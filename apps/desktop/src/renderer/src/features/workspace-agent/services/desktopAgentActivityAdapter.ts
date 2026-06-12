@@ -112,11 +112,18 @@ export function createDesktopAgentActivityAdapter({
       return agentActivitySessionFromNextopdSession(input.workspaceId, session);
     },
     async cancelSession(input) {
-      const session = await nextopdClient.cancelWorkspaceAgentSession(
+      const result = await nextopdClient.cancelWorkspaceAgentSessionWithResult(
         input.workspaceId,
         input.agentSessionId
       );
-      return agentActivitySessionFromNextopdSession(input.workspaceId, session);
+      return {
+        canceled: result.cancel.canceled,
+        reason: result.cancel.reason,
+        session: agentActivitySessionFromNextopdSession(
+          input.workspaceId,
+          result.session
+        )
+      };
     },
     async submitInteractive(input) {
       return await nextopdClient.submitWorkspaceAgentInteractive(

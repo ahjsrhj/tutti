@@ -110,7 +110,12 @@ interface DesktopAgentHostApiUnderTest {
         status?: string;
       };
     }>;
-    cancel(input: { agentSessionId: string }): Promise<{ canceled: boolean }>;
+    cancel(input: { agentSessionId: string }): Promise<{
+      agentSessionId?: string;
+      canceled: boolean;
+      reason?: string;
+      sessionStatus?: string;
+    }>;
     exec(input: {
       agentSessionId: string;
       content: AgentPromptContentBlock[];
@@ -230,7 +235,7 @@ test("desktop agent host api routes session commands through injected nextopd cl
   const calls: Array<{ method: string; args: unknown[] }> = [];
   const api = createAgentHostApi({
     nextopdClient: createNextopdClient({
-      async cancelWorkspaceAgentSession(
+      async cancelWorkspaceAgentSessionWithResult(
         requestWorkspaceId: string,
         agentSessionId: string
       ) {
@@ -238,7 +243,13 @@ test("desktop agent host api routes session commands through injected nextopd cl
           args: [requestWorkspaceId, agentSessionId],
           method: "cancel"
         });
-        return createSession({ id: agentSessionId, status: "canceled" });
+        return {
+          cancel: {
+            canceled: true,
+            reason: "active_turn_canceled"
+          },
+          session: createSession({ id: agentSessionId, status: "canceled" })
+        };
       },
       async createWorkspaceAgentSession(
         requestWorkspaceId: string,
@@ -354,6 +365,8 @@ test("desktop agent host api routes session commands through injected nextopd cl
   assert.equal(interactive.accepted, true);
   assert.equal(abortInteractive.accepted, true);
   assert.equal(canceled.canceled, true);
+  assert.equal(canceled.reason, "active_turn_canceled");
+  assert.equal(canceled.sessionStatus, "canceled");
   assert.deepEqual(calls, [
     {
       args: [
@@ -442,6 +455,46 @@ test("desktop agent host api routes session commands through injected nextopd cl
       method: "cancel"
     }
   ]);
+});
+
+test("desktop agent host api returns no-active-turn cancel metadata", async () => {
+  const reporterCalls: ReporterEventInput[][] = [];
+  const api = createAgentHostApi({
+    nextopdClient: createNextopdClient({
+      async cancelWorkspaceAgentSessionWithResult(
+        _requestWorkspaceId: string,
+        agentSessionId: string
+      ) {
+        return {
+          cancel: {
+            canceled: false,
+            reason: "no_active_turn"
+          },
+          session: createSession({
+            id: agentSessionId,
+            status: "created"
+          })
+        };
+      }
+    }),
+    reporterService: {
+      async trackEvents(events) {
+        reporterCalls.push(events);
+      }
+    }
+  });
+
+  const result = await api.agentSessions.cancel({
+    agentSessionId: "agent-session-1"
+  });
+
+  assert.deepEqual(result, {
+    agentSessionId: "agent-session-1",
+    canceled: false,
+    reason: "no_active_turn",
+    sessionStatus: "ready"
+  });
+  assert.deepEqual(reporterCalls, []);
 });
 
 test("desktop agent host api pins sessions through the canonical pinSession host method", async () => {
@@ -2627,6 +2680,15 @@ function createNextopdClient(
   return {
     async cancelWorkspaceAgentSession() {
       return createSession({ status: "canceled" });
+    },
+    async cancelWorkspaceAgentSessionWithResult() {
+      return {
+        cancel: {
+          canceled: true,
+          reason: "active_turn_canceled"
+        },
+        session: createSession({ status: "canceled" })
+      };
     },
     async createWorkspaceAgentSession() {
       return createSession();

@@ -1,6 +1,7 @@
 import {
   createAgentActivityController,
   type AgentActivityAdapter,
+  type AgentActivityCancelSessionResult,
   type AgentActivityController,
   type AgentActivityMessage,
   type AgentActivityMessagePage,
@@ -299,11 +300,11 @@ export class WorkspaceAgentActivityService implements IWorkspaceAgentActivitySer
 
   async cancelSession(
     input: Parameters<AgentActivityAdapter["cancelSession"]>[0]
-  ): Promise<AgentActivitySession> {
+  ): Promise<AgentActivityCancelSessionResult> {
     const entry = this.controllerEntry(input.workspaceId);
-    const session = await entry.adapter.cancelSession(input);
-    this.upsertAuthoritativeSession(session);
-    return session;
+    const result = await entry.adapter.cancelSession(input);
+    this.upsertAuthoritativeSession(result.session);
+    return result;
   }
 
   async submitInteractive(

@@ -534,6 +534,7 @@ function createDependenciesStub(): {
       publishWorkspaceAppFactoryJob: fail,
       rollbackWorkspaceApp: fail,
       cancelWorkspaceAgentSession: fail,
+      cancelWorkspaceAgentSessionWithResult: fail,
       sendWorkspaceAgentSessionInput: fail,
       readWorkspaceAgentSessionAttachment: fail,
       updateWorkspaceAgentSessionSettings: fail,

@@ -89,7 +89,7 @@ func (l *keyedOperationLocks) Lock(key string) func() {
 type FactoryAgentSessionService interface {
 	Create(context.Context, string, agentservice.CreateSessionInput) (agentservice.Session, error)
 	SendInput(context.Context, string, string, agentservice.SendInput) (agentservice.Session, error)
-	Cancel(context.Context, string, string) (agentservice.Session, error)
+	Cancel(context.Context, string, string) (agentservice.CancelSessionResult, error)
 }
 
 type FactoryAgentSessionStateReporter interface {

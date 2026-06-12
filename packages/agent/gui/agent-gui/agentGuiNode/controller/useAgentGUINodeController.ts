@@ -9,6 +9,7 @@ import {
 import { useAgentHostApi } from "../../../agentActivityHost";
 import { resolveAgentActivityPromptImagesSupported } from "@tutti-os/agent-activity-core";
 import type {
+  AgentActivityCancelSessionResult,
   AgentActivityComposerOptions,
   AgentActivitySnapshot
 } from "@tutti-os/agent-activity-core";
@@ -219,6 +220,95 @@ function reportAgentGUIRuntimeError(input: {
   } catch {
     // Diagnostic logging must never affect the Agent GUI recovery path.
   }
+}
+
+function reportAgentGUICancelDiagnostic(input: {
+  agentSessionId: string;
+  busySource?: string | null;
+  currentSessionStatus?: string | null;
+  phase: "drain_queued_prompt_interrupt" | "interrupt_current_turn";
+  provider?: string | null;
+  result: AgentActivityCancelSessionResult;
+  runtime: AgentActivityRuntime;
+  workspaceId: string;
+}): void {
+  if (input.result.canceled) {
+    return;
+  }
+  const reportDiagnostic = input.runtime.reportDiagnostic;
+  if (!reportDiagnostic) {
+    return;
+  }
+  try {
+    void Promise.resolve(
+      reportDiagnostic.call(input.runtime, {
+        details: {
+          agentSessionId: input.agentSessionId,
+          busySource: input.busySource ?? "unknown",
+          canceled: input.result.canceled,
+          cancelReason: input.result.reason,
+          currentSessionStatus: input.currentSessionStatus ?? null,
+          phase: input.phase,
+          provider: input.provider ?? null,
+          returnedSessionNonBusy: cancelResultSessionStatusIsNonBusy(
+            input.result
+          ),
+          returnedSessionStatus: input.result.session.status
+        },
+        event: "agent.gui.cancel.noop",
+        level: "info",
+        source: "agent-gui",
+        workspaceId: input.workspaceId
+      })
+    ).catch(() => {});
+  } catch {
+    // Diagnostic logging must never affect the Agent GUI recovery path.
+  }
+}
+
+function cancelResultSessionStatusIsNonBusy(
+  result: AgentActivityCancelSessionResult
+): boolean {
+  const status = normalizeOptionalWorkspaceAgentStatus({
+    currentPhase: result.session.currentPhase,
+    status: result.session.status
+  });
+  return (
+    status !== null && status.kind !== "working" && status.kind !== "waiting"
+  );
+}
+
+function cancelBusySource(input: {
+  conversationStatus?: string | null;
+  hasActivePrompt?: boolean;
+  runtimeSessionStatus?: string | null;
+  sessionStateStatus?: string | null;
+}): string {
+  if (input.hasActivePrompt) {
+    return "interactive_prompt";
+  }
+  if (
+    agentSessionStatusBusy({
+      status: input.conversationStatus ?? undefined
+    })
+  ) {
+    return "conversation_status";
+  }
+  if (
+    agentSessionStatusBusy({
+      status: input.runtimeSessionStatus ?? undefined
+    })
+  ) {
+    return "runtime_session";
+  }
+  if (
+    agentSessionStatusBusy({
+      status: input.sessionStateStatus ?? undefined
+    })
+  ) {
+    return "session_state";
+  }
+  return "unknown";
 }
 
 function normalizeAgentGUIDiagnosticError(
@@ -4930,6 +5020,31 @@ export function useAgentGUINodeController({
           if (!result || !isCurrentConversation(agentSessionId)) {
             return;
           }
+          const conversationStatus =
+            resolveConversationSummaryById(
+              conversations,
+              agentSessionId,
+              transientConversationRef.current
+            )?.status ?? null;
+          const runtimeSessionStatus =
+            runtimeSessionsBySessionId.get(agentSessionId)?.status ?? null;
+          reportAgentGUICancelDiagnostic({
+            agentSessionId,
+            busySource: cancelBusySource({
+              conversationStatus,
+              hasActivePrompt:
+                activePendingPrompt?.sessionId === agentSessionId,
+              runtimeSessionStatus,
+              sessionStateStatus: activeSessionState?.status ?? null
+            }),
+            currentSessionStatus:
+              activeSessionState?.status ?? runtimeSessionStatus,
+            phase: "interrupt_current_turn",
+            provider: dataRef.current.provider,
+            result,
+            runtime: agentActivityRuntime,
+            workspaceId
+          });
           void refreshMessagesFromSnapshot(agentSessionId);
           void loadSessionState(agentSessionId);
           void syncConversationListProjection(agentSessionId);
@@ -4972,6 +5087,9 @@ export function useAgentGUINodeController({
       syncConversationListProjection,
       loadSessionState,
       refreshMessagesFromSnapshot,
+      conversations,
+      runtimeSessionsBySessionId,
+      activeSessionState,
       workspaceId,
       agentActivityRuntime
     ]
@@ -5412,6 +5530,23 @@ export function useAgentGUINodeController({
         if (!result || !isCurrentConversation(activeConversationId)) {
           return;
         }
+        reportAgentGUICancelDiagnostic({
+          agentSessionId: activeConversationId,
+          busySource: cancelBusySource({
+            conversationStatus: activeConversationSummary?.status ?? null,
+            hasActivePrompt: false,
+            runtimeSessionStatus:
+              runtimeSessionsBySessionId.get(activeConversationId)?.status ??
+              null,
+            sessionStateStatus: activeSessionState?.status ?? null
+          }),
+          currentSessionStatus: activeSessionState?.status ?? null,
+          phase: "drain_queued_prompt_interrupt",
+          provider: dataRef.current.provider,
+          result,
+          runtime: agentActivityRuntime,
+          workspaceId
+        });
         void refreshMessagesFromSnapshot(activeConversationId);
         void loadSessionState(activeConversationId);
         void syncConversationListProjection(activeConversationId);
@@ -5450,6 +5585,7 @@ export function useAgentGUINodeController({
     loadSessionState,
     refreshMessagesFromSnapshot,
     queuedPromptsBySessionId,
+    runtimeSessionsBySessionId,
     workspaceId,
     sessionViewRef,
     sendNextQueuedPromptIdBySessionId,

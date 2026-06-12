@@ -670,6 +670,27 @@ func (e WorkspaceAgentSessionAttachmentResponseMimeType) Valid() bool {
 	}
 }
 
+// Defines values for WorkspaceAgentSessionCancelResultReason.
+const (
+	ActiveTurnCanceled  WorkspaceAgentSessionCancelResultReason = "active_turn_canceled"
+	NoActiveTurn        WorkspaceAgentSessionCancelResultReason = "no_active_turn"
+	StaleTurnReconciled WorkspaceAgentSessionCancelResultReason = "stale_turn_reconciled"
+)
+
+// Valid indicates whether the value is a known member of the WorkspaceAgentSessionCancelResultReason enum.
+func (e WorkspaceAgentSessionCancelResultReason) Valid() bool {
+	switch e {
+	case ActiveTurnCanceled:
+		return true
+	case NoActiveTurn:
+		return true
+	case StaleTurnReconciled:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for WorkspaceAgentSessionStatus.
 const (
 	WorkspaceAgentSessionStatusCanceled  WorkspaceAgentSessionStatus = "canceled"
@@ -2119,6 +2140,21 @@ type WorkspaceAgentSessionAttachmentResponse struct {
 
 // WorkspaceAgentSessionAttachmentResponseMimeType defines model for WorkspaceAgentSessionAttachmentResponse.MimeType.
 type WorkspaceAgentSessionAttachmentResponseMimeType string
+
+// WorkspaceAgentSessionCancelResponse defines model for WorkspaceAgentSessionCancelResponse.
+type WorkspaceAgentSessionCancelResponse struct {
+	Cancel  WorkspaceAgentSessionCancelResult `json:"cancel"`
+	Session WorkspaceAgentSession             `json:"session"`
+}
+
+// WorkspaceAgentSessionCancelResult defines model for WorkspaceAgentSessionCancelResult.
+type WorkspaceAgentSessionCancelResult struct {
+	Canceled bool                                    `json:"canceled"`
+	Reason   WorkspaceAgentSessionCancelResultReason `json:"reason"`
+}
+
+// WorkspaceAgentSessionCancelResultReason defines model for WorkspaceAgentSessionCancelResult.Reason.
+type WorkspaceAgentSessionCancelResultReason string
 
 // WorkspaceAgentSessionEventEnvelope defines model for WorkspaceAgentSessionEventEnvelope.
 type WorkspaceAgentSessionEventEnvelope struct {

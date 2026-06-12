@@ -37,6 +37,17 @@ export interface AgentActivitySession {
   updatedAtUnixMs?: number;
 }
 
+export type AgentActivityCancelReason =
+  | "active_turn_canceled"
+  | "no_active_turn"
+  | "stale_turn_reconciled";
+
+export interface AgentActivityCancelSessionResult {
+  session: AgentActivitySession;
+  canceled: boolean;
+  reason: AgentActivityCancelReason | (string & {});
+}
+
 export interface AgentActivityMessage {
   workspaceId?: string;
   agentSessionId: string;

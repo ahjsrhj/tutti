@@ -710,6 +710,16 @@ export type WorkspaceAgentSessionResponse = {
   session: WorkspaceAgentSession;
 };
 
+export type WorkspaceAgentSessionCancelResponse = {
+  session: WorkspaceAgentSession;
+  cancel: WorkspaceAgentSessionCancelResult;
+};
+
+export type WorkspaceAgentSessionCancelResult = {
+  canceled: boolean;
+  reason: "active_turn_canceled" | "no_active_turn" | "stale_turn_reconciled";
+};
+
 export type WorkspaceAgentSessionMessage = {
   id: number;
   agentSessionId: string;
@@ -3799,7 +3809,7 @@ export type CancelWorkspaceAgentSessionResponses = {
   /**
    * Workspace agent session canceled
    */
-  200: WorkspaceAgentSessionResponse;
+  200: WorkspaceAgentSessionCancelResponse;
 };
 
 export type CancelWorkspaceAgentSessionResponse =

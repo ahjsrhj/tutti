@@ -21,7 +21,7 @@ type AgentSessionService interface {
 	Get(context.Context, string, string) (agentservice.Session, error)
 	ReadAttachment(context.Context, string, string, string) (agentservice.PromptAttachment, error)
 	Delete(context.Context, string, string) (bool, error)
-	Cancel(context.Context, string, string) (agentservice.Session, error)
+	Cancel(context.Context, string, string) (agentservice.CancelSessionResult, error)
 	SendInput(context.Context, string, string, agentservice.SendInput) (agentservice.Session, error)
 	UpdatePin(context.Context, string, string, bool) (agentservice.Session, error)
 	UpdateSettings(context.Context, string, string, agentservice.ComposerSettingsPatch) (agentservice.Session, error)
@@ -224,12 +224,13 @@ func (api DaemonAPI) CancelWorkspaceAgentSession(ctx context.Context, request ne
 			ServiceUnavailableErrorJSONResponse: agentSessionServiceUnavailableError(),
 		}, nil
 	}
-	session, err := api.AgentSessionService.Cancel(ctx, string(request.WorkspaceID), string(request.AgentSessionID))
+	result, err := api.AgentSessionService.Cancel(ctx, string(request.WorkspaceID), string(request.AgentSessionID))
 	if err != nil {
 		return writeCancelWorkspaceAgentSessionError(err), nil
 	}
 	return nextopgenerated.CancelWorkspaceAgentSession200JSONResponse{
-		Session: generatedAgentSession(session),
+		Cancel:  generatedAgentSessionCancelResult(result),
+		Session: generatedAgentSession(result.Session),
 	}, nil
 }
 
@@ -594,6 +595,13 @@ func agentPromptContentFromGenerated(content []nextopgenerated.AgentPromptConten
 		result = append(result, item)
 	}
 	return result
+}
+
+func generatedAgentSessionCancelResult(result agentservice.CancelSessionResult) nextopgenerated.WorkspaceAgentSessionCancelResult {
+	return nextopgenerated.WorkspaceAgentSessionCancelResult{
+		Canceled: result.Canceled,
+		Reason:   nextopgenerated.WorkspaceAgentSessionCancelResultReason(result.Reason),
+	}
 }
 
 func generatedAgentSession(session agentservice.Session) nextopgenerated.WorkspaceAgentSession {

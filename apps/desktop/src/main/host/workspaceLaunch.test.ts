@@ -382,6 +382,9 @@ function createTransportClient(
     async cancelWorkspaceAgentSession() {
       throw new Error("not used");
     },
+    async cancelWorkspaceAgentSessionWithResult() {
+      throw new Error("not used");
+    },
     async sendWorkspaceAgentSessionInput() {
       throw new Error("not used");
     },

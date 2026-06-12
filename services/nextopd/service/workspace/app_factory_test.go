@@ -53,7 +53,7 @@ type workspaceRootResolverStub struct {
 
 func (s *factoryAgentSessionStateReporterStub) ReportSessionState(_ context.Context, input agentsessionstore.ReportSessionStateInput) (agentsessionstore.ReportSessionStateReply, error) {
 	s.reports = append(s.reports, input)
-	return agentsessionstore.ReportSessionStateReply{Accepted: true}, nil
+	return agentsessionstore.ReportSessionStateReply{Accepted: true, StateApplied: true}, nil
 }
 
 func (s factoryAgentSessionReaderStub) GetSession(workspaceID string, agentSessionID string) (agentservice.PersistedSession, bool) {
@@ -134,9 +134,13 @@ func (s *factoryAgentSessionServiceStub) SendInput(_ context.Context, _ string, 
 	return agentservice.Session{}, nil
 }
 
-func (s *factoryAgentSessionServiceStub) Cancel(_ context.Context, _ string, sessionID string) (agentservice.Session, error) {
+func (s *factoryAgentSessionServiceStub) Cancel(_ context.Context, _ string, sessionID string) (agentservice.CancelSessionResult, error) {
 	s.canceledSessionID = sessionID
-	return agentservice.Session{ID: sessionID}, nil
+	return agentservice.CancelSessionResult{
+		Session:  agentservice.Session{ID: sessionID},
+		Canceled: true,
+		Reason:   agentservice.CancelReasonActiveTurnCanceled,
+	}, nil
 }
 
 func (s workspaceRootResolverStub) ResolveWorkspaceRoot(context.Context, string) (workspacefiles.WorkspaceRoot, error) {
@@ -1276,6 +1280,45 @@ func TestAppFactoryServiceFailedAgentSessionFailsGeneratingJob(t *testing.T) {
 	}
 	if job.Status != workspacebiz.AppFactoryJobStatusFailed || job.FailureReason != "provider failed" {
 		t.Fatalf("job = status %q reason %q, want failed provider failed", job.Status, job.FailureReason)
+	}
+}
+
+func TestAppFactoryServiceIgnoresStaleTerminalAgentSessionState(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+	store := newAppFactoryStoreStub()
+	if err := store.PutAppFactoryJob(ctx, workspacebiz.AppFactoryJob{
+		AgentSessionID: "session-1",
+		AppID:          "app_1",
+		JobID:          "job-1",
+		Status:         workspacebiz.AppFactoryJobStatusGenerating,
+		WorkspaceID:    "ws-1",
+	}); err != nil {
+		t.Fatalf("PutAppFactoryJob() error = %v", err)
+	}
+	service := AppFactoryService{Store: store}
+
+	service.ObserveAgentSessionState(ctx, agentsessionstore.ReportSessionStateInput{
+		WorkspaceID:    "ws-1",
+		AgentSessionID: "session-1",
+		State: agentsessionstore.WorkspaceAgentSessionStateUpdate{
+			LifecycleStatus:  "failed",
+			LastError:        "stale failure",
+			OccurredAtUnixMS: 150,
+		},
+	}, agentsessionstore.ReportSessionStateReply{
+		Accepted:          true,
+		StateApplied:      false,
+		LastEventAtUnixMS: 200,
+	})
+
+	job, err := store.GetAppFactoryJob(ctx, "ws-1", "job-1")
+	if err != nil {
+		t.Fatalf("GetAppFactoryJob() error = %v", err)
+	}
+	if job.Status != workspacebiz.AppFactoryJobStatusGenerating || job.FailureReason != "" {
+		t.Fatalf("job = status %q reason %q, want unchanged generating job", job.Status, job.FailureReason)
 	}
 }
 
