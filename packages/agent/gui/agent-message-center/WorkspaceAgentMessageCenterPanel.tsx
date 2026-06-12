@@ -38,7 +38,7 @@ import {
   buildMessageCenterStatusOptions,
   groupMessageCenterItems,
   itemMatchesViewFilters,
-  partitionMessageCenterItemsByProvider,
+  partitionMessageCenterItemsByAgentUser,
   statusFilterSummary,
   type MessageCenterGroupBy,
   type MessageCenterStatusFilter
@@ -334,12 +334,12 @@ function WorkspaceAgentMessageCenterPanelContent({
       return;
     }
     for (const group of itemGroups) {
-      for (const stack of partitionMessageCenterItemsByProvider(group.items)) {
+      for (const stack of partitionMessageCenterItemsByAgentUser(group.items)) {
         if (
           stack.items.length > 1 &&
           stack.items.some((item) => item.id === highlightedItemId)
         ) {
-          expandStack(`${group.id}:${stack.provider}`);
+          expandStack(`${group.id}:${stack.id}`);
           return;
         }
       }
@@ -500,7 +500,7 @@ function WorkspaceAgentMessageCenterPanelContent({
                         );
                       };
 
-                      return partitionMessageCenterItemsByProvider(
+                      return partitionMessageCenterItemsByAgentUser(
                         group.items
                       ).map((stack) => {
                         const firstItem = stack.items[0];
@@ -510,7 +510,7 @@ function WorkspaceAgentMessageCenterPanelContent({
                         if (stack.items.length === 1) {
                           return renderCard(firstItem);
                         }
-                        const stackId = `${group.id}:${stack.provider}`;
+                        const stackId = `${group.id}:${stack.id}`;
                         return (
                           <MessageCenterStack
                             key={stackId}

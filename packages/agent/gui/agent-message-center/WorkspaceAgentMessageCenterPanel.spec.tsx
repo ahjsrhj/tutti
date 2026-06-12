@@ -15,6 +15,7 @@ const baseItem: WorkspaceAgentMessageCenterItem = {
   id: "message-center-session-1",
   agentSessionId: "session-1",
   provider: "codex",
+  userId: null,
   title: "整理本地文件夹",
   identity: null,
   cwd: "/workspace",
@@ -852,7 +853,7 @@ describe("WorkspaceAgentMessageCenterPanel", () => {
     );
 
     const stack = screen.getByTestId(
-      "workspace-agent-message-stack-working:codex"
+      "workspace-agent-message-stack-working:agent-user:codex:unknown-user"
     );
     expect(stack).toHaveAttribute(
       "data-stack-top-item-id",
@@ -864,7 +865,7 @@ describe("WorkspaceAgentMessageCenterPanel", () => {
     expect(stack.querySelector("[data-message-center-item-id]")).toBeNull();
 
     const summary = screen.getByTestId(
-      "workspace-agent-message-stack-summary-working:codex"
+      "workspace-agent-message-stack-summary-working:agent-user:codex:unknown-user"
     );
     expect(summary).toHaveAttribute("data-stack-summary-count", "5");
     expect(summary).toHaveAttribute("data-stack-provider", "codex");
@@ -878,7 +879,7 @@ describe("WorkspaceAgentMessageCenterPanel", () => {
     expect(screen.queryByText("Running task 5")).toBeNull();
   });
 
-  it("aggregates stacked cards by agent provider inside a group", () => {
+  it("aggregates stacked cards by agent provider and user inside a group", () => {
     render(
       <WorkspaceAgentMessageCenterPanel
         open
@@ -886,24 +887,35 @@ describe("WorkspaceAgentMessageCenterPanel", () => {
           createMessageCenterItem({
             agentSessionId: "codex-session-1",
             provider: "codex",
+            userId: "user-a",
             title: "Codex task 1",
             status: "working"
           }),
           createMessageCenterItem({
             agentSessionId: "codex-session-2",
             provider: "codex",
+            userId: "user-a",
             title: "Codex task 2",
+            status: "working"
+          }),
+          createMessageCenterItem({
+            agentSessionId: "codex-session-3",
+            provider: "codex",
+            userId: "user-b",
+            title: "Codex task 3",
             status: "working"
           }),
           createMessageCenterItem({
             agentSessionId: "gemini-session-1",
             provider: "gemini",
+            userId: "user-a",
             title: "Gemini task 1",
             status: "working"
           }),
           createMessageCenterItem({
             agentSessionId: "gemini-session-2",
             provider: "gemini",
+            userId: "user-a",
             title: "Gemini task 2",
             status: "working"
           }),
@@ -921,22 +933,39 @@ describe("WorkspaceAgentMessageCenterPanel", () => {
     );
 
     const codexStack = screen.getByTestId(
-      "workspace-agent-message-stack-working:codex"
+      "workspace-agent-message-stack-working:agent-user:codex:user-a"
     );
     expect(codexStack).toHaveAttribute("data-stack-count", "2");
     const geminiStack = screen.getByTestId(
-      "workspace-agent-message-stack-working:gemini"
+      "workspace-agent-message-stack-working:agent-user:gemini:user-a"
     );
     expect(geminiStack).toHaveAttribute("data-stack-count", "2");
     expect(
-      screen.getByTestId("workspace-agent-message-stack-summary-working:codex")
+      screen.getByTestId(
+        "workspace-agent-message-stack-summary-working:agent-user:codex:user-a"
+      )
     ).toHaveTextContent("2 messages");
     expect(
-      screen.getByTestId("workspace-agent-message-stack-summary-working:gemini")
+      screen.getByTestId(
+        "workspace-agent-message-stack-summary-working:agent-user:codex:user-a"
+      )
+    ).toHaveAttribute("data-stack-user-id", "user-a");
+    expect(
+      screen.getByTestId(
+        "workspace-agent-message-stack-summary-working:agent-user:gemini:user-a"
+      )
     ).toHaveTextContent("2 messages");
+    expect(
+      screen.queryByTestId(
+        "workspace-agent-message-stack-working:agent-user:codex:user-b"
+      )
+    ).toBeNull();
+    expect(screen.getByText("Codex task 3")).toBeTruthy();
 
     expect(
-      screen.queryByTestId("workspace-agent-message-stack-working:claude-code")
+      screen.queryByTestId(
+        "workspace-agent-message-stack-working:agent-user:claude-code:unknown-user"
+      )
     ).toBeNull();
     expect(screen.getByText("Claude task 1")).toBeTruthy();
   });
@@ -983,7 +1012,7 @@ describe("WorkspaceAgentMessageCenterPanel", () => {
     );
 
     const expandedStack = screen.getByTestId(
-      "workspace-agent-message-stack-working:codex"
+      "workspace-agent-message-stack-working:agent-user:codex:unknown-user"
     );
     expect(expandedStack).toHaveAttribute("data-stack-state", "expanded");
     expect(
@@ -997,7 +1026,7 @@ describe("WorkspaceAgentMessageCenterPanel", () => {
     await waitFor(() => {
       expect(
         screen.queryByTestId(
-          "workspace-agent-message-stack-summary-working:codex"
+          "workspace-agent-message-stack-summary-working:agent-user:codex:unknown-user"
         )
       ).toBeNull();
     });
@@ -1014,14 +1043,16 @@ describe("WorkspaceAgentMessageCenterPanel", () => {
     );
 
     const collapsedStack = screen.getByTestId(
-      "workspace-agent-message-stack-working:codex"
+      "workspace-agent-message-stack-working:agent-user:codex:unknown-user"
     );
     expect(collapsedStack).toHaveAttribute("data-stack-state", "collapsed");
     await waitFor(() => {
       expect(screen.queryByText("Running task 3")).toBeNull();
     });
     expect(
-      screen.getByTestId("workspace-agent-message-stack-summary-working:codex")
+      screen.getByTestId(
+        "workspace-agent-message-stack-summary-working:agent-user:codex:unknown-user"
+      )
     ).toHaveTextContent("5 messages");
     expect(screen.queryByText("Running task 4")).toBeNull();
     expect(screen.queryByText("Running task 5")).toBeNull();
@@ -1056,7 +1087,7 @@ describe("WorkspaceAgentMessageCenterPanel", () => {
     );
 
     const stack = screen.getByTestId(
-      "workspace-agent-message-stack-working:codex"
+      "workspace-agent-message-stack-working:agent-user:codex:unknown-user"
     );
     expect(stack).toHaveAttribute("data-stack-state", "expanded");
     expect(screen.getByText("Running task 3")).toBeTruthy();
@@ -1099,7 +1130,7 @@ describe("WorkspaceAgentMessageCenterPanel", () => {
     );
 
     const stack = screen.getByTestId(
-      "workspace-agent-message-stack-completed:codex"
+      "workspace-agent-message-stack-completed:agent-user:codex:unknown-user"
     );
     expect(stack).toHaveAttribute(
       "data-stack-top-item-id",
@@ -1108,7 +1139,7 @@ describe("WorkspaceAgentMessageCenterPanel", () => {
     expect(stack).toHaveAttribute("data-stack-count", "3");
 
     const summary = screen.getByTestId(
-      "workspace-agent-message-stack-summary-completed:codex"
+      "workspace-agent-message-stack-summary-completed:agent-user:codex:unknown-user"
     );
     expect(summary).toHaveTextContent("3 messages");
     expect(summary).toHaveTextContent("Completed task 1 summary");

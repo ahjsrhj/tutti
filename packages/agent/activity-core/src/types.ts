@@ -20,6 +20,7 @@ export interface AgentActivitySession {
   agentSessionId: string;
   provider: string;
   providerSessionId?: string | null;
+  userId?: string;
   model?: string | null;
   cwd: string;
   title: string;

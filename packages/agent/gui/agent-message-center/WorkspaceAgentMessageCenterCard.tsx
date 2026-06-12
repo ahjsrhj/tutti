@@ -355,6 +355,7 @@ function MessageCenterStackSummary({
       )}
       data-stack-summary-count={items.length}
       data-stack-provider={firstItem.provider}
+      data-stack-user-id={firstItem.userId ?? ""}
       data-testid={`workspace-agent-message-stack-summary-${groupId}`}
       onClick={onExpand}
     >

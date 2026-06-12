@@ -33,24 +33,40 @@ export interface MessageCenterGroup {
   items: WorkspaceAgentMessageCenterItem[];
 }
 
-export interface MessageCenterProviderStack {
+export interface MessageCenterAgentUserStack {
+  id: string;
   provider: string;
+  userId: string | null;
   items: WorkspaceAgentMessageCenterItem[];
 }
 
-export function partitionMessageCenterItemsByProvider(
+export function partitionMessageCenterItemsByAgentUser(
   items: readonly WorkspaceAgentMessageCenterItem[]
-): MessageCenterProviderStack[] {
-  const stacks = new Map<string, MessageCenterProviderStack>();
+): MessageCenterAgentUserStack[] {
+  const stacks = new Map<string, MessageCenterAgentUserStack>();
   for (const item of items) {
-    const stack = stacks.get(item.provider);
+    const stackId = messageCenterAgentUserStackId(item);
+    const stack = stacks.get(stackId);
     if (stack) {
       stack.items.push(item);
     } else {
-      stacks.set(item.provider, { provider: item.provider, items: [item] });
+      stacks.set(stackId, {
+        id: stackId,
+        provider: item.provider,
+        userId: item.userId,
+        items: [item]
+      });
     }
   }
   return [...stacks.values()];
+}
+
+export function messageCenterAgentUserStackId(
+  item: Pick<WorkspaceAgentMessageCenterItem, "provider" | "userId">
+): string {
+  const provider = item.provider.trim().toLowerCase() || "unknown-agent";
+  const userId = item.userId?.trim() || "unknown-user";
+  return `agent-user:${provider}:${userId}`;
 }
 
 export function buildMessageCenterStatusOptions(
