@@ -1,6 +1,5 @@
 import type {
   AgentActivityDisplayStatus,
-  AgentActivityComposerOptions,
   AgentActivityMessage,
   AgentActivityNeedsAttentionItem,
   AgentActivityNeedsAttentionKind,
@@ -273,10 +272,4 @@ function includesAny(value: string, needles: readonly string[]): boolean {
 
 function stringValue(value: unknown): string {
   return typeof value === "string" ? value.trim() : "";
-}
-
-function recordValue(value: unknown): Record<string, unknown> | null {
-  return value !== null && typeof value === "object" && !Array.isArray(value)
-    ? (value as Record<string, unknown>)
-    : null;
 }
