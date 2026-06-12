@@ -13,14 +13,14 @@ PRD 結論：CLI 老用戶的「會話核心循環」操作（圖片輸入、Ski
 
 ## 2. 已確認的決策
 
-| 決策點        | 結論                                                                                      |
-| ------------- | ----------------------------------------------------------------------------------------- |
-| 計畫範圍      | 完整 PRD 本期範圍：P0 四項 + P1 用量展示，全棧（GUI + 能力協商 + daemon/adapter）         |
-| Provider 驗收 | codex + claude-code 全量驗收；gemini/hermes/openclaw/nexight 只保證優雅降級（置灰不報錯） |
-| Skills 深度   | 只讀列表 + 調用；啟用/禁用/安裝本期不做                                                   |
-| 交付節奏      | 按能力垂直切片，每切片一條端到端鏈路獨立成 PR；能力協商底座先行                           |
-| 計畫口徑      | 按代碼實際現狀「驗證+補缺」，不按 PRD 現狀欄當全缺失重做                                  |
-| 能力協商      | 方案 A 為主（daemon 運行時上報為單一事實源）、方案 B 兜底（會話建立前用靜態保守預設渲染） |
+| 決策點        | 結論                                                                                                                                                                |
+| ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 計畫範圍      | PRD 本期範圍減圖片項：P0 三項（Skills、壓縮上下文、通知）+ P1 用量展示，全棧（GUI + 能力協商 + daemon/adapter）。圖片鏈路經核實已端到端可用，本期不投入，加固項後置 |
+| Provider 驗收 | codex + claude-code 全量驗收；gemini/hermes/openclaw/nexight 只保證優雅降級（置灰不報錯）                                                                           |
+| Skills 深度   | 只讀列表 + 調用；啟用/禁用/安裝本期不做                                                                                                                             |
+| 交付節奏      | 按能力垂直切片，每切片一條端到端鏈路獨立成 PR；能力協商底座先行                                                                                                     |
+| 計畫口徑      | 按代碼實際現狀「驗證+補缺」，不按 PRD 現狀欄當全缺失重做                                                                                                            |
+| 能力協商      | 方案 A 為主（daemon 運行時上報為單一事實源）、方案 B 兜底（會話建立前用靜態保守預設渲染）                                                                           |
 
 ## 3. 核實後的現狀基線（4 個獨立核實 agent 的結論）
 
@@ -72,7 +72,7 @@ adapter 上報 capabilities/usage/skills
 - **B（兜底）**：nextopd `GetComposerOptions` 保留每 provider 靜態保守預設表（替換現有 `composerPromptCapabilities` 硬編碼 switch 的角色），僅用於會話建立前的初始渲染；會話建立後被運行時上報覆蓋。
 - **GUI**：`activity-core` 新增 `resolveCapability(snapshot, key)`（沿用 `resolveAgentActivityPromptImagesSupported` 的「runtime 優先、靜態兜底」模式並泛化）；能力缺失 → 控件置灰 + tooltip。
 
-## 5. 六個垂直切片
+## 5. 五個垂直切片
 
 ### 切片 0 · 能力協商底座（PR0）
 
@@ -81,11 +81,9 @@ adapter 上報 capabilities/usage/skills
 - GUI：`resolveCapability` selector；遷移三個站點（image 門控來源、planMode 判斷、compact 命令可用性）。
 - 驗收：codex/claude-code 正確亮起；其餘四 provider 全部置灰零報錯。
 
-### 切片 1 · 圖片/多模態輸入（P0，驗收+加固）
+### 切片 1 ·（本期移除）圖片/多模態輸入
 
-- 真機驗收（兩 provider）：粘貼、拖拽、混合多圖、回顯。
-- 加固：單圖尺寸/體積上限 + 超限自動壓縮（canvas 重採樣，保留 mimeType）；不支持 provider 的拒絕提示文案核驗。
-- 門控切換到切片 0 機制。
+經核實鏈路端到端可用（見 3.1），本期不投入。尺寸/體積上限與壓縮等加固項列入後置清單（第 9 節）。image 能力 key 仍保留在統一詞表中（其運行時門控數據已存在，PR0 的 `composerPromptCapabilities` 替換順帶覆蓋，無額外成本）。
 
 ### 切片 2 · Skills（P0，補缺+設置頁視圖）
 
@@ -119,13 +117,12 @@ adapter 上報 capabilities/usage/skills
 - 能力缺失 → 置灰 + tooltip，永不報錯彈窗；會話未建立 → 靜態預設兜底。
 - usage 無數據 → 隱藏而非顯示零值。
 - 系統通知發送失敗 → 靜默降級到消息中心（compositeNotificationService 已有 best-effort 吞錯）。
-- 圖片超限 → 先壓縮，仍超限則拒絕該圖並 toast 說明，不阻斷其餘內容發送。
 
 ## 7. 測試與驗收
 
 - Go 單測：兩個 adapter 的 capabilities 上報；composer options「預設+運行時覆蓋」合併；skills cwd 失效邏輯。
-- TS 單測：`resolveCapability`；Composer 門控；閾值提醒檔位/去重；通知聚焦態矩陣；圖片壓縮邊界。
-- 真機驗收清單（codex + claude-code 各跑一遍）：圖片三場景、skill 調用、Compact 按鈕+兩檔提醒、通知三場景（聚焦/未聚焦 × 完成/失敗/待決策）、用量條實時性。
+- TS 單測：`resolveCapability`；Composer 門控；閾值提醒檔位/去重；通知聚焦態矩陣。
+- 真機驗收清單（codex + claude-code 各跑一遍）：skill 調用、Compact 按鈕+兩檔提醒、通知三場景（聚焦/未聚焦 × 完成/失敗/待決策）、用量條實時性。
 - codex 復用 `NEXTOP_REAL_CODEX_TEST` 門控真機測試擴展。
 
 ## 8. PR 切分與里程碑
@@ -133,19 +130,18 @@ adapter 上報 capabilities/usage/skills
 | PR  | 內容                            | 依賴                  |
 | --- | ------------------------------- | --------------------- |
 | PR0 | 能力協商底座                    | codex-app-server 合入 |
-| PR1 | 圖片驗收+尺寸/壓縮加固          | PR0                   |
 | PR2 | Skills cwd 修復 + 設置頁視圖    | PR0                   |
 | PR5 | 常駐用量條（含 usage selector） | PR0                   |
 | PR3 | Compact 入口 + 閾值提醒         | PR0、PR5              |
 | PR4 | 系統通知三場景                  | 無（可全程並行）      |
 
-里程碑：M1 輸入側（PR0+1+2）→ M2 上下文管理（PR5→PR3）→ M3 通知（PR4 並行）。
+里程碑：M1 輸入側（PR0+PR2）→ M2 上下文管理（PR5→PR3）→ M3 通知（PR4 並行）。PR 編號沿用切片號（PR1 已隨切片 1 移除）。
 
 ## 9. 風險與後置清單
 
 - 風險：能力詞表 Go/TS 雙份常量可能漂移——以 Go 為源,TS 側加對齊單測鎖定。
 - 風險：閾值提醒的 contextWindow 語義在 provider 間略有差異（codex 為最近一次請求佔用,claude 為累計）——文案用「約 X%」措辭,不承諾精確。
-- 後置：附錄 A 中未遷移的門控站點；Skills 啟用/禁用；steering 的 controller 打通；登錄流程；命令輸出增量流。
+- 後置：圖片加固（單圖尺寸/體積上限、超限自動壓縮、不支持 provider 的拒絕提示文案核驗、真機多圖回顯驗收）；附錄 A 中未遷移的門控站點；Skills 啟用/禁用；steering 的 controller 打通；登錄流程；命令輸出增量流。
 
 ## 附錄 A：能力門控站點盤點（節選，完整清單見核實記錄）
 
