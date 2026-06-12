@@ -546,7 +546,7 @@ export function WorkbenchHostDock({
           dockHoverPanelHitSlopPx
         ) ||
         rectContainsPoint(
-          unionRects(anchorRect, panelRect),
+          createHoverPanelBridgeRect(anchorRect, panelRect),
           clientX,
           clientY,
           dockHoverPanelBridgeSlopPx
@@ -2249,13 +2249,20 @@ function rectContainsPoint(
   );
 }
 
-function unionRects(first: DOMRect, second: DOMRect): DOMRect {
-  const left = Math.min(first.left, second.left);
-  const top = Math.min(first.top, second.top);
-  const right = Math.max(first.right, second.right);
-  const bottom = Math.max(first.bottom, second.bottom);
+function createHoverPanelBridgeRect(anchor: DOMRect, panel: DOMRect): DOMRect {
+  if (anchor.right <= panel.left || panel.right <= anchor.left) {
+    const left = Math.min(anchor.right, panel.right);
+    const right = Math.max(anchor.left, panel.left);
+    const top = Math.max(anchor.top, panel.top);
+    const bottom = Math.min(anchor.bottom, panel.bottom);
+    return new DOMRect(left, top, right - left, Math.max(0, bottom - top));
+  }
 
-  return new DOMRect(left, top, right - left, bottom - top);
+  const left = Math.max(anchor.left, panel.left);
+  const right = Math.min(anchor.right, panel.right);
+  const top = Math.min(anchor.bottom, panel.bottom);
+  const bottom = Math.max(anchor.top, panel.top);
+  return new DOMRect(left, top, Math.max(0, right - left), bottom - top);
 }
 const dockPresenceAnimationMs = 300;
 const minimizedDockSlotLayoutAnimationMs = 720;

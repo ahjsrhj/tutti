@@ -55,7 +55,7 @@ test("dock hover panels survive pointer travel from slot to panel", () => {
   );
   assert.match(source, /rectContainsPoint\(\s*anchorRect,/);
   assert.match(source, /rectContainsPoint\(\s*panelRect,/);
-  assert.match(source, /unionRects\(anchorRect, panelRect\)/);
+  assert.match(source, /createHoverPanelBridgeRect\(anchorRect, panelRect\)/);
   assert.match(
     source,
     /handleDockPointerMove\(clientX, clientY\);\s*scheduleHoverPanelAtPointAfterRest\(clientX, clientY\);/
@@ -130,7 +130,7 @@ test("dock hover panels survive pointer travel from slot to panel", () => {
     /onPointerLeave=\{\(event\) => \{[\s\S]*?scheduleHoverPanelClose\(activeHoverPanel\.entryId\);/
   );
   assert.match(source, /function rectContainsPoint/);
-  assert.match(source, /function unionRects/);
+  assert.match(source, /function createHoverPanelBridgeRect/);
   assert.doesNotMatch(source, /\[dock-hover\]/);
   assert.doesNotMatch(
     source,
