@@ -1,5 +1,5 @@
 import "@testing-library/jest-dom/vitest";
-import { act, render, screen } from "@testing-library/react";
+import { act, fireEvent, render, screen } from "@testing-library/react";
 import { TooltipProvider } from "@tutti-os/ui-system";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { WorkspaceAgentMessageCenterAttentionDeck } from "./WorkspaceAgentMessageCenterAttentionDeck";
@@ -182,5 +182,48 @@ describe("WorkspaceAgentMessageCenterAttentionDeck cooldown", () => {
     expect(
       screen.getAllByRole("button", { name: "Yes, proceed" })[0]
     ).not.toBeDisabled();
+  });
+});
+
+describe("WorkspaceAgentMessageCenterAttentionDeck transitions", () => {
+  it("keeps a leaving ghost of the answered top card until its animation ends", () => {
+    const { rerender, container } = render(
+      <TooltipProvider>
+        <WorkspaceAgentMessageCenterAttentionDeck
+          items={[
+            promptItem({ agentSessionId: "top" }),
+            promptItem({ agentSessionId: "next" })
+          ]}
+          submittingPromptKey={null}
+          onSubmitPrompt={vi.fn()}
+          onOpenChat={vi.fn()}
+        />
+      </TooltipProvider>
+    );
+
+    // The top card is answered and removed from the model.
+    rerender(
+      <TooltipProvider>
+        <WorkspaceAgentMessageCenterAttentionDeck
+          items={[promptItem({ agentSessionId: "next" })]}
+          submittingPromptKey={null}
+          onSubmitPrompt={vi.fn()}
+          onOpenChat={vi.fn()}
+        />
+      </TooltipProvider>
+    );
+
+    const ghost = container.querySelector(
+      '[data-deck-leaving-item-id="message-center-top"]'
+    );
+    expect(ghost).not.toBeNull();
+
+    // Fire the animation end -> ghost is dropped.
+    fireEvent.animationEnd(ghost as Element);
+    expect(
+      container.querySelector(
+        '[data-deck-leaving-item-id="message-center-top"]'
+      )
+    ).toBeNull();
   });
 });

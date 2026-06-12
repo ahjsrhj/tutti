@@ -7,6 +7,7 @@ import type { WorkspaceAgentMessageCenterItem } from "./workspaceAgentMessageCen
 
 const DECK_MAX_PEEK = 2;
 const DECK_NEW_CARD_COOLDOWN_MS = 500;
+const DECK_LEAVE_ANIMATION_FALLBACK_MS = 420;
 
 export interface WorkspaceAgentMessageCenterAttentionDeckProps {
   items: WorkspaceAgentMessageCenterItem[];
@@ -78,6 +79,33 @@ export function WorkspaceAgentMessageCenterAttentionDeck({
   const isTopCoolingDown =
     cooldownRequestId !== null && cooldownRequestId === topRequestId;
 
+  const previousTopItemRef = useRef<WorkspaceAgentMessageCenterItem | null>(
+    null
+  );
+  const [leavingItem, setLeavingItem] =
+    useState<WorkspaceAgentMessageCenterItem | null>(null);
+
+  useEffect(() => {
+    const previousTopItem = previousTopItemRef.current;
+    previousTopItemRef.current = ordered[0] ?? null;
+    if (
+      previousTopItem &&
+      previousTopItem.id !== (ordered[0]?.id ?? null) &&
+      !items.some((item) => item.id === previousTopItem.id)
+    ) {
+      setLeavingItem(previousTopItem);
+      const timeoutId = window.setTimeout(() => {
+        setLeavingItem((current) =>
+          current?.id === previousTopItem.id ? null : current
+        );
+      }, DECK_LEAVE_ANIMATION_FALLBACK_MS);
+      return () => {
+        window.clearTimeout(timeoutId);
+      };
+    }
+    return undefined;
+  }, [items, ordered]);
+
   const topItem = ordered[0];
   if (!topItem) {
     return null;
@@ -106,6 +134,30 @@ export function WorkspaceAgentMessageCenterAttentionDeck({
         data-deck-count={ordered.length}
         data-deck-top-item-id={topItem.id}
       >
+        {leavingItem ? (
+          <div
+            key={`leaving-${leavingItem.agentSessionId}`}
+            aria-hidden="true"
+            inert
+            data-deck-leaving-item-id={leavingItem.id}
+            className="pointer-events-none absolute inset-x-0 top-0 z-20 min-w-0 motion-safe:animate-out motion-safe:fade-out-0 motion-safe:slide-out-to-top-2 motion-safe:duration-300 motion-safe:ease-[cubic-bezier(0.4,0,0.2,1)] motion-reduce:hidden"
+            onAnimationEnd={(event) => {
+              if (event.target === event.currentTarget) {
+                setLeavingItem((current) =>
+                  current?.id === leavingItem.id ? null : current
+                );
+              }
+            }}
+          >
+            <WorkspaceAgentMessageCenterCard
+              interactive={false}
+              isSubmitting={false}
+              item={leavingItem}
+              onOpenChat={onOpenChat}
+              onSubmitPrompt={() => {}}
+            />
+          </div>
+        ) : null}
         {behindItems.map((item, peekIndex) => {
           const depth = peekIndex + 1;
           return (
@@ -131,7 +183,11 @@ export function WorkspaceAgentMessageCenterAttentionDeck({
           );
         })}
         <div
-          className={cn("relative min-w-0", behindItems.length > 0 && "z-10")}
+          key={topItem.id}
+          className={cn(
+            "relative min-w-0 motion-safe:animate-in motion-safe:fade-in-0 motion-safe:slide-in-from-top-1 motion-safe:duration-300 motion-reduce:animate-none",
+            behindItems.length > 0 && "z-10"
+          )}
         >
           <WorkspaceAgentMessageCenterCard
             cardRef={
