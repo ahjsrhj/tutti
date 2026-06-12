@@ -282,6 +282,7 @@ interface AgentGUINodeViewProps {
   isAgentProviderReady: boolean;
   slashStatusLimits?: readonly AgentComposerSlashStatusLimit[];
   slashStatusLimitsLoading?: boolean;
+  showProjectSelector?: boolean;
   onAgentProviderLogin?: (provider?: string | null) => void;
   actions: {
     createConversation: (options?: { projectPath?: string | null }) => void;
@@ -615,6 +616,7 @@ export function AgentGUINodeView({
   isAgentProviderReady,
   slashStatusLimits = [],
   slashStatusLimitsLoading = false,
+  showProjectSelector = true,
   onAgentProviderLogin,
   actions,
   conversationRailCollapsed,
@@ -879,6 +881,7 @@ export function AgentGUINodeView({
             isAgentProviderReady={isAgentProviderReady}
             slashStatusLimits={slashStatusLimits}
             slashStatusLimitsLoading={slashStatusLimitsLoading}
+            showProjectSelector={showProjectSelector}
             onLinkAction={onLinkAction}
             onAgentProviderLogin={onAgentProviderLogin}
             onRequestWorkspaceReferences={requestWorkspaceReferences}
@@ -912,6 +915,7 @@ interface AgentGUIDetailPaneProps {
   isAgentProviderReady: boolean;
   slashStatusLimits: readonly AgentComposerSlashStatusLimit[];
   slashStatusLimitsLoading: boolean;
+  showProjectSelector: boolean;
   onLinkAction?: (action: WorkspaceLinkAction) => void;
   onAgentProviderLogin?: (provider?: string | null) => void;
   onRequestWorkspaceReferences?:
@@ -998,6 +1002,7 @@ const AgentGUIDetailPane = memo(function AgentGUIDetailPane({
   isAgentProviderReady,
   slashStatusLimits,
   slashStatusLimitsLoading,
+  showProjectSelector,
   onLinkAction,
   onAgentProviderLogin,
   onRequestWorkspaceReferences,
@@ -1555,6 +1560,7 @@ const AgentGUIDetailPane = memo(function AgentGUIDetailPane({
               isActive,
               promptImagesSupported: viewModel.promptImagesSupported,
               promptTips: labels.promptTips,
+              showProjectSelector,
               isInterrupting: viewModel.isInterrupting,
               isSendingTurn: isComposerSending,
               isSubmittingPrompt: viewModel.isRespondingApproval,
@@ -1627,6 +1633,7 @@ const AgentGUIDetailPane = memo(function AgentGUIDetailPane({
             composerFocusRequestSequence,
             isActive,
             promptImagesSupported: viewModel.promptImagesSupported,
+            showProjectSelector,
             isInterrupting: viewModel.isInterrupting,
             isSendingTurn: isComposerSending,
             isSubmittingPrompt: viewModel.isRespondingApproval,
