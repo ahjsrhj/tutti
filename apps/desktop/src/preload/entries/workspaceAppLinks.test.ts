@@ -3,6 +3,11 @@ import test from "node:test";
 
 import { installWorkspaceAppLinkInterception } from "./workspaceAppLinks.ts";
 
+type MainWorldExecutionScript = {
+  args?: unknown[];
+  func: (...args: never[]) => unknown;
+};
+
 function installFakeAnchorGlobals(): () => void {
   const originalElement = globalThis.Element;
   const originalHTMLAnchorElement = globalThis.HTMLAnchorElement;
@@ -261,4 +266,53 @@ test("workspace app link interception delegates cross-origin window.open calls",
     ["https://example.com/product", "_blank", "noopener"],
     ["https://example.com/after-dispose"]
   ]);
+});
+
+test("workspace app link interception installs same-origin window.open handling in the main world", () => {
+  const originalWindow = (globalThis as { window?: unknown }).window;
+  const mainWorldWindow = createFakeWindow({
+    href: "https://app.local/home",
+    open() {
+      return null;
+    }
+  });
+  const isolatedWorldWindow = createFakeWindow({
+    href: "https://app.local/home"
+  });
+  const diagnostics: unknown[] = [];
+
+  try {
+    (globalThis as { window?: unknown }).window = mainWorldWindow;
+    const dispose = installWorkspaceAppLinkInterception({
+      executeInMainWorld(script: MainWorldExecutionScript) {
+        return script.func(...((script.args ?? []) as never[]));
+      },
+      reportDiagnostic(diagnostic) {
+        diagnostics.push(diagnostic);
+      },
+      scope: isolatedWorldWindow,
+      send() {}
+    });
+
+    const opened = mainWorldWindow.open("/canvas?id=canvas-1", "_blank");
+
+    assert.equal(opened, mainWorldWindow);
+    assert.deepEqual(mainWorldWindow.assignedUrls, [
+      "https://app.local/canvas?id=canvas-1"
+    ]);
+    assert.deepEqual(
+      diagnostics.filter(
+        (diagnostic) =>
+          typeof diagnostic === "object" &&
+          diagnostic !== null &&
+          "action" in diagnostic &&
+          diagnostic.action === "installed-main-world"
+      ),
+      [{ action: "installed-main-world" }]
+    );
+
+    dispose();
+  } finally {
+    (globalThis as { window?: unknown }).window = originalWindow;
+  }
 });
