@@ -1,7 +1,7 @@
 import "@testing-library/jest-dom/vitest";
-import { render, screen } from "@testing-library/react";
+import { act, render, screen } from "@testing-library/react";
 import { TooltipProvider } from "@tutti-os/ui-system";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { WorkspaceAgentMessageCenterAttentionDeck } from "./WorkspaceAgentMessageCenterAttentionDeck";
 import type { WorkspaceAgentMessageCenterItem } from "./workspaceAgentMessageCenterModel";
 
@@ -116,5 +116,71 @@ describe("WorkspaceAgentMessageCenterAttentionDeck", () => {
       "data-deck-top-item-id",
       "message-center-older"
     );
+  });
+});
+
+describe("WorkspaceAgentMessageCenterAttentionDeck cooldown", () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+  });
+  afterEach(() => {
+    vi.runOnlyPendingTimers();
+    vi.useRealTimers();
+  });
+
+  it("does not disable the top option on first mount", () => {
+    render(
+      <TooltipProvider>
+        <WorkspaceAgentMessageCenterAttentionDeck
+          items={[promptItem({ agentSessionId: "first" })]}
+          submittingPromptKey={null}
+          onSubmitPrompt={vi.fn()}
+          onOpenChat={vi.fn()}
+        />
+      </TooltipProvider>
+    );
+    expect(
+      screen.getByRole("button", { name: "Yes, proceed" })
+    ).not.toBeDisabled();
+  });
+
+  it("disables the new top for the cooldown window, then re-enables it", () => {
+    const { rerender } = render(
+      <TooltipProvider>
+        <WorkspaceAgentMessageCenterAttentionDeck
+          items={[promptItem({ agentSessionId: "first" })]}
+          submittingPromptKey={null}
+          onSubmitPrompt={vi.fn()}
+          onOpenChat={vi.fn()}
+        />
+      </TooltipProvider>
+    );
+
+    // A new card jumps to the top.
+    rerender(
+      <TooltipProvider>
+        <WorkspaceAgentMessageCenterAttentionDeck
+          items={[
+            promptItem({ agentSessionId: "second" }),
+            promptItem({ agentSessionId: "first" })
+          ]}
+          submittingPromptKey={null}
+          onSubmitPrompt={vi.fn()}
+          onOpenChat={vi.fn()}
+        />
+      </TooltipProvider>
+    );
+
+    expect(
+      screen.getAllByRole("button", { name: "Yes, proceed" })[0]
+    ).toBeDisabled();
+
+    act(() => {
+      vi.advanceTimersByTime(600);
+    });
+
+    expect(
+      screen.getAllByRole("button", { name: "Yes, proceed" })[0]
+    ).not.toBeDisabled();
   });
 });

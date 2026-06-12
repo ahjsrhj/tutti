@@ -1,4 +1,4 @@
-import { useMemo, type JSX } from "react";
+import { useEffect, useMemo, useRef, useState, type JSX } from "react";
 import { cn } from "@tutti-os/ui-system";
 import { useTranslation } from "../i18n/index";
 import type { WorkspaceLinkAction } from "../actions/workspaceLinkActions";
@@ -6,6 +6,7 @@ import { WorkspaceAgentMessageCenterCard } from "./WorkspaceAgentMessageCenterCa
 import type { WorkspaceAgentMessageCenterItem } from "./workspaceAgentMessageCenterModel";
 
 const DECK_MAX_PEEK = 2;
+const DECK_NEW_CARD_COOLDOWN_MS = 500;
 
 export interface WorkspaceAgentMessageCenterAttentionDeckProps {
   items: WorkspaceAgentMessageCenterItem[];
@@ -41,6 +42,41 @@ export function WorkspaceAgentMessageCenterAttentionDeck({
     () => orderDeckItems(items, highlightedItemId),
     [items, highlightedItemId]
   );
+
+  // Derive topRequestId using optional chaining so it is safe when ordered[0] is undefined.
+  // All hooks must run before the early-return guard.
+  const topRequestId = ordered[0]?.pendingPrompt?.requestId ?? null;
+  const topPromotedByHighlight =
+    ordered[0]?.id === highlightedItemId && highlightedItemId !== null;
+  const previousTopRequestIdRef = useRef<string | null>(null);
+  const [cooldownRequestId, setCooldownRequestId] = useState<string | null>(
+    null
+  );
+
+  useEffect(() => {
+    const previousTopRequestId = previousTopRequestIdRef.current;
+    previousTopRequestIdRef.current = topRequestId;
+    if (
+      !topRequestId ||
+      topPromotedByHighlight ||
+      previousTopRequestId === null ||
+      previousTopRequestId === topRequestId
+    ) {
+      return undefined;
+    }
+    setCooldownRequestId(topRequestId);
+    const timeoutId = window.setTimeout(() => {
+      setCooldownRequestId((current) =>
+        current === topRequestId ? null : current
+      );
+    }, DECK_NEW_CARD_COOLDOWN_MS);
+    return () => {
+      window.clearTimeout(timeoutId);
+    };
+  }, [topPromotedByHighlight, topRequestId]);
+
+  const isTopCoolingDown =
+    cooldownRequestId !== null && cooldownRequestId === topRequestId;
 
   const topItem = ordered[0];
   if (!topItem) {
@@ -105,7 +141,7 @@ export function WorkspaceAgentMessageCenterAttentionDeck({
             }
             highlighted={topItem.id === highlightedItemId}
             interactive
-            isSubmitting={topIsSubmitting}
+            isSubmitting={topIsSubmitting || isTopCoolingDown}
             item={topItem}
             onLinkAction={onLinkAction}
             onOpenChat={onOpenChat}
