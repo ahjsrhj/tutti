@@ -163,25 +163,25 @@ test("dock magnification skips layout-locked dock slots", () => {
   assert.equal(
     isDockMagnificationSlotLayoutLocked({
       dataset: { collapsing: "true" }
-    } as HTMLElement),
+    } as unknown as HTMLElement),
     true
   );
   assert.equal(
     isDockMagnificationSlotLayoutLocked({
       dataset: { presence: "entering" }
-    } as HTMLElement),
+    } as unknown as HTMLElement),
     true
   );
   assert.equal(
     isDockMagnificationSlotLayoutLocked({
       dataset: { presence: "exiting" }
-    } as HTMLElement),
+    } as unknown as HTMLElement),
     true
   );
   assert.equal(
     isDockMagnificationSlotLayoutLocked({
       dataset: { presence: "present" }
-    } as HTMLElement),
+    } as unknown as HTMLElement),
     false
   );
   assert.match(source, /isDockMagnificationSlotLayoutLocked\(slotElement\)/);

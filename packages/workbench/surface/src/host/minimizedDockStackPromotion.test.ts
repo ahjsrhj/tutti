@@ -1,25 +1,33 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { detectMinimizedDockStackPromotion } from "./minimizedDockStackPromotion.ts";
+import type { WorkbenchMinimizedDockNode } from "./minimizedDockSlots.ts";
 import type { WorkbenchMinimizedDockSlot } from "./minimizedDockSlots.ts";
+
+function createNode(id: string): WorkbenchMinimizedDockNode {
+  return {
+    data: {
+      dockEntryId: id,
+      instanceId: id,
+      launchSource: "dock",
+      typeId: "test"
+    },
+    displayMode: "floating",
+    frame: { height: 480, width: 640, x: 0, y: 0 },
+    id,
+    isMinimized: true,
+    kind: "test",
+    minimizedAtUnixMs: 1,
+    restoreFrame: null,
+    title: id
+  };
+}
 
 function nodeSlot(id: string): WorkbenchMinimizedDockSlot {
   return {
     anchorKey: `minimized:${id}`,
     kind: "node",
-    node: {
-      data: {
-        dockEntryId: id,
-        instanceId: id,
-        launchSource: "dock",
-        typeId: "test"
-      },
-      frame: { height: 480, width: 640, x: 0, y: 0 },
-      id,
-      isMinimized: true,
-      minimizedAtUnixMs: 1,
-      title: id
-    }
+    node: createNode(id)
   };
 }
 
@@ -27,7 +35,7 @@ function stackSlot(ids: readonly string[]): WorkbenchMinimizedDockSlot {
   return {
     anchorKey: "minimized-stack",
     kind: "stack",
-    nodes: ids.map((id) => nodeSlot(id).node)
+    nodes: ids.map((id) => createNode(id))
   };
 }
 

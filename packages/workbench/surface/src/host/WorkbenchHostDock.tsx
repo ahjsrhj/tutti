@@ -351,9 +351,8 @@ export function WorkbenchHostDock({
       }),
     [minimizedDockSlots, resolvedEntries]
   );
-  const presentDockItems = useDockPresenceItems(
-    dockItems,
-    context.genie.shouldAnimateMinimizedDockEnter
+  const presentDockItems = useDockPresenceItems(dockItems, (nodeId) =>
+    context.genie.shouldAnimateMinimizedDockEnter(nodeId)
   );
   const dockWidth = useMemo(
     () => resolveWorkbenchHostDockItemsWidth(dockItems),
