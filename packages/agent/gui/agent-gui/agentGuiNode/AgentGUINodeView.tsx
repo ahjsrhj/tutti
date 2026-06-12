@@ -100,8 +100,12 @@ import type { AgentRichTextAtProvider } from "./agentRichTextAtProvider";
 const AGENT_GUI_STICK_TO_BOTTOM_THRESHOLD_PX = 24;
 
 const AGENT_GUI_TIMELINE_SCROLL_AREA_CONTENT_STYLE: CSSProperties = {
+  width: "100%",
   minWidth: "100%",
   display: "grid",
+  gridTemplateColumns:
+    "minmax(0, min(100%, var(--agent-gui-detail-flow-max-width)))",
+  justifyContent: "center",
   gap: "24px"
 };
 
