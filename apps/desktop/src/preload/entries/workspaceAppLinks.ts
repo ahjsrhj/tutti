@@ -1,5 +1,4 @@
 const workspaceAppOpenUrlChannel = "workspace-app:open-url";
-const sameOriginWindowOpenFallbackDelayMs = 30_000;
 
 interface WorkspaceAppLinkInterceptionOptions {
   reportDiagnostic?: (
@@ -118,7 +117,6 @@ function installPreloadWindowOpenInterception({
 }): () => void {
   const originalOpen =
     typeof scope.open === "function" ? scope.open.bind(scope) : () => null;
-  const pendingTimers = new Set<ReturnType<typeof setTimeout>>();
 
   const interceptedOpen: typeof scope.open = (url, target, features) => {
     const normalizedTarget = target?.trim().toLowerCase() ?? "_blank";
@@ -128,12 +126,6 @@ function installPreloadWindowOpenInterception({
 
     return createWorkspaceAppPopupProxy({
       initialUrl: resolveWindowOpenUrl(scope, url),
-      onTimerCreated(timer) {
-        pendingTimers.add(timer);
-      },
-      onTimerDisposed(timer) {
-        pendingTimers.delete(timer);
-      },
       resolveUrl(rawUrl) {
         return resolveWindowOpenUrl(scope, rawUrl);
       },
@@ -145,10 +137,6 @@ function installPreloadWindowOpenInterception({
 
   return () => {
     scope.open = originalOpen;
-    for (const timer of pendingTimers) {
-      clearTimeout(timer);
-    }
-    pendingTimers.clear();
   };
 }
 
@@ -195,15 +183,11 @@ function isSameOriginUrl(scope: Window, resolvedUrl: string): boolean {
 
 function createWorkspaceAppPopupProxy({
   initialUrl,
-  onTimerCreated,
-  onTimerDisposed,
   resolveUrl,
   sameOrigin,
   sendOpenUrl
 }: {
   initialUrl: string | null;
-  onTimerCreated: (timer: ReturnType<typeof setTimeout>) => void;
-  onTimerDisposed: (timer: ReturnType<typeof setTimeout>) => void;
   resolveUrl: (rawUrl: unknown) => string | null;
   sameOrigin: (resolvedUrl: string) => boolean;
   sendOpenUrl: (url: string) => void;
@@ -211,23 +195,12 @@ function createWorkspaceAppPopupProxy({
   let closed = false;
   let currentUrl = initialUrl;
   let dispatched = false;
-  let fallbackTimer: ReturnType<typeof setTimeout> | null = null;
-
-  const disposeFallbackTimer = () => {
-    if (!fallbackTimer) {
-      return;
-    }
-    clearTimeout(fallbackTimer);
-    onTimerDisposed(fallbackTimer);
-    fallbackTimer = null;
-  };
 
   const dispatchCurrentUrl = () => {
     if (closed || dispatched || !currentUrl) {
       return;
     }
     dispatched = true;
-    disposeFallbackTimer();
     sendOpenUrl(currentUrl);
   };
 
@@ -260,7 +233,6 @@ function createWorkspaceAppPopupProxy({
     blur() {},
     close() {
       closed = true;
-      disposeFallbackTimer();
     },
     focus() {
       dispatchCurrentUrl();
@@ -279,13 +251,7 @@ function createWorkspaceAppPopupProxy({
   };
 
   if (currentUrl) {
-    if (sameOrigin(currentUrl)) {
-      fallbackTimer = setTimeout(
-        dispatchCurrentUrl,
-        sameOriginWindowOpenFallbackDelayMs
-      );
-      onTimerCreated(fallbackTimer);
-    } else {
+    if (!sameOrigin(currentUrl)) {
       dispatchCurrentUrl();
     }
   }

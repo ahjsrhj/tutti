@@ -25,6 +25,7 @@ interface WorkspaceAppWindowOpenLogger {
 }
 
 interface WorkspaceAppWindowOpenHandlerInput {
+  appBaseUrl?: string | null;
   contents: WorkspaceAppWindowOpenContents;
   logger?: WorkspaceAppWindowOpenLogger;
   ownerWindow: WorkspaceAppWindowOpenOwnerWindow;
@@ -35,6 +36,7 @@ interface WorkspaceAppOpenUrlInput extends WorkspaceAppWindowOpenHandlerInput {
 }
 
 export function installWorkspaceAppWindowOpenHandler({
+  appBaseUrl,
   contents,
   logger,
   ownerWindow
@@ -49,6 +51,16 @@ export function installWorkspaceAppWindowOpenHandler({
   }
 
   contents.setWindowOpenHandler?.(({ url }) => {
+    if (isSameOriginWorkspaceAppUrl({ appBaseUrl, url })) {
+      logger?.info?.(
+        "workspace app native same-origin window-open suppressed",
+        {
+          url,
+          webContentsId: contents.id
+        }
+      );
+      return { action: "deny" };
+    }
     dispatchWorkspaceAppOpenUrl({ contents, logger, ownerWindow, url });
     return { action: "deny" };
   });
@@ -96,4 +108,22 @@ export function dispatchWorkspaceAppOpenUrl({
   });
   ownerWindow.webContents.send(desktopIpcChannels.browser.event, payload);
   return true;
+}
+
+function isSameOriginWorkspaceAppUrl({
+  appBaseUrl,
+  url
+}: {
+  appBaseUrl?: string | null;
+  url: string;
+}): boolean {
+  if (!appBaseUrl) {
+    return false;
+  }
+
+  try {
+    return new URL(url, appBaseUrl).origin === new URL(appBaseUrl).origin;
+  } catch {
+    return false;
+  }
 }

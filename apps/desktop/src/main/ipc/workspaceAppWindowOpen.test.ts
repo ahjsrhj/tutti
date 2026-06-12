@@ -61,6 +61,43 @@ test("workspace app native window-open requests dispatch Browser Node open-url e
   ]);
 });
 
+test("workspace app native window-open suppresses same-origin popup placeholders", () => {
+  const sent: Array<{ channel: string; payload: unknown }> = [];
+  type WindowOpenHandler = (details: { url: string }) => {
+    action: "allow" | "deny";
+  };
+  const captured: { windowOpenHandler?: WindowOpenHandler } = {};
+
+  installWorkspaceAppWindowOpenHandler({
+    appBaseUrl: "http://127.0.0.1:60031/projects",
+    contents: {
+      id: 99,
+      setWindowOpenHandler(handler) {
+        captured.windowOpenHandler = handler;
+      }
+    },
+    ownerWindow: {
+      webContents: {
+        send(channel, payload) {
+          sent.push({ channel, payload });
+        }
+      }
+    }
+  });
+
+  if (!captured.windowOpenHandler) {
+    throw new Error("expected a window-open handler to be installed");
+  }
+
+  assert.deepEqual(
+    captured.windowOpenHandler({
+      url: "http://127.0.0.1:60031/loading-preview"
+    }),
+    { action: "deny" }
+  );
+  assert.deepEqual(sent, []);
+});
+
 test("workspace app preload open-url requests dispatch Browser Node open-url events", () => {
   const sent: Array<{ channel: string; payload: unknown }> = [];
   const logs: Array<{ message: string; details?: Record<string, unknown> }> =

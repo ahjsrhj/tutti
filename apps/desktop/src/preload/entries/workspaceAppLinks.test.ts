@@ -162,6 +162,41 @@ test("workspace app window.open forwards deferred popup navigation target", () =
   ]);
 });
 
+test("workspace app window.open does not fallback-open same-origin placeholders", () => {
+  const originalSetTimeout = globalThis.setTimeout;
+  const originalClearTimeout = globalThis.clearTimeout;
+  const fakeWindow = createFakeWorkspaceAppWindow();
+  const sent: Array<{ channel: string; payload: unknown }> = [];
+
+  try {
+    Object.assign(globalThis, {
+      clearTimeout() {},
+      setTimeout(handler: TimerHandler) {
+        if (typeof handler === "function") {
+          handler();
+        }
+        return 1;
+      }
+    });
+
+    installWorkspaceAppLinkInterception({
+      scope: fakeWindow,
+      send(channel, payload) {
+        sent.push({ channel, payload });
+      }
+    });
+
+    fakeWindow.open("/loading-preview", "_blank");
+
+    assert.deepEqual(sent, []);
+  } finally {
+    Object.assign(globalThis, {
+      clearTimeout: originalClearTimeout,
+      setTimeout: originalSetTimeout
+    });
+  }
+});
+
 function createFakeWorkspaceAppWindow(): Window {
   const listeners: EventListener[] = [];
   return {
