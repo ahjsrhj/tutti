@@ -711,7 +711,11 @@ export function AgentGUINodeView({
       : (composerFocusRequestSequence ?? 0) + localComposerFocusRequestSequence;
   const requestCreateConversation = useCallback(
     (options?: { projectPath?: string | null }) => {
-      actions.createConversation(options);
+      if (options) {
+        actions.createConversation(options);
+      } else {
+        actions.createConversation();
+      }
       setLocalComposerFocusRequestSequence((current) => current + 1);
     },
     [actions]
