@@ -1021,6 +1021,57 @@ describe("AgentComposer", () => {
     ).toHaveClass("agent-gui-node__composer-input-shell-hero");
   });
 
+  it("hides the hero project selector when disabled while keeping prompt tips", () => {
+    const { container } = render(
+      <AgentComposer
+        workspaceId="workspace-1"
+        currentUserId="user-1"
+        provider="codex"
+        draftPrompt=""
+        availableCommands={[] satisfies readonly AgentHostAgentSessionCommand[]}
+        disabled={false}
+        submitDisabled={false}
+        placeholder="placeholder"
+        composerSettings={createComposerSettings()}
+        queuedPrompts={[]}
+        drainingQueuedPromptId={null}
+        canQueueWhileBusy={false}
+        showStopButton={false}
+        activePrompt={null}
+        promptTips={[
+          {
+            id: "set-workspace",
+            label: "指定工作区",
+            prompt: "让 Agent 知道在哪里读文件、运行命令和理解代码"
+          }
+        ]}
+        isInterrupting={false}
+        isSendingTurn={false}
+        isSubmittingPrompt={false}
+        labels={createLabels()}
+        workspaceUserProjectI18n={workspaceUserProjectI18n}
+        layoutMode="hero"
+        showProjectSelector={false}
+        onDraftChange={vi.fn()}
+        onSettingsChange={vi.fn()}
+        onSubmit={vi.fn()}
+        onSendQueuedPromptNext={vi.fn()}
+        onRemoveQueuedPrompt={vi.fn()}
+        onEditQueuedPrompt={vi.fn()}
+        onInterruptCurrentTurn={vi.fn()}
+        onSubmitInteractivePrompt={vi.fn()}
+      />
+    );
+
+    expect(screen.queryByTestId("agent-project-dropdown")).toBeNull();
+    expect(
+      container.querySelector(".agent-gui-node__composer-project-row")
+    ).not.toBeNull();
+    expect(screen.getByTestId("agent-gui-prompt-tips")).toHaveTextContent(
+      "Tips：指定工作区"
+    );
+  });
+
   it("keeps the hero composer shell visually flattened inside the glow frame", () => {
     const css = readFileSync(resolve("app/renderer/agentactivity.css"), "utf8");
 

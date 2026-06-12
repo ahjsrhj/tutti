@@ -118,6 +118,7 @@ export interface AgentGUINodeProps {
   isMaximized?: boolean;
   isActive: boolean;
   composerFocusRequestSequence?: number | null;
+  showProjectSelector?: boolean;
   isMuted?: boolean;
   onMinimize?: () => void;
   onToggleMaximize?: () => void;
@@ -428,6 +429,7 @@ function areAgentGUINodePropsEqual(
     previous.workspaceAppIcons === next.workspaceAppIcons &&
     previous.embedded === next.embedded &&
     previous.isActive === next.isActive &&
+    previous.showProjectSelector === next.showProjectSelector &&
     previous.composerFocusRequestSequence === next.composerFocusRequestSequence
   );
 }
@@ -454,6 +456,7 @@ export const AgentGUINode = memo(function AgentGUINode({
   isMaximized = false,
   isActive,
   composerFocusRequestSequence = null,
+  showProjectSelector = true,
   isMuted = false,
   onMinimize,
   onToggleMaximize,
@@ -1069,6 +1072,7 @@ export const AgentGUINode = memo(function AgentGUINode({
             slashStatusLimitsLoading={
               workspaceAgentProbes?.isLoadingUsage ?? false
             }
+            showProjectSelector={showProjectSelector}
             onLinkAction={handleLinkAction}
             onAgentProviderLogin={
               onAgentProviderLogin ? handleAgentProviderLogin : undefined

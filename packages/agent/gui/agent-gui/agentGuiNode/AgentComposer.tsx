@@ -141,6 +141,7 @@ interface AgentComposerProps {
   promptImagesSupported?: boolean;
   composerFocusRequestSequence?: number | null;
   layoutMode?: "dock" | "hero";
+  showProjectSelector?: boolean;
   labels: {
     send: string;
     modelLabel: string;
@@ -542,6 +543,7 @@ export function AgentComposer({
   promptImagesSupported = true,
   composerFocusRequestSequence = null,
   layoutMode = "dock",
+  showProjectSelector = true,
   labels,
   workspaceUserProjectI18n,
   onDraftChange,
@@ -1462,11 +1464,6 @@ export function AgentComposer({
   );
   const composerClassName =
     layoutMode === "hero" ? styles.composerHero : styles.composer;
-  const showProjectRow = layoutMode === "hero";
-  const showProjectMissingProbe =
-    !showProjectRow &&
-    Boolean(composerSettings.projectLocked) &&
-    selectedProjectPath !== "";
   const inputShellClassName = cn(
     styles.composerInputShell,
     layoutMode === "hero" && styles.composerInputShellHero
@@ -1587,6 +1584,14 @@ export function AgentComposer({
   const showEdgeGlow = layoutMode === "hero" && !inputDisabled;
   const showPromptTips = layoutMode === "hero" && promptTips.length > 0;
   const activePromptTip = showPromptTips ? (promptTips[0] ?? null) : null;
+  const showHeroProjectSelector = layoutMode === "hero" && showProjectSelector;
+  const showProjectRow =
+    layoutMode === "hero" && (showHeroProjectSelector || activePromptTip);
+  const showProjectMissingProbe =
+    !showProjectRow &&
+    showProjectSelector &&
+    Boolean(composerSettings.projectLocked) &&
+    selectedProjectPath !== "";
   const activePromptTipId = activePromptTip?.id ?? null;
   const activePromptTipText = activePromptTip
     ? `${labels.promptTipsPrefix}${activePromptTip.label} · ${activePromptTip.prompt}`
@@ -2173,16 +2178,18 @@ export function AgentComposer({
             className={styles.composerProjectRow}
             data-project-missing={isSelectedProjectMissing ? "true" : undefined}
           >
-            <AgentProjectDropdown
-              composerSettings={composerSettings}
-              i18n={workspaceUserProjectI18n}
-              labels={{
-                projectLocked: labels.projectLocked,
-                projectMissingDescription: labels.projectMissingDescription
-              }}
-              onProjectMissingChange={setIsSelectedProjectMissing}
-              onProjectPathChange={onProjectPathChange}
-            />
+            {showHeroProjectSelector ? (
+              <AgentProjectDropdown
+                composerSettings={composerSettings}
+                i18n={workspaceUserProjectI18n}
+                labels={{
+                  projectLocked: labels.projectLocked,
+                  projectMissingDescription: labels.projectMissingDescription
+                }}
+                onProjectMissingChange={setIsSelectedProjectMissing}
+                onProjectPathChange={onProjectPathChange}
+              />
+            ) : null}
             {activePromptTip ? (
               <div
                 className={styles.composerPromptTips}
