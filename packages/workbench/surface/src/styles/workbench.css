@@ -1402,19 +1402,22 @@
   background: var(--workbench-foreground);
 }
 
-.desktop-dock__slot[data-attention-active="true"] .desktop-dock__icon-shell {
+.desktop-dock__slot[data-attention-active="true"] .desktop-dock__icon-content {
   animation: desktop-dock-bounce-translate 0.6s ease;
 }
 
-.desktop-dock__slot[data-bouncing="true"] .desktop-dock__icon-shell,
+.desktop-dock__slot[data-bouncing="true"] .desktop-dock__icon-content,
 .desktop-dock__slot[data-bouncing="true"] .desktop-dock__minimized-preview,
 .desktop-dock__slot[data-bouncing="true"] .desktop-dock__minimized-stack-icon {
   animation: desktop-dock-bounce-translate 0.6s ease;
 }
 
 .desktop-dock[data-dock-placement="left"]
+  .desktop-dock__slot[data-attention-active="true"]
+  .desktop-dock__icon-content,
+.desktop-dock[data-dock-placement="left"]
   .desktop-dock__slot[data-bouncing="true"]
-  .desktop-dock__icon-shell,
+  .desktop-dock__icon-content,
 .desktop-dock[data-dock-placement="left"]
   .desktop-dock__slot[data-bouncing="true"]
   .desktop-dock__minimized-preview,

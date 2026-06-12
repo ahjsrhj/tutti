@@ -49,6 +49,17 @@ test("dock hover panels survive pointer travel from slot to panel", () => {
     /dockMeasureRef\.current\?\.contains\(relatedTarget\)[\s\S]*?scheduleHoverPanelAtPointAfterRest\(\s*event\.clientX,\s*event\.clientY\s*\);[\s\S]*?return;/
   );
   assert.match(source, /beginDockIconInteraction\(anchorKey\)/);
+  const beginDockIconInteractionSource =
+    source.match(
+      /const beginDockIconInteraction = useCallback\(\s*\(anchorKey: string\) => \{([\s\S]*?)\n {4}\},/
+    )?.[1] ?? "";
+  assert.notEqual(beginDockIconInteractionSource, "");
+  assert.match(
+    beginDockIconInteractionSource,
+    /triggerDockBounce\(anchorKey\);/
+  );
+  assert.doesNotMatch(beginDockIconInteractionSource, /pauseDockMagnification/);
+  assert.doesNotMatch(beginDockIconInteractionSource, /resetDockMagnification/);
   assert.match(source, /const beginDockMinimizedInteraction = useCallback/);
   assert.match(source, /beginDockMinimizedInteraction\(\);/);
   assert.match(source, /beginDockMinimizedInteraction\(slot\.anchorKey\);/);

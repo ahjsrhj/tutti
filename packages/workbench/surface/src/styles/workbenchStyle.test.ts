@@ -193,6 +193,14 @@ test("dock overflow keeps scroll controls viewport-bound", () => {
   assert.match(css, /@keyframes desktop-dock-bounce-translate/s);
   assert.match(
     css,
+    /\.desktop-dock__slot\[data-bouncing="true"\]\s+\.desktop-dock__icon-content,/s
+  );
+  assert.doesNotMatch(
+    css,
+    /\.desktop-dock__slot\[data-bouncing="true"\]\s+\.desktop-dock__icon-shell,/s
+  );
+  assert.match(
+    css,
     /\.desktop-dock:not\(\[data-dock-pointer-active="true"\]\)\s+\.desktop-dock__btn\[data-interactive="true"\]:active\s*{[^}]*transform:\s*translateY\(-1px\) scale\(0\.99\);/s
   );
   assert.match(

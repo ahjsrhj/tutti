@@ -492,15 +492,9 @@ export function WorkbenchHostDock({
       hoverPanelRestTargetRef.current = null;
       clearHoverPanelOpenTimer();
       closeHoverPanelImmediate();
-      pauseDockMagnification();
       triggerDockBounce(anchorKey);
     },
-    [
-      clearHoverPanelOpenTimer,
-      closeHoverPanelImmediate,
-      pauseDockMagnification,
-      triggerDockBounce
-    ]
+    [clearHoverPanelOpenTimer, closeHoverPanelImmediate, triggerDockBounce]
   );
 
   const beginDockMinimizedInteraction = useCallback(
