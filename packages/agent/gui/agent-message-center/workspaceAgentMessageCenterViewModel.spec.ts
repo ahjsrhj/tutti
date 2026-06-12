@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  groupMessageCenterItems,
   messageCenterAgentUserStackId,
   partitionMessageCenterItemsByAgentUser
 } from "./workspaceAgentMessageCenterViewModel";
@@ -72,6 +73,69 @@ describe("partitionMessageCenterItemsByAgentUser", () => {
         userId: null
       })
     ).toBe("agent-user:unknown-agent:unknown-user");
+  });
+});
+
+describe("groupMessageCenterItems", () => {
+  it("groups the agent view by provider and user id", () => {
+    const groups = groupMessageCenterItems(
+      [
+        item({
+          agentSessionId: "codex-user-a-1",
+          provider: "codex",
+          userId: "user-a",
+          identity: {
+            userName: "Jessica",
+            agentName: "Codex"
+          }
+        }),
+        item({
+          agentSessionId: "codex-user-a-2",
+          provider: "codex",
+          userId: "user-a",
+          identity: {
+            userName: "Jessica",
+            agentName: "Codex"
+          }
+        }),
+        item({
+          agentSessionId: "codex-user-b",
+          provider: "codex",
+          userId: "user-b",
+          identity: {
+            userName: "Taylor",
+            agentName: "Codex"
+          }
+        })
+      ],
+      "agent",
+      (key) => key
+    );
+
+    expect(
+      groups.map((group) => ({
+        id: group.id,
+        label: group.label,
+        provider: group.provider,
+        userId: group.userId,
+        sessionIds: group.items.map((item) => item.agentSessionId)
+      }))
+    ).toEqual([
+      {
+        id: "agent-user:codex:user-a",
+        label: "Jessica & Codex",
+        provider: "codex",
+        userId: "user-a",
+        sessionIds: ["codex-user-a-1", "codex-user-a-2"]
+      },
+      {
+        id: "agent-user:codex:user-b",
+        label: "Taylor & Codex",
+        provider: "codex",
+        userId: "user-b",
+        sessionIds: ["codex-user-b"]
+      }
+    ]);
   });
 });
 

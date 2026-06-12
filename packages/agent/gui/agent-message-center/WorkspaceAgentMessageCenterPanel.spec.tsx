@@ -815,6 +815,83 @@ describe("WorkspaceAgentMessageCenterPanel", () => {
     expect(screen.getByText("Gemini task")).toBeTruthy();
   });
 
+  it("groups the agent view by agent and user identity", () => {
+    render(
+      <WorkspaceAgentMessageCenterPanel
+        open
+        model={createMessageCenterModel([
+          createMessageCenterItem({
+            agentSessionId: "codex-jessica-1",
+            provider: "codex",
+            userId: "user-a",
+            title: "Jessica task 1",
+            status: "working",
+            identity: {
+              userName: "Jessica",
+              userAvatarUrl: "https://cdn.example.com/jessica.png",
+              agentName: "Codex",
+              agentAvatarUrl: "https://cdn.example.com/codex.png"
+            }
+          }),
+          createMessageCenterItem({
+            agentSessionId: "codex-jessica-2",
+            provider: "codex",
+            userId: "user-a",
+            title: "Jessica task 2",
+            status: "working",
+            identity: {
+              userName: "Jessica",
+              userAvatarUrl: "https://cdn.example.com/jessica.png",
+              agentName: "Codex",
+              agentAvatarUrl: "https://cdn.example.com/codex.png"
+            }
+          }),
+          createMessageCenterItem({
+            agentSessionId: "codex-taylor",
+            provider: "codex",
+            userId: "user-b",
+            title: "Taylor task",
+            status: "working",
+            identity: {
+              userName: "Taylor",
+              userAvatarUrl: "https://cdn.example.com/taylor.png",
+              agentName: "Codex",
+              agentAvatarUrl: "https://cdn.example.com/codex.png"
+            }
+          })
+        ])}
+        onClose={vi.fn()}
+        onOpenChat={vi.fn()}
+        onSubmitPrompt={vi.fn()}
+      />
+    );
+
+    openViewOptions();
+    fireEvent.click(screen.getByRole("menuitemradio", { name: "Agent" }));
+
+    const jessicaGroup = screen
+      .getByRole("heading", { name: "Jessica & Codex · 2" })
+      .closest("section");
+    const taylorGroup = screen
+      .getByRole("heading", { name: "Taylor & Codex · 1" })
+      .closest("section");
+
+    expect(jessicaGroup).toHaveTextContent("Jessica task 1");
+    expect(jessicaGroup).not.toHaveTextContent("Taylor task");
+    expect(taylorGroup).toHaveTextContent("Taylor task");
+    expect(taylorGroup).not.toHaveTextContent("Jessica task 1");
+    expect(
+      jessicaGroup?.querySelector(
+        ".workspace-agent-message-center__identity-avatar-stack"
+      )
+    ).toBeInTheDocument();
+    expect(
+      jessicaGroup?.querySelector(
+        'img[src="https://cdn.example.com/jessica.png"]'
+      )
+    ).toBeTruthy();
+  });
+
   it("collapses grouped cards into a summary card with stack edges exposed below", () => {
     render(
       <WorkspaceAgentMessageCenterPanel
@@ -968,6 +1045,60 @@ describe("WorkspaceAgentMessageCenterPanel", () => {
       )
     ).toBeNull();
     expect(screen.getByText("Claude task 1")).toBeTruthy();
+  });
+
+  it("renders user and agent avatars in collapsed stack summaries", () => {
+    render(
+      <WorkspaceAgentMessageCenterPanel
+        open
+        model={createMessageCenterModel([
+          createMessageCenterItem({
+            agentSessionId: "codex-session-1",
+            provider: "codex",
+            userId: "user-a",
+            title: "Codex task 1",
+            status: "working",
+            identity: {
+              userName: "Jessica",
+              userAvatarUrl: "https://cdn.example.com/jessica.png",
+              agentName: "Codex",
+              agentAvatarUrl: "https://cdn.example.com/codex.png"
+            }
+          }),
+          createMessageCenterItem({
+            agentSessionId: "codex-session-2",
+            provider: "codex",
+            userId: "user-a",
+            title: "Codex task 2",
+            status: "working",
+            identity: {
+              userName: "Jessica",
+              userAvatarUrl: "https://cdn.example.com/jessica.png",
+              agentName: "Codex",
+              agentAvatarUrl: "https://cdn.example.com/codex.png"
+            }
+          })
+        ])}
+        onClose={vi.fn()}
+        onOpenChat={vi.fn()}
+        onSubmitPrompt={vi.fn()}
+      />
+    );
+
+    const summary = screen.getByTestId(
+      "workspace-agent-message-stack-summary-working:agent-user:codex:user-a"
+    );
+
+    expect(
+      summary.querySelector(
+        ".workspace-agent-message-center__identity-avatar-stack"
+      )
+    ).toBeInTheDocument();
+    const imageSources = Array.from(summary.querySelectorAll("img")).map(
+      (image) => image.getAttribute("src")
+    );
+    expect(imageSources).toContain("https://cdn.example.com/jessica.png");
+    expect(imageSources).toContain("https://cdn.example.com/codex.png");
   });
 
   it("expands and collapses a stacked card group", async () => {

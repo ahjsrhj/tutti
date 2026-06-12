@@ -2,6 +2,7 @@ import type { TranslateFn } from "../i18n/index";
 import { workspaceAgentProviderLabel } from "../shared/workspaceAgentProviderLabel";
 import {
   isWaitingMessageCenterItem,
+  type WorkspaceAgentMessageCenterIdentity,
   type WorkspaceAgentMessageCenterItem,
   type WorkspaceAgentMessageCenterModel
 } from "./workspaceAgentMessageCenterModel";
@@ -29,8 +30,11 @@ export interface MessageCenterProviderOption {
 
 export interface MessageCenterGroup {
   id: string;
+  identity?: WorkspaceAgentMessageCenterIdentity | null;
   label: string;
   items: WorkspaceAgentMessageCenterItem[];
+  provider?: string;
+  userId?: string | null;
 }
 
 export interface MessageCenterAgentUserStack {
@@ -180,8 +184,11 @@ export function groupMessageCenterItems(
       ]);
     case "agent":
       return groupByDynamicKey(items, (item) => ({
-        id: `agent:${item.provider}`,
-        label: workspaceAgentProviderLabel(item.provider)
+        id: messageCenterAgentUserStackId(item),
+        identity: item.identity,
+        label: messageCenterAgentUserGroupLabel(item),
+        provider: item.provider,
+        userId: item.userId
       }));
     case "time":
       return groupByFixedDefinitions(items, [
@@ -242,6 +249,15 @@ export function groupMessageCenterItems(
       ]);
     }
   }
+}
+
+function messageCenterAgentUserGroupLabel(
+  item: WorkspaceAgentMessageCenterItem
+): string {
+  if (item.identity) {
+    return `${item.identity.userName} & ${item.identity.agentName}`;
+  }
+  return workspaceAgentProviderLabel(item.provider);
 }
 
 const RECENTLY_COMPLETED_WINDOW_MS = 10 * 60 * 1000;
@@ -312,7 +328,10 @@ function groupByDynamicKey(
   items: readonly WorkspaceAgentMessageCenterItem[],
   keyForItem: (item: WorkspaceAgentMessageCenterItem) => {
     id: string;
+    identity?: WorkspaceAgentMessageCenterIdentity | null;
     label: string;
+    provider?: string;
+    userId?: string | null;
   }
 ): MessageCenterGroup[] {
   const groups = new Map<string, MessageCenterGroup>();
@@ -321,6 +340,10 @@ function groupByDynamicKey(
     const group = groups.get(key.id);
     if (group) {
       group.items.push(item);
+      if (!group.identity && key.identity) {
+        group.identity = key.identity;
+        group.label = key.label;
+      }
     } else {
       groups.set(key.id, { ...key, items: [item] });
     }
