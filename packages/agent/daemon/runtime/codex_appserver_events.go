@@ -42,10 +42,11 @@ func (a *CodexAppServerAdapter) handleAppServerMessage(
 			return nil, nil
 		}
 	}
-	return a.appServerNotificationEvents(session, turnID, message, normalizer, emitCommands), nil
+	return a.appServerNotificationEvents(client, session, turnID, message, normalizer, emitCommands), nil
 }
 
 func (a *CodexAppServerAdapter) appServerNotificationEvents(
+	client *acpClient,
 	session Session,
 	turnID string,
 	message acpMessage,
@@ -63,7 +64,13 @@ func (a *CodexAppServerAdapter) appServerNotificationEvents(
 		// turns (for example compaction) cannot block future prompts.
 		if a.sessionActiveTurn(session.AgentSessionID) != nil {
 			if turn := payloadObject(params["turn"]); turn != nil {
-				a.setSessionActiveTurnID(session.AgentSessionID, asString(turn["id"]))
+				providerTurnID := asString(turn["id"])
+				if a.setSessionActiveTurnID(session.AgentSessionID, providerTurnID) {
+					a.interruptActiveTurnAsync(&codexAppServerSession{
+						client:   client,
+						threadID: firstNonEmpty(asString(params["threadId"]), session.ProviderSessionID),
+					}, session, providerTurnID, "queued cancel")
+				}
 			}
 		}
 		return nil
@@ -387,9 +394,9 @@ func (a *CodexAppServerAdapter) applyTokenUsage(agentSessionID string, params ma
 	if len(tokenUsage) == 0 {
 		return
 	}
-	used, usedOK := firstACPInt64(payloadObject(tokenUsage["last"]), "totalTokens")
+	used, usedOK := firstACPInt64(payloadObject(tokenUsage["total"]), "totalTokens")
 	if !usedOK {
-		used, usedOK = firstACPInt64(payloadObject(tokenUsage["total"]), "totalTokens")
+		used, usedOK = firstACPInt64(payloadObject(tokenUsage["last"]), "totalTokens")
 	}
 	window, windowOK := firstACPInt64(tokenUsage, "modelContextWindow")
 	if !usedOK || !windowOK {

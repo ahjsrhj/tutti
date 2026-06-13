@@ -78,3 +78,23 @@ func TestAppServerUserInputAnswers(t *testing.T) {
 		})
 	}
 }
+
+func TestCodexAppServerAdapterApplyTokenUsagePrefersCumulativeTotal(t *testing.T) {
+	t.Parallel()
+
+	adapter, _, session := startedAppServerAdapter(t)
+	adapter.applyTokenUsage(session.AgentSessionID, map[string]any{
+		"tokenUsage": map[string]any{
+			"last":               map[string]any{"totalTokens": 1200},
+			"total":              map[string]any{"totalTokens": 4800},
+			"modelContextWindow": 272000,
+		},
+	})
+
+	state := adapter.SessionState(session)
+	usage, _ := state.RuntimeContext["usage"].(map[string]any)
+	contextWindow, _ := usage["contextWindow"].(map[string]any)
+	if used, _ := acpInt64Value(contextWindow["usedTokens"]); used != 4800 {
+		t.Fatalf("usage usedTokens = %#v, want cumulative total", usage)
+	}
+}

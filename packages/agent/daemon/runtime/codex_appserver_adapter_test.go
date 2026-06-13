@@ -60,6 +60,8 @@ type scriptedAppServerConnection struct {
 	turnStatus                   string // completed (default) | failed | interrupted
 	turnError                    map[string]any
 	holdTurn                     bool // do not finish the turn until released
+	turnStartEntered             chan struct{}
+	turnStartRelease             chan struct{}
 	commandApproval              bool
 	userInputRequest             bool
 	approvalResponse             map[string]any
@@ -257,7 +259,15 @@ func (c *scriptedAppServerConnection) Send(data []byte) error {
 			approval := c.commandApproval
 			userInput := c.userInputRequest
 			emitPlan := c.emitPlanItem
+			turnStartEntered := c.turnStartEntered
+			turnStartRelease := c.turnStartRelease
 			c.mu.Unlock()
+			if turnStartEntered != nil {
+				close(turnStartEntered)
+			}
+			if turnStartRelease != nil {
+				<-turnStartRelease
+			}
 			// Mirror the real app-server: the RPC responds immediately with
 			// the inProgress turn; output streams as notifications.
 			c.sendJSON(map[string]any{
@@ -875,6 +885,63 @@ func TestCodexAppServerAdapterCancelInterruptsActiveTurn(t *testing.T) {
 		}
 	case <-time.After(5 * time.Second):
 		t.Fatalf("Exec did not finish after interrupt")
+	}
+}
+
+func TestCodexAppServerAdapterCancelQueuesInterruptUntilTurnIDArrives(t *testing.T) {
+	t.Parallel()
+
+	adapter, transport, session := startedAppServerAdapter(t)
+	transport.conn.holdTurn = true
+	transport.conn.turnStartEntered = make(chan struct{})
+	transport.conn.turnStartRelease = make(chan struct{})
+
+	execDone := make(chan []activityshared.Event, 1)
+	go func() {
+		events, _ := adapter.Exec(context.Background(), session, []PromptContentBlock{{
+			Type: "text", Text: "long task",
+		}}, "", "turn-local-1", nil, nil)
+		execDone <- events
+	}()
+
+	select {
+	case <-transport.conn.turnStartEntered:
+	case <-time.After(5 * time.Second):
+		t.Fatalf("turn/start was not sent")
+	}
+	waitForCondition(t, func() bool {
+		return adapter.sessionActiveTurn(session.AgentSessionID) != nil &&
+			adapter.sessionActiveTurnID(session.AgentSessionID) == ""
+	})
+	if _, err := adapter.Cancel(context.Background(), session, "user requested"); err != nil {
+		t.Fatalf("Cancel before provider turn id: %v", err)
+	}
+
+	close(transport.conn.turnStartRelease)
+	waitForCondition(t, func() bool {
+		return len(appServerRequestParamsList(t, transport.conn, appServerMethodTurnInterrupt)) == 1
+	})
+	interrupt := appServerRequestParams(t, transport.conn, appServerMethodTurnInterrupt)
+	if asString(interrupt["threadId"]) != "codex-thread-1" || asString(interrupt["turnId"]) != "turn-1" {
+		t.Fatalf("turn/interrupt params = %#v", interrupt)
+	}
+	select {
+	case events := <-execDone:
+		if completed := eventsOfType(events, activityshared.EventTurnCompleted); len(completed) != 1 ||
+			completed[0].Payload.TurnOutcome != string(activityshared.TurnOutcomeInterrupted) {
+			t.Fatalf("expected interrupted turn outcome, got %#v", events)
+		}
+	case <-time.After(5 * time.Second):
+		t.Fatalf("Exec did not finish after queued interrupt")
+	}
+}
+
+func TestCodexAppServerAdapterCancelWithoutActiveTurnFails(t *testing.T) {
+	t.Parallel()
+
+	adapter, _, session := startedAppServerAdapter(t)
+	if _, err := adapter.Cancel(context.Background(), session, "user requested"); err == nil {
+		t.Fatalf("Cancel without active turn returned nil error")
 	}
 }
 

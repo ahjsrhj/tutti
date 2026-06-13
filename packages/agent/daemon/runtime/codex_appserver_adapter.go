@@ -117,10 +117,14 @@ type codexAppServerSession struct {
 type codexAppServerActiveTurn struct {
 	turnID       string
 	session      Session
+	ctx          context.Context
 	normalizer   *acpTurnNormalizer
 	emit         func([]activityshared.Event)
 	emitCommands CommandSnapshotSink
 	done         chan map[string]any
+
+	cancelRequested     bool
+	cancelInterruptSent bool
 }
 
 func NewCodexAppServerAdapter(transport ProcessTransport) *CodexAppServerAdapter {
@@ -665,6 +669,7 @@ func (a *CodexAppServerAdapter) Exec(
 	appTurn := &codexAppServerActiveTurn{
 		turnID:       turnID,
 		session:      session,
+		ctx:          ctx,
 		normalizer:   normalizer,
 		emit:         emitEvents,
 		emitCommands: emitCommands,
@@ -707,7 +712,9 @@ func (a *CodexAppServerAdapter) Exec(
 	// arrives with the turn/completed notification.
 	initialTurn := appServerTurnFromResult(result)
 	if providerTurnID := asString(initialTurn["id"]); providerTurnID != "" {
-		a.setSessionActiveTurnID(session.AgentSessionID, providerTurnID)
+		if a.setSessionActiveTurnID(session.AgentSessionID, providerTurnID) {
+			a.interruptActiveTurnAsync(appSession, session, providerTurnID, "queued cancel")
+		}
 	}
 	finalTurn, finishErr := a.awaitTurnCompletion(ctx, appSession, appTurn, initialTurn)
 	a.endActiveTurn(session.AgentSessionID, appTurn)
@@ -921,14 +928,27 @@ func (a *CodexAppServerAdapter) Cancel(ctx context.Context, session Session, rea
 	if appSession == nil || appSession.client == nil {
 		return nil, ErrSessionDisconnected
 	}
-	activeTurnID := a.sessionActiveTurnID(session.AgentSessionID)
+	activeTurnID, queued := a.requestActiveTurnCancel(session.AgentSessionID)
 	// Unblock any handler waiting on an approval answer first: the message
 	// read loop is parked inside that handler, so the interrupt response
 	// could never be dispatched otherwise.
 	a.rejectPendingRequests(session.AgentSessionID, errPermissionRequestCanceled)
 	if activeTurnID == "" {
-		return nil, nil
+		if queued {
+			return nil, nil
+		}
+		return nil, ErrSessionNoActiveTurn
 	}
+	return nil, a.interruptActiveTurn(ctx, appSession, session, activeTurnID, reason)
+}
+
+func (a *CodexAppServerAdapter) interruptActiveTurn(
+	ctx context.Context,
+	appSession *codexAppServerSession,
+	session Session,
+	activeTurnID string,
+	reason string,
+) error {
 	cancelCtx, cancel := context.WithTimeout(ctx, acpPermissionModeTimeout)
 	defer cancel()
 	if _, err := appSession.client.CallNoHandler(cancelCtx, appServerMethodTurnInterrupt, map[string]any{
@@ -943,9 +963,29 @@ func (a *CodexAppServerAdapter) Cancel(ctx context.Context, session Session, rea
 			"reason", reason,
 			"error", err.Error(),
 		)
-		return nil, err
+		return err
 	}
-	return nil, nil
+	return nil
+}
+
+func (a *CodexAppServerAdapter) interruptActiveTurnAsync(
+	appSession *codexAppServerSession,
+	session Session,
+	activeTurnID string,
+	reason string,
+) {
+	go func() {
+		if err := a.interruptActiveTurn(context.Background(), appSession, session, activeTurnID, reason); err != nil {
+			slog.Warn("agent session app-server queued interrupt failed",
+				"event", "agent_session.app_server.interrupt.queued_failed",
+				"agent_session_id", session.AgentSessionID,
+				"provider_session_id", appSession.threadID,
+				"turn_id", activeTurnID,
+				"reason", reason,
+				"error", err.Error(),
+			)
+		}
+	}()
 }
 
 func (a *CodexAppServerAdapter) ApplyPermissionMode(_ context.Context, session Session) error {
@@ -1293,16 +1333,47 @@ func (a *CodexAppServerAdapter) sessionActiveTurnID(agentSessionID string) strin
 	return strings.TrimSpace(appSession.activeTurnID)
 }
 
-func (a *CodexAppServerAdapter) setSessionActiveTurnID(agentSessionID string, turnID string) {
+func (a *CodexAppServerAdapter) requestActiveTurnCancel(agentSessionID string) (string, bool) {
 	if a == nil {
-		return
+		return "", false
+	}
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	appSession := a.sessions[strings.TrimSpace(agentSessionID)]
+	if appSession == nil {
+		return "", false
+	}
+	if activeTurnID := strings.TrimSpace(appSession.activeTurnID); activeTurnID != "" {
+		return activeTurnID, false
+	}
+	if appSession.activeTurn == nil {
+		return "", false
+	}
+	if appSession.activeTurn.ctx != nil && appSession.activeTurn.ctx.Err() != nil {
+		return "", false
+	}
+	appSession.activeTurn.cancelRequested = true
+	return "", true
+}
+
+func (a *CodexAppServerAdapter) setSessionActiveTurnID(agentSessionID string, turnID string) bool {
+	if a == nil {
+		return false
 	}
 	a.mu.Lock()
 	defer a.mu.Unlock()
 	appSession := a.sessions[strings.TrimSpace(agentSessionID)]
 	if appSession != nil {
 		appSession.activeTurnID = strings.TrimSpace(turnID)
+		if appSession.activeTurn != nil &&
+			appSession.activeTurnID != "" &&
+			appSession.activeTurn.cancelRequested &&
+			!appSession.activeTurn.cancelInterruptSent {
+			appSession.activeTurn.cancelInterruptSent = true
+			return true
+		}
 	}
+	return false
 }
 
 func (a *CodexAppServerAdapter) storePendingRequest(pending *pendingACPRequest) {

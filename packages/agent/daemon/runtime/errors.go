@@ -7,7 +7,10 @@ const (
 	AppErrorResumeSessionNotLocal   = "agent.resume_session_not_local"
 )
 
-var ErrSessionDisconnected = errors.New("agent session is not connected")
+var (
+	ErrSessionDisconnected = errors.New("agent session is not connected")
+	ErrSessionNoActiveTurn = errors.New("agent session has no active turn")
+)
 
 type AppError struct {
 	Code         string
