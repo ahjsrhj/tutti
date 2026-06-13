@@ -127,7 +127,7 @@ import {
   PLAN_IMPLEMENTATION_PROMPT,
   latestPlanTurnId,
   planImplementationPromptFromPlanTurn
-} from "../model/planImplementation";
+} from "../../../shared/agentConversation/planImplementation";
 import {
   INITIAL_USAGE_ALERT_STATE,
   nextUsageAlert,

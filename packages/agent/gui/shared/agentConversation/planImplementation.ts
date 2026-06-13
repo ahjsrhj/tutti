@@ -1,4 +1,4 @@
-import type { AgentConversationPromptVM } from "../../../shared/agentConversation/contracts/agentConversationVM";
+import type { AgentConversationPromptVM } from "./contracts/agentConversationVM";
 
 /**
  * Codex has no provider-driven exit-plan approval flow (unlike claude-code's

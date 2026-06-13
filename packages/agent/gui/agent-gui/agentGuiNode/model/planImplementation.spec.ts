@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   PLAN_IMPLEMENTATION_PROMPT,
   latestPlanTurnId
-} from "./planImplementation";
+} from "../../../shared/agentConversation/planImplementation";
 
 describe("latestPlanTurnId", () => {
   it("returns the turn id when the latest turn produced a plan item", () => {

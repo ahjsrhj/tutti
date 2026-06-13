@@ -31,7 +31,7 @@ import {
   PLAN_IMPLEMENTATION_ACTION_FEEDBACK,
   PLAN_IMPLEMENTATION_ACTION_IMPLEMENT,
   PLAN_IMPLEMENTATION_ACTION_SKIP
-} from "../../../agent-gui/agentGuiNode/model/planImplementation";
+} from "../planImplementation";
 import {
   getPromptToolDetails,
   isPromptRequestIdTitle,
@@ -204,9 +204,11 @@ function CompactAskUserPromptSurface({
                       onSubmit({
                         requestId: prompt.requestId,
                         action: "submit",
-                        payload: { ...buildAskUserAnswerPayload({
-                          [question.id]: option.label
-                        }) }
+                        payload: {
+                          ...buildAskUserAnswerPayload({
+                            [question.id]: option.label
+                          })
+                        }
                       })
                     }
                   >

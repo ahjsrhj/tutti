@@ -13,7 +13,7 @@ export { approvalOptionDisplayLabel } from "../shared/agentConversation/approval
 export {
   PLAN_IMPLEMENTATION_ACTION_IMPLEMENT,
   PLAN_IMPLEMENTATION_PROMPT
-} from "../agent-gui/agentGuiNode/model/planImplementation";
+} from "../shared/agentConversation/planImplementation";
 export type { PromptToolDetail } from "../shared/agentConversation/promptToolDetails";
 export type { WorkspaceAgentMessageCenterPanelProps } from "./WorkspaceAgentMessageCenterPanel";
 export type { WorkspaceAgentMessageCenterCardProps } from "./WorkspaceAgentMessageCenterCard";
