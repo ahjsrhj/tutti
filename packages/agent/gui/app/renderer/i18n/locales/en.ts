@@ -509,6 +509,8 @@ export const en = {
       slashStatusContextUnavailable: "Context usage unavailable",
       slashStatusLimitsUnavailable: "Rate limits unavailable from this agent",
       noRunningResponse: "No running response to stop.",
+      copyMessage: "Copy message",
+      messageCopied: "Copied",
       promptTipsPrefix: "Tips: ",
       promptTips: {
         setWorkspace: {

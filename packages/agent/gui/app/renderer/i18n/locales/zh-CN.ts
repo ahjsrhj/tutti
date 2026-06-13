@@ -466,6 +466,8 @@ export const zhCN = {
       slashStatusContextUnavailable: "上下文用量不可用",
       slashStatusLimitsUnavailable: "当前 Agent 未提供额度限制",
       noRunningResponse: "当前没有正在运行的回复。",
+      copyMessage: "复制消息",
+      messageCopied: "已复制",
       promptTipsPrefix: "Tips：",
       promptTips: {
         setWorkspace: {
