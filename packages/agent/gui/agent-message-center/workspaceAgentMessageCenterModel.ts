@@ -10,6 +10,10 @@ import type { AgentConversationPromptVM } from "../shared/agentConversation/cont
 import { normalizeAskUserQuestions } from "../shared/agentConversation/askUserQuestions";
 import type { WorkspaceAgentActivityStatus } from "../shared/workspaceAgentActivityListViewModel";
 import { resolveWorkspaceAgentSessionSortTimeUnixMs } from "../shared/workspaceAgentSessionSortTime";
+import {
+  latestPlanTurnId,
+  planImplementationPromptFromPlanTurn
+} from "../shared/agentConversation/planImplementation";
 
 export interface WorkspaceAgentMessageCenterModel {
   waitingCount: number;
@@ -97,6 +101,7 @@ export function buildWorkspaceAgentMessageCenterModel(
       const title = resolveSessionTitle(session, messages);
       const pendingPrompt =
         pendingPromptFromMessages(messages) ??
+        codexPlanImplementationPrompt(session, status, messages) ??
         fallbackPromptFromNeedsAttention(
           needsAttention,
           options.promptFallbackLabels
@@ -391,6 +396,37 @@ function exitPlanPromptFromMessage(
       stringValue(payload.summary) ??
       messageSummary(message)
   };
+}
+
+function codexPlanImplementationPrompt(
+  session: AgentActivitySession,
+  status: WorkspaceAgentActivityStatus,
+  messages: readonly AgentActivityMessage[]
+): AgentConversationPromptVM | null {
+  if (session.provider.trim().toLowerCase() !== "codex") {
+    return null;
+  }
+  // Only offer once the session has settled to completed/idle — not while it
+  // is still working/waiting, and not after failed/canceled (no point asking
+  // to implement a plan from a turn that didn't finish cleanly). Mirrors the
+  // codex TUI gate but evaluated against the latest turn rather than a
+  // transient per-turn flag.
+  if (status !== "completed" && status !== "idle") {
+    return null;
+  }
+  const planTurnId = latestPlanTurnId(messages);
+  if (!planTurnId) {
+    return null;
+  }
+  // Title from the plan message itself (matching latestPlanTurnId's plan-item
+  // detection), not whichever message in the turn happens to come first.
+  const planMessage = messages.find(
+    (item) =>
+      item.turnId?.trim() === planTurnId &&
+      recordValue(item.payload).messageKind === "plan"
+  );
+  const title = planMessage ? messageSummary(planMessage) : "";
+  return planImplementationPromptFromPlanTurn(planTurnId, title);
 }
 
 function latestAgentMessage(

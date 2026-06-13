@@ -512,7 +512,7 @@ describe("buildWorkspaceAgentMessageCenterModel", () => {
     });
   });
 
-  it("does not synthesize a plan-implementation decision from codex plan messages", () => {
+  it("synthesizes a plan-implementation decision from a settled codex plan turn", () => {
     const model = buildWorkspaceAgentMessageCenterModel(
       snapshot({
         messages: [
@@ -536,8 +536,12 @@ describe("buildWorkspaceAgentMessageCenterModel", () => {
       })
     );
 
-    expect(model.items[0]?.pendingPrompt).toBeNull();
-    expect(model.waitingCount).toBe(0);
+    expect(model.items[0]?.pendingPrompt).toEqual({
+      kind: "plan-implementation",
+      requestId: "turn-plan",
+      title: "# Plan\n1. inspect"
+    });
+    expect(model.waitingCount).toBe(1);
   });
 
   it("does not offer a plan decision while the codex session is still working", () => {
@@ -564,6 +568,67 @@ describe("buildWorkspaceAgentMessageCenterModel", () => {
       })
     );
 
+    expect(model.items[0]?.pendingPrompt).toBeNull();
+  });
+
+  it("does not offer a codex plan decision when the latest turn is not a plan", () => {
+    const model = buildWorkspaceAgentMessageCenterModel(
+      snapshot({
+        messages: [
+          message({
+            agentSessionId: "session-1",
+            messageId: "plan-1",
+            kind: "message.assistant",
+            status: "completed",
+            turnId: "turn-plan",
+            payload: { messageKind: "plan", text: "# Plan" },
+            occurredAtUnixMs: 10
+          }),
+          message({
+            agentSessionId: "session-1",
+            messageId: "reply-1",
+            kind: "message.assistant",
+            status: "completed",
+            turnId: "turn-reply",
+            payload: { text: "done" },
+            occurredAtUnixMs: 20
+          })
+        ],
+        sessions: [
+          session({
+            agentSessionId: "session-1",
+            provider: "codex",
+            status: "completed"
+          })
+        ]
+      })
+    );
+    expect(model.items[0]?.pendingPrompt).toBeNull();
+  });
+
+  it("does not synthesize a plan decision for non-codex providers", () => {
+    const model = buildWorkspaceAgentMessageCenterModel(
+      snapshot({
+        messages: [
+          message({
+            agentSessionId: "session-1",
+            messageId: "plan-1",
+            kind: "message.assistant",
+            status: "completed",
+            turnId: "turn-plan",
+            payload: { messageKind: "plan", text: "# Plan" },
+            occurredAtUnixMs: 20
+          })
+        ],
+        sessions: [
+          session({
+            agentSessionId: "session-1",
+            provider: "claude-code",
+            status: "completed"
+          })
+        ]
+      })
+    );
     expect(model.items[0]?.pendingPrompt).toBeNull();
   });
 });
