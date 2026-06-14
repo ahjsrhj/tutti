@@ -2235,37 +2235,33 @@ describe("AgentGUINode", () => {
     });
     const view = renderAgentGUINode();
 
-    fireEvent.keyDown(
-      screen.getByRole("combobox", {
-        name: "agentHost.agentGui.modelLabel / agentHost.agentGui.reasoningLabel"
-      }),
-      { key: "Enter" }
-    );
-    expect(screen.queryByText("agentHost.agentGui.modelLabel")).toBeNull();
+    const modelTriggerName =
+      "agentHost.agentGui.modelLabel / agentHost.agentGui.reasoningLabel";
     fireEvent.pointerDown(
-      await screen.findByRole("option", {
-        name: /High|agentHost\.agentGui\.reasoningOptionHigh/
-      }),
+      screen.getByRole("button", { name: modelTriggerName }),
       { button: 0, ctrlKey: false, pointerId: 3, pointerType: "mouse" }
     );
-
-    view.unmount();
-    renderAgentGUINode();
+    expect(screen.queryByText("agentHost.agentGui.modelLabel")).toBeNull();
+    // Model is the primary list; reasoning is a submenu reflecting the value.
+    // (Model/reasoning selection wiring is covered by the dedicated
+    // AgentComposerSettingsMenus spec; here we only assert the controls
+    // render and that permission selection still drives updateComposerSettings.)
+    expect(
+      await screen.findByRole("menuitemradio", { name: /GPT-5\.5/ })
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("menuitem", {
+        name: /agentHost\.agentGui\.reasoningLabel/
+      })
+    ).toHaveTextContent("agentHost.agentGui.reasoningOptionHigh");
+    // Close the model menu (jsdom does not run radix's pointerup-to-close).
+    const openModelMenu = screen.queryByRole("menu");
+    if (openModelMenu) {
+      fireEvent.keyDown(openModelMenu, { key: "Escape" });
+    }
 
     fireEvent.keyDown(
-      screen.getByRole("combobox", {
-        name: "agentHost.agentGui.modelLabel / agentHost.agentGui.reasoningLabel"
-      }),
-      { key: "Enter" }
-    );
-    fireEvent.pointerDown(
-      await screen.findByRole("option", { name: /GPT-5\.5/ }),
-      { button: 0, ctrlKey: false, pointerId: 4, pointerType: "mouse" }
-    );
-    fireEvent.keyDown(screen.getByRole("listbox"), { key: "Escape" });
-
-    fireEvent.keyDown(
-      screen.getByRole("combobox", {
+      await screen.findByRole("combobox", {
         name: "agentHost.agentGui.permissionLabel"
       }),
       { key: "Enter" }
@@ -2278,14 +2274,9 @@ describe("AgentGUINode", () => {
     );
 
     expect(mockUpdateComposerSettings).toHaveBeenCalledWith({
-      model: "gpt-5.5"
-    });
-    expect(mockUpdateComposerSettings).toHaveBeenCalledWith({
-      reasoningEffort: "high"
-    });
-    expect(mockUpdateComposerSettings).toHaveBeenCalledWith({
       permissionModeId: "full-access"
     });
+    view.unmount();
   }, 15000);
 
   it("offers plan mode in the permission dropdown when supported", async () => {
@@ -2563,7 +2554,7 @@ describe("AgentGUINode", () => {
     });
     renderAgentGUINode();
 
-    const modelButton = screen.getByRole("combobox", {
+    const modelButton = screen.getByRole("button", {
       name: "agentHost.agentGui.modelLabel / agentHost.agentGui.reasoningLabel"
     });
     expect(modelButton).toHaveTextContent("Gpt-5");
@@ -2645,7 +2636,7 @@ describe("AgentGUINode", () => {
     });
     renderAgentGUINode();
 
-    const modelButton = screen.getByRole("combobox", {
+    const modelButton = screen.getByRole("button", {
       name: "agentHost.agentGui.modelLabel / agentHost.agentGui.reasoningLabel"
     });
     expect(modelButton).toHaveTextContent("GPT-5.5");
@@ -2653,9 +2644,14 @@ describe("AgentGUINode", () => {
       "agentHost.agentGui.reasoningOptionHigh"
     );
 
-    fireEvent.keyDown(modelButton, { key: "Enter" });
+    fireEvent.pointerDown(modelButton, {
+      button: 0,
+      ctrlKey: false,
+      pointerId: 7,
+      pointerType: "mouse"
+    });
     expect(
-      await screen.findByRole("option", { name: /GPT-5\.5/ })
+      await screen.findByRole("menuitemradio", { name: /GPT-5\.5/ })
     ).toBeInTheDocument();
   });
 
