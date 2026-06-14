@@ -1,7 +1,6 @@
 package types
 
 import (
-	"os"
 	"path/filepath"
 	"testing"
 )
@@ -35,15 +34,11 @@ func TestResolveDefaultsFromEnvUsesSharedGeneratedDefaults(t *testing.T) {
 	assertEqualInt(t, got.Logging.MaxTotalMB, 300)
 }
 
-func TestResolveDefaultsFromEnvPrefersTuttiOverridesOverLegacyNextopOverrides(t *testing.T) {
+func TestResolveDefaultsFromEnvAppliesOverrides(t *testing.T) {
 	t.Setenv("TUTTI_ENV", "development")
-	t.Setenv("NEXTOP_ENV", "production")
 	t.Setenv("TUTTI_STATE_DIR", "/tmp/tutti-state")
-	t.Setenv("NEXTOP_STATE_DIR", "/tmp/nextop-state")
 	t.Setenv("TUTTI_LOG_DIR", "/tmp/tutti-logs")
-	t.Setenv("NEXTOP_LOG_DIR", "/tmp/nextop-logs")
 	t.Setenv("TUTTID_ADDR", "127.0.0.1:1111")
-	t.Setenv("NEXTOPD_ADDR", "127.0.0.1:2222")
 
 	got := ResolveDefaultsFromEnv()
 
@@ -51,44 +46,6 @@ func TestResolveDefaultsFromEnvPrefersTuttiOverridesOverLegacyNextopOverrides(t 
 	assertEqual(t, got.State.RootDir, "/tmp/tutti-state")
 	assertEqual(t, got.State.LogsDir, "/tmp/tutti-logs")
 	assertEqual(t, got.Transport.TCPAddr, "127.0.0.1:1111")
-}
-
-func TestResolveDefaultsFromEnvFallsBackToLegacyNextopOverrides(t *testing.T) {
-	t.Setenv("TUTTI_ENV", "")
-	t.Setenv("NEXTOP_ENV", "development")
-	t.Setenv("TUTTI_STATE_DIR", "")
-	t.Setenv("NEXTOP_STATE_DIR", "/tmp/nextop-state")
-	t.Setenv("TUTTI_LOG_DIR", "")
-	t.Setenv("NEXTOP_LOG_DIR", "/tmp/nextop-logs")
-	t.Setenv("TUTTID_ADDR", "")
-	t.Setenv("NEXTOPD_ADDR", "127.0.0.1:2222")
-
-	got := ResolveDefaultsFromEnv()
-
-	assertEqual(t, got.Runtime.Env, "development")
-	assertEqual(t, got.State.RootDir, "/tmp/nextop-state")
-	assertEqual(t, got.State.LogsDir, "/tmp/nextop-logs")
-	assertEqual(t, got.Transport.TCPAddr, "127.0.0.1:2222")
-}
-
-func TestResolveDefaultsFromEnvMigratesLegacyDefaultStateDir(t *testing.T) {
-	homeDir := t.TempDir()
-	legacyRoot := filepath.Join(homeDir, ".nextop-dev")
-	if err := os.MkdirAll(legacyRoot, 0o755); err != nil {
-		t.Fatalf("create legacy root: %v", err)
-	}
-	t.Setenv("HOME", homeDir)
-	t.Setenv("TUTTI_ENV", "development")
-	t.Setenv("TUTTI_STATE_DIR", "")
-	t.Setenv("NEXTOP_STATE_DIR", "")
-
-	got := ResolveDefaultsFromEnv()
-
-	wantRoot := filepath.Join(homeDir, ".tutti-dev")
-	assertEqual(t, got.State.RootDir, wantRoot)
-	if _, err := os.Stat(wantRoot); err != nil {
-		t.Fatalf("stat migrated root: %v", err)
-	}
 }
 
 func TestResolveAnalyticsConfigUsesGeneratedDefaults(t *testing.T) {
@@ -110,31 +67,6 @@ func TestResolveAnalyticsConfigUsesGeneratedDefaults(t *testing.T) {
 	assertEqual(t, got.Channel, "sg")
 	assertEqual(t, got.ChannelDomain, "https://gator.uba.ap-southeast-1.volces.com")
 	assertEqual(t, got.AppVersion, "0.0.0")
-}
-
-func TestResolveAnalyticsConfigFallsBackToLegacyNextopOverrides(t *testing.T) {
-	t.Setenv("TUTTI_ANALYTICS_DISABLED", "")
-	t.Setenv("NEXTOP_ANALYTICS_DISABLED", "true")
-	t.Setenv("TUTTI_ANALYTICS_APP_ID", "")
-	t.Setenv("NEXTOP_ANALYTICS_APP_ID", "321")
-	t.Setenv("TUTTI_ANALYTICS_APP_KEY", "")
-	t.Setenv("NEXTOP_ANALYTICS_APP_KEY", "legacy-key")
-	t.Setenv("TUTTI_ANALYTICS_CHANNEL_DOMAIN", "")
-	t.Setenv("NEXTOP_ANALYTICS_CHANNEL_DOMAIN", "https://legacy.example.test")
-	t.Setenv("TUTTI_APP_VERSION", "")
-	t.Setenv("NEXTOP_APP_VERSION", "9.9.9")
-	t.Setenv("TUTTI_ANALYTICS_APP_VERSION", "")
-	t.Setenv("NEXTOP_ANALYTICS_APP_VERSION", "")
-
-	got := ResolveAnalyticsConfig()
-
-	if !got.Disabled {
-		t.Fatal("analytics disabled = false, want true")
-	}
-	assertEqualInt(t, got.AppID, 321)
-	assertEqual(t, got.AppKey, "legacy-key")
-	assertEqual(t, got.ChannelDomain, "https://legacy.example.test")
-	assertEqual(t, got.AppVersion, "9.9.9")
 }
 
 func TestResolveAnalyticsConfigEnablesDebugPipelineInDevelopment(t *testing.T) {

@@ -37,13 +37,10 @@ func TestResolveDefaultsFromEnvHonorsListenerInfoOverride(t *testing.T) {
 	}
 }
 
-func TestResolveDefaultsFromEnvPrefersTuttiOverridesOverLegacyNextopOverrides(t *testing.T) {
+func TestResolveDefaultsFromEnvAppliesOverrides(t *testing.T) {
 	t.Setenv("TUTTI_ENV", "development")
-	t.Setenv("NEXTOP_ENV", "production")
 	t.Setenv("TUTTI_STATE_DIR", "/tmp/tutti-state")
-	t.Setenv("NEXTOP_STATE_DIR", "/tmp/nextop-state")
 	t.Setenv("TUTTID_LISTENER_INFO_PATH", "/tmp/tuttid.listener.json")
-	t.Setenv("NEXTOPD_LISTENER_INFO_PATH", "/tmp/nextopd.listener.json")
 
 	got := ResolveDefaultsFromEnv()
 
@@ -54,27 +51,6 @@ func TestResolveDefaultsFromEnvPrefersTuttiOverridesOverLegacyNextopOverrides(t 
 		t.Fatalf("root dir = %q", got.State.RootDir)
 	}
 	if got.State.TuttidListenerInfoPath != "/tmp/tuttid.listener.json" {
-		t.Fatalf("listener info path = %q", got.State.TuttidListenerInfoPath)
-	}
-}
-
-func TestResolveDefaultsFromEnvFallsBackToLegacyNextopOverrides(t *testing.T) {
-	t.Setenv("TUTTI_ENV", "")
-	t.Setenv("NEXTOP_ENV", "development")
-	t.Setenv("TUTTI_STATE_DIR", "")
-	t.Setenv("NEXTOP_STATE_DIR", "/tmp/nextop-state")
-	t.Setenv("TUTTID_LISTENER_INFO_PATH", "")
-	t.Setenv("NEXTOPD_LISTENER_INFO_PATH", "/tmp/nextopd.listener.json")
-
-	got := ResolveDefaultsFromEnv()
-
-	if got.Runtime.Env != "development" {
-		t.Fatalf("env = %q, want development", got.Runtime.Env)
-	}
-	if got.State.RootDir != "/tmp/nextop-state" {
-		t.Fatalf("root dir = %q", got.State.RootDir)
-	}
-	if got.State.TuttidListenerInfoPath != "/tmp/nextopd.listener.json" {
 		t.Fatalf("listener info path = %q", got.State.TuttidListenerInfoPath)
 	}
 }

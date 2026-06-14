@@ -49,21 +49,4 @@ describe("room share text i18n", () => {
       roomId: "room-1"
     });
   });
-
-  it("parses legacy nextop scheme room links", () => {
-    expect(
-      parseRoomShareJoinInput(
-        "nextop://room/join?roomId=room-1&inviteCode=legacy"
-      )
-    ).toMatchObject({
-      inviteCode: "legacy",
-      roomId: "room-1"
-    });
-    expect(
-      parseRoomShareJoinInput("nextop://invite/room-2?code=legacy-2")
-    ).toMatchObject({
-      inviteCode: "legacy-2",
-      roomId: "room-2"
-    });
-  });
 });

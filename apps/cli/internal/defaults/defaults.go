@@ -32,11 +32,6 @@ type StateDefaults struct {
 	TuttidListenerInfoPath string
 }
 
-const (
-	legacyProductionDirName  = ".nextop"
-	legacyDevelopmentDirName = ".nextop-dev"
-)
-
 func ResolveDefaultsFromEnv() ResolvedDefaults {
 	env := resolveTuttiEnv()
 	stateRootDir := resolveStateRootDir(env)
@@ -55,7 +50,7 @@ func ResolveDefaultsFromEnv() ResolvedDefaults {
 }
 
 func resolveTuttiEnv() string {
-	value := strings.ToLower(resolveStringOverride("TUTTI_ENV", "NEXTOP_ENV", ""))
+	value := strings.ToLower(resolveStringOverride("TUTTI_ENV", ""))
 	switch value {
 	case "dev", "development", "local":
 		return "development"
@@ -65,7 +60,7 @@ func resolveTuttiEnv() string {
 }
 
 func resolveStateRootDir(env string) string {
-	override := resolveStringOverride("TUTTI_STATE_DIR", "NEXTOP_STATE_DIR", "")
+	override := resolveStringOverride("TUTTI_STATE_DIR", "")
 	if override != "" {
 		return override
 	}
@@ -79,24 +74,15 @@ func resolveStateRootDir(env string) string {
 	}
 
 	dirName := generatedDefaults.State.ProductionDirName
-	legacyDirName := legacyProductionDirName
 	if env == "development" {
 		dirName = generatedDefaults.State.DevelopmentDirName
-		legacyDirName = legacyDevelopmentDirName
 	}
 
-	stateRootDir := filepath.Join(homeDir, dirName)
-	legacyStateRootDir := filepath.Join(homeDir, legacyDirName)
-	if _, err := os.Stat(stateRootDir); os.IsNotExist(err) {
-		if _, legacyErr := os.Stat(legacyStateRootDir); legacyErr == nil {
-			return legacyStateRootDir
-		}
-	}
-	return stateRootDir
+	return filepath.Join(homeDir, dirName)
 }
 
 func resolveRunDir(stateRootDir string) string {
-	override := resolveStringOverride("TUTTID_RUN_DIR", "NEXTOPD_RUN_DIR", "")
+	override := resolveStringOverride("TUTTID_RUN_DIR", "")
 	if override != "" {
 		return override
 	}
@@ -105,7 +91,7 @@ func resolveRunDir(stateRootDir string) string {
 }
 
 func resolveListenerInfoPath(runDir string) string {
-	override := resolveStringOverride("TUTTID_LISTENER_INFO_PATH", "NEXTOPD_LISTENER_INFO_PATH", "")
+	override := resolveStringOverride("TUTTID_LISTENER_INFO_PATH", "")
 	if override != "" {
 		return override
 	}
@@ -113,14 +99,10 @@ func resolveListenerInfoPath(runDir string) string {
 	return filepath.Join(runDir, generatedDefaults.State.ListenerInfoFileName)
 }
 
-func resolveStringOverride(name string, legacyName string, fallback string) string {
+func resolveStringOverride(name string, fallback string) string {
 	override := strings.TrimSpace(os.Getenv(name))
 	if override != "" {
 		return override
-	}
-	legacyOverride := strings.TrimSpace(os.Getenv(legacyName))
-	if legacyOverride != "" {
-		return legacyOverride
 	}
 	return fallback
 }

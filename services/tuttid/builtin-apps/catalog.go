@@ -43,13 +43,12 @@ type Distribution struct {
 }
 
 const (
-	remoteCatalogSchemaVersionV1       = "tutti.app.catalog.v1"
-	legacyRemoteCatalogSchemaVersionV1 = "nextop.app.catalog.v1"
-	remoteCatalogFileEnv               = "TUTTI_APP_CATALOG_FILE"
-	remoteCatalogURLEnv                = "TUTTI_APP_CATALOG_URL"
-	defaultRemoteCatalogURL            = "https://d1x7gb6wqsqmnm.cloudfront.net/tutti-app-releases/catalog.json"
-	remoteCatalogFetchTimeout          = 10 * time.Second
-	remoteCatalogFetchAttempts         = 3
+	remoteCatalogSchemaVersionV1 = "tutti.app.catalog.v1"
+	remoteCatalogFileEnv         = "TUTTI_APP_CATALOG_FILE"
+	remoteCatalogURLEnv          = "TUTTI_APP_CATALOG_URL"
+	defaultRemoteCatalogURL      = "https://d1x7gb6wqsqmnm.cloudfront.net/tutti-app-releases/catalog.json"
+	remoteCatalogFetchTimeout    = 10 * time.Second
+	remoteCatalogFetchAttempts   = 3
 )
 
 type RemoteCatalogLoadStatus string
@@ -334,7 +333,7 @@ func (l *asyncRemoteCatalogLoader) refresh(catalogURL string) remoteCatalogResul
 
 func (l *asyncRemoteCatalogLoader) load(catalogURL string) {
 	slog.Info("remote app catalog fetch started", "url", catalogURL)
-	apps, err := fetchRemoteCatalogWithFallbacks(remoteCatalogURLs(catalogURL))
+	apps, err := fetchRemoteCatalogWithRetries(catalogURL)
 
 	l.mu.Lock()
 	defer l.mu.Unlock()
@@ -350,22 +349,6 @@ func (l *asyncRemoteCatalogLoader) load(catalogURL string) {
 	slog.Info("remote app catalog fetch completed", "url", catalogURL, "appCount", len(apps))
 	l.apps = apps
 	l.state = readyRemoteCatalogLoadState()
-}
-
-func remoteCatalogURLs(catalogURL string) []string {
-	return []string{catalogURL}
-}
-
-func fetchRemoteCatalogWithFallbacks(catalogURLs []string) ([]App, error) {
-	var lastErr error
-	for _, catalogURL := range catalogURLs {
-		apps, err := fetchRemoteCatalogWithRetries(catalogURL)
-		if err == nil {
-			return apps, nil
-		}
-		lastErr = err
-	}
-	return nil, lastErr
 }
 
 func fetchRemoteCatalogWithRetries(catalogURL string) ([]App, error) {
@@ -486,7 +469,7 @@ func parseRemoteCatalog(data []byte) ([]App, error) {
 }
 
 func isSupportedRemoteCatalogSchemaVersion(schemaVersion string) bool {
-	return schemaVersion == remoteCatalogSchemaVersionV1 || schemaVersion == legacyRemoteCatalogSchemaVersionV1
+	return schemaVersion == remoteCatalogSchemaVersionV1
 }
 
 func parseRemoteDistribution(appID string, manifest workspacebiz.AppManifest, distribution remoteDistribution) (Distribution, error) {

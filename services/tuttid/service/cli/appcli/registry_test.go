@@ -81,41 +81,6 @@ func TestRegistryActivateExposesDocumentationFile(t *testing.T) {
 	}
 }
 
-func TestRegistryActivateReadsLegacyNextopCLIManifest(t *testing.T) {
-	registry := NewRegistry(fakeWorkspaceCatalog{workspaceID: "ws-1"}, nil)
-	appPackage := writeTestPackage(t, "automation-app", "automation", testJSONCommand())
-	if err := os.Rename(filepath.Join(appPackage.PackageDir, "tutti.cli.json"), filepath.Join(appPackage.PackageDir, "nextop.cli.json")); err != nil {
-		t.Fatalf("rename legacy cli manifest: %v", err)
-	}
-	appPackage.Manifest.CLI.Manifest = "tutti.cli.json"
-
-	state := registry.Activate(context.Background(), Activation{
-		WorkspaceID: "ws-1",
-		AppPackage:  appPackage,
-		BaseURL:     "http://127.0.0.1:1",
-	})
-
-	if state.Status != workspacebiz.AppCLIStatusActive {
-		t.Fatalf("Activate() state = %#v, want active", state)
-	}
-}
-
-func TestReadManifestAcceptsLegacyNextopSchemaVersion(t *testing.T) {
-	packageDir := t.TempDir()
-	manifestPath := filepath.Join(packageDir, "tutti.cli.json")
-	if err := os.WriteFile(manifestPath, []byte(`{"schemaVersion":"nextop.app.cli.v1","scope":"automation","commands":`+testJSONCommand()+`}`), 0o644); err != nil {
-		t.Fatalf("write legacy cli manifest: %v", err)
-	}
-
-	manifest, err := ReadManifest(manifestPath)
-	if err != nil {
-		t.Fatalf("ReadManifest() error = %v", err)
-	}
-	if manifest.Scope != "automation" {
-		t.Fatalf("scope = %q", manifest.Scope)
-	}
-}
-
 func TestRegistryActivateRejectsMissingDocumentationFile(t *testing.T) {
 	registry := NewRegistry(fakeWorkspaceCatalog{workspaceID: "ws-1"}, nil)
 	appPackage := writeTestPackageWithDocumentation(t, "automation-app", "automation", "MISSING.md", testJSONCommand())

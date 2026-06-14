@@ -52,25 +52,6 @@ func TestExtractAppPackageZipRejectsTotalExpandedSizeLimit(t *testing.T) {
 	}
 }
 
-func TestResolveExtractedPackageRootAcceptsLegacyNextopManifestName(t *testing.T) {
-	stagingDir := t.TempDir()
-	packageDir := filepath.Join(stagingDir, "legacy-app")
-	if err := os.MkdirAll(packageDir, 0o755); err != nil {
-		t.Fatalf("create package dir: %v", err)
-	}
-	if err := os.WriteFile(filepath.Join(packageDir, "nextop.app.json"), []byte("{}"), 0o644); err != nil {
-		t.Fatalf("write legacy manifest: %v", err)
-	}
-
-	got, err := resolveExtractedPackageRoot(stagingDir)
-	if err != nil {
-		t.Fatalf("resolveExtractedPackageRoot() error = %v", err)
-	}
-	if got != packageDir {
-		t.Fatalf("package root = %q, want %q", got, packageDir)
-	}
-}
-
 func TestDownloadAppArtifactRetriesTransientHTTPFailure(t *testing.T) {
 	t.Parallel()
 

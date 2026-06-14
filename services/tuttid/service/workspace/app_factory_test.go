@@ -721,8 +721,8 @@ func TestAppFactoryServicePublishMarksMissingAgentsFileAsValidationFailure(t *te
 	if err := os.MkdirAll(packageDir, 0o755); err != nil {
 		t.Fatalf("create package dir: %v", err)
 	}
-	if err := os.WriteFile(filepath.Join(packageDir, "nextop.app.json"), []byte(`{
-  "schemaVersion": "nextop.app.manifest.v1",
+	if err := os.WriteFile(filepath.Join(packageDir, "tutti.app.json"), []byte(`{
+  "schemaVersion": "tutti.app.manifest.v1",
   "appId": "app_missing-agents",
   "version": "0.1.0",
   "name": "Missing Agents",

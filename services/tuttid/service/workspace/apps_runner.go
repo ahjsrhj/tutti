@@ -194,7 +194,6 @@ func (r *AppRunner) startProcess(ctx context.Context, key string, input AppStart
 		"TUTTI_CLI=" + tuttiCLIShim,
 	}
 	envOverrides = append(envOverrides, appRuntime.EnvOverrides...)
-	envOverrides = append(envOverrides, legacyNextopAppEnvAliases(input, port, appRuntime, tuttiCLIShim, tuttiAPIBaseURL)...)
 	envOverrides = append(envOverrides, appRuntimePathWithCLIShim(appRuntime, tuttiCLIShim))
 	command.Env = workspaceAppProcessEnv(envOverrides...)
 	writeAppStartupDiagnostic(logFile, input, bootstrapPath, port, appRuntime, command.Env)
@@ -655,30 +654,6 @@ func appRuntimePathWithCLIShim(appRuntime ResolvedAppRuntime, cliShimPath string
 	pathDirs := filepath.SplitList(envValue(appRuntime.EnvOverrides, pathKey))
 	pathDirs = mergeAppPathDirs(append([]string{filepath.Dir(cliShimPath)}, pathDirs...))
 	return pathKey + "=" + strings.Join(pathDirs, string(os.PathListSeparator))
-}
-
-func legacyNextopAppEnvAliases(input AppStartInput, port int, appRuntime ResolvedAppRuntime, cliShimPath string, apiBaseURL string) []string {
-	baseURL := "http://127.0.0.1:" + strconv.Itoa(port)
-	return []string{
-		"NEXTOP_APP_ID=" + input.AppID,
-		"NEXTOP_WORKSPACE_ID=" + input.WorkspaceID,
-		"NEXTOP_WORKSPACE_NAME=" + input.WorkspaceName,
-		"NEXTOP_WORKSPACE_ROOT=" + input.WorkspaceRoot,
-		"NEXTOP_APP_HOST=127.0.0.1",
-		"NEXTOP_APP_PACKAGE_DIR=" + input.PackageDir,
-		"NEXTOP_APP_RUNTIME_DIR=" + input.RuntimeDir,
-		"NEXTOP_APP_DATA_DIR=" + input.DataDir,
-		"NEXTOP_APP_LOG_DIR=" + input.LogDir,
-		"NEXTOP_APP_PORT=" + strconv.Itoa(port),
-		"NEXTOP_APP_BASE_URL=" + baseURL,
-		"NEXTOP_API_BASE_URL=" + apiBaseURL,
-		"NEXTOP_APP_INSTALLATION_ID=" + input.WorkspaceID + ":" + input.AppID,
-		"NEXTOP_APP_SERVER_TOKEN=" + appServerToken(input.WorkspaceID, input.AppID),
-		"NEXTOP_APP_PYTHON=" + appRuntime.Python,
-		"NEXTOP_APP_NODE=" + appRuntime.Node,
-		"NEXTOP_APP_NPM=" + appRuntime.NPM,
-		"NEXTOP_CLI=" + cliShimPath,
-	}
 }
 
 func tuttiCLIShimPathForPlatform(platform string) string {

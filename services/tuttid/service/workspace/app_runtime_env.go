@@ -21,10 +21,8 @@ const tuttiAppRuntimeRootEnv = "TUTTI_APP_RUNTIME_ROOT"
 const tuttiAppRuntimeCacheRootEnv = "TUTTI_APP_RUNTIME_CACHE_ROOT"
 const tuttiAppRuntimeCatalogEnv = "TUTTI_APP_RUNTIME_CATALOG"
 const appRuntimeCatalogSchemaVersion = "tutti.app.runtimes.v2"
-const legacyAppRuntimeCatalogSchemaVersion = "nextop.app.runtimes.v2"
 const appRuntimeBaselineProfile = "baseline"
 const defaultTuttiAppRuntimeCatalogURL = "https://d1x7gb6wqsqmnm.cloudfront.net/tutti-app-runtimes/catalog.json"
-const legacyDefaultAppRuntimeCatalogURL = "https://d1x7gb6wqsqmnm.cloudfront.net/nextop-app-runtimes/catalog.json"
 
 const maxManagedAppRuntimeArtifactBytes int64 = 512 * 1024 * 1024
 const maxManagedAppRuntimeExpandedBytes int64 = 2 * 1024 * 1024 * 1024
@@ -130,12 +128,12 @@ func (r DefaultManagedAppRuntimeResolver) ensureRuntime(ctx context.Context, roo
 	if managedAppRuntimeRootReady(root) {
 		return nil
 	}
-	catalogSources := r.runtimeCatalogSources()
-	if len(catalogSources) == 0 || catalogSources[0] == "" {
+	catalogSource := r.runtimeCatalogSource()
+	if catalogSource == "" {
 		return fmt.Errorf("managed app runtime is unavailable at %s and %s is not configured", root, tuttiAppRuntimeCatalogEnv)
 	}
 	platformArch := appRuntimePlatformArch(runtime.GOOS, runtime.GOARCH)
-	catalog, err := r.loadCatalogWithFallbacks(ctx, catalogSources)
+	catalog, err := r.loadCatalog(ctx, catalogSource)
 	if err != nil {
 		return err
 	}
@@ -181,40 +179,17 @@ func (r DefaultManagedAppRuntimeResolver) loadCatalog(ctx context.Context, sourc
 }
 
 func isSupportedAppRuntimeCatalogSchemaVersion(schemaVersion string) bool {
-	return schemaVersion == appRuntimeCatalogSchemaVersion || schemaVersion == legacyAppRuntimeCatalogSchemaVersion
-}
-
-func (r DefaultManagedAppRuntimeResolver) loadCatalogWithFallbacks(ctx context.Context, sources []string) (appRuntimeCatalog, error) {
-	var lastErr error
-	for _, source := range sources {
-		catalog, err := r.loadCatalog(ctx, source)
-		if err == nil {
-			return catalog, nil
-		}
-		lastErr = err
-	}
-	if lastErr != nil {
-		return appRuntimeCatalog{}, lastErr
-	}
-	return appRuntimeCatalog{}, fmt.Errorf("managed app runtime is unavailable and %s is not configured", tuttiAppRuntimeCatalogEnv)
+	return schemaVersion == appRuntimeCatalogSchemaVersion
 }
 
 func (r DefaultManagedAppRuntimeResolver) runtimeCatalogSource() string {
-	sources := r.runtimeCatalogSources()
-	if len(sources) == 0 {
-		return ""
-	}
-	return sources[0]
-}
-
-func (r DefaultManagedAppRuntimeResolver) runtimeCatalogSources() []string {
 	for _, item := range r.environ() {
 		key, value, ok := strings.Cut(item, "=")
 		if ok && key == tuttiAppRuntimeCatalogEnv {
-			return []string{strings.TrimSpace(value)}
+			return strings.TrimSpace(value)
 		}
 	}
-	return []string{defaultTuttiAppRuntimeCatalogURL, legacyDefaultAppRuntimeCatalogURL}
+	return defaultTuttiAppRuntimeCatalogURL
 }
 
 func (r DefaultManagedAppRuntimeResolver) readCatalog(ctx context.Context, source string) ([]byte, error) {

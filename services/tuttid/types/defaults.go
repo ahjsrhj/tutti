@@ -92,11 +92,6 @@ type AnalyticsConfig struct {
 	AppVersion    string
 }
 
-const (
-	legacyProductionDirName  = ".nextop"
-	legacyDevelopmentDirName = ".nextop-dev"
-)
-
 func ResolveDefaultsFromEnv() ResolvedDefaults {
 	env := resolveTuttiEnv()
 	stateRootDir := resolveStateRootDir(env)
@@ -136,15 +131,15 @@ func ResolveAnalyticsConfig() AnalyticsConfig {
 		Disabled:      resolveAnalyticsDisabled(),
 		Debug:         resolveAnalyticsDebug(),
 		AppID:         resolveAnalyticsAppID(),
-		AppKey:        resolveStringOverride("TUTTI_ANALYTICS_APP_KEY", "NEXTOP_ANALYTICS_APP_KEY", generatedDefaults.Analytics.AppKey),
+		AppKey:        resolveStringOverride("TUTTI_ANALYTICS_APP_KEY", generatedDefaults.Analytics.AppKey),
 		Channel:       generatedDefaults.Analytics.Channel,
-		ChannelDomain: resolveStringOverride("TUTTI_ANALYTICS_CHANNEL_DOMAIN", "NEXTOP_ANALYTICS_CHANNEL_DOMAIN", generatedDefaults.Analytics.ChannelDomain),
+		ChannelDomain: resolveStringOverride("TUTTI_ANALYTICS_CHANNEL_DOMAIN", generatedDefaults.Analytics.ChannelDomain),
 		AppVersion:    resolveAnalyticsAppVersion(),
 	}
 }
 
 func resolveTuttiEnv() string {
-	value := strings.ToLower(resolveStringOverride("TUTTI_ENV", "NEXTOP_ENV", ""))
+	value := strings.ToLower(resolveStringOverride("TUTTI_ENV", ""))
 	switch value {
 	case "dev", "development", "local":
 		return "development"
@@ -154,7 +149,7 @@ func resolveTuttiEnv() string {
 }
 
 func resolveStateRootDir(env string) string {
-	override := resolveStringOverride("TUTTI_STATE_DIR", "NEXTOP_STATE_DIR", "")
+	override := resolveStringOverride("TUTTI_STATE_DIR", "")
 	if override != "" {
 		return override
 	}
@@ -168,19 +163,15 @@ func resolveStateRootDir(env string) string {
 	}
 
 	dirName := generatedDefaults.State.ProductionDirName
-	legacyDirName := legacyProductionDirName
 	if env == "development" {
 		dirName = generatedDefaults.State.DevelopmentDirName
-		legacyDirName = legacyDevelopmentDirName
 	}
 
-	stateRootDir := filepath.Join(homeDir, dirName)
-	legacyStateRootDir := filepath.Join(homeDir, legacyDirName)
-	return migrateLegacyDefaultStateRoot(stateRootDir, legacyStateRootDir)
+	return filepath.Join(homeDir, dirName)
 }
 
 func resolveLogsDir(stateRootDir string) string {
-	override := resolveStringOverride("TUTTI_LOG_DIR", "NEXTOP_LOG_DIR", "")
+	override := resolveStringOverride("TUTTI_LOG_DIR", "")
 	if override != "" {
 		return override
 	}
@@ -189,7 +180,7 @@ func resolveLogsDir(stateRootDir string) string {
 }
 
 func resolveRunDir(stateRootDir string) string {
-	override := resolveStringOverride("TUTTID_RUN_DIR", "NEXTOPD_RUN_DIR", "")
+	override := resolveStringOverride("TUTTID_RUN_DIR", "")
 	if override != "" {
 		return override
 	}
@@ -198,7 +189,7 @@ func resolveRunDir(stateRootDir string) string {
 }
 
 func resolveDBPath(stateRootDir string) string {
-	override := resolveStringOverride("TUTTID_DB_PATH", "NEXTOPD_DB_PATH", "")
+	override := resolveStringOverride("TUTTID_DB_PATH", "")
 	if override != "" {
 		return override
 	}
@@ -207,7 +198,7 @@ func resolveDBPath(stateRootDir string) string {
 }
 
 func resolveDaemonLogPath(logsDir string) string {
-	override := resolveStringOverride("TUTTID_LOG_PATH", "NEXTOPD_LOG_PATH", "")
+	override := resolveStringOverride("TUTTID_LOG_PATH", "")
 	if override != "" {
 		return override
 	}
@@ -216,7 +207,7 @@ func resolveDaemonLogPath(logsDir string) string {
 }
 
 func resolveDesktopLogPath(logsDir string) string {
-	override := resolveStringOverride("TUTTI_DESKTOP_LOG_PATH", "NEXTOP_DESKTOP_LOG_PATH", "")
+	override := resolveStringOverride("TUTTI_DESKTOP_LOG_PATH", "")
 	if override != "" {
 		return override
 	}
@@ -225,7 +216,7 @@ func resolveDesktopLogPath(logsDir string) string {
 }
 
 func resolvePIDPath(runDir string) string {
-	override := resolveStringOverride("TUTTID_PID_PATH", "NEXTOPD_PID_PATH", "")
+	override := resolveStringOverride("TUTTID_PID_PATH", "")
 	if override != "" {
 		return override
 	}
@@ -234,7 +225,7 @@ func resolvePIDPath(runDir string) string {
 }
 
 func resolveListenerInfoPath(runDir string) string {
-	override := resolveStringOverride("TUTTID_LISTENER_INFO_PATH", "NEXTOPD_LISTENER_INFO_PATH", "")
+	override := resolveStringOverride("TUTTID_LISTENER_INFO_PATH", "")
 	if override != "" {
 		return override
 	}
@@ -243,7 +234,7 @@ func resolveListenerInfoPath(runDir string) string {
 }
 
 func resolveTCPAddr() string {
-	override := resolveStringOverride("TUTTID_ADDR", "NEXTOPD_ADDR", "")
+	override := resolveStringOverride("TUTTID_ADDR", "")
 	if override != "" {
 		return override
 	}
@@ -252,7 +243,7 @@ func resolveTCPAddr() string {
 }
 
 func resolveAnalyticsDisabled() bool {
-	value := strings.ToLower(resolveStringOverride("TUTTI_ANALYTICS_DISABLED", "NEXTOP_ANALYTICS_DISABLED", ""))
+	value := strings.ToLower(resolveStringOverride("TUTTI_ANALYTICS_DISABLED", ""))
 	switch value {
 	case "":
 		return false
@@ -270,7 +261,7 @@ func resolveAnalyticsDebug() bool {
 }
 
 func resolveAnalyticsAppID() int {
-	override := resolveStringOverride("TUTTI_ANALYTICS_APP_ID", "NEXTOP_ANALYTICS_APP_ID", "")
+	override := resolveStringOverride("TUTTI_ANALYTICS_APP_ID", "")
 	if override == "" {
 		return generatedDefaults.Analytics.AppID
 	}
@@ -283,34 +274,17 @@ func resolveAnalyticsAppID() int {
 }
 
 func resolveAnalyticsAppVersion() string {
-	override := resolveStringOverride("TUTTI_ANALYTICS_APP_VERSION", "NEXTOP_ANALYTICS_APP_VERSION", "")
+	override := resolveStringOverride("TUTTI_ANALYTICS_APP_VERSION", "")
 	if override != "" {
 		return override
 	}
-	return resolveStringOverride("TUTTI_APP_VERSION", "NEXTOP_APP_VERSION", generatedDefaults.Analytics.AppVersion)
+	return resolveStringOverride("TUTTI_APP_VERSION", generatedDefaults.Analytics.AppVersion)
 }
 
-func resolveStringOverride(name string, legacyName string, fallback string) string {
+func resolveStringOverride(name string, fallback string) string {
 	override := strings.TrimSpace(os.Getenv(name))
 	if override != "" {
 		return override
 	}
-	legacyOverride := strings.TrimSpace(os.Getenv(legacyName))
-	if legacyOverride != "" {
-		return legacyOverride
-	}
 	return fallback
-}
-
-func migrateLegacyDefaultStateRoot(stateRootDir string, legacyStateRootDir string) string {
-	if _, err := os.Stat(stateRootDir); err == nil || !os.IsNotExist(err) {
-		return stateRootDir
-	}
-	if _, err := os.Stat(legacyStateRootDir); err != nil {
-		return stateRootDir
-	}
-	if err := os.Rename(legacyStateRootDir, stateRootDir); err == nil {
-		return stateRootDir
-	}
-	return legacyStateRootDir
 }

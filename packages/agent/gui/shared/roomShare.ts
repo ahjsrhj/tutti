@@ -53,7 +53,7 @@ export function requestExplicitRoomShareInvite(
 }
 
 /**
- * Parses a pasted room share link (https …/tutti-share/…, legacy …/tutti/share/…, tutti:// or legacy nextop:// …/join…),
+ * Parses a pasted room share link (https …/tutti-share/…, legacy …/tutti/share/…, or tutti:// …/join…),
  * optional multiline invite-code line, or a bare room UUID in text.
  */
 export function parseRoomShareJoinInput(
@@ -161,7 +161,7 @@ export function parseRoomShareJoinInput(
 }
 
 function isSupportedRoomShareProtocol(protocol: string): boolean {
-  return protocol === "tutti:" || protocol === "nextop:";
+  return protocol === "tutti:";
 }
 
 export interface RoomShareMemberView {

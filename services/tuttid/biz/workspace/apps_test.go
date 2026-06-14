@@ -139,45 +139,6 @@ func TestValidateAppManifestRejectsInvalidWindowMinimizeBehavior(t *testing.T) {
 	}
 }
 
-func TestValidateAppManifestAcceptsLegacyNextopSchemaVersion(t *testing.T) {
-	t.Parallel()
-
-	manifest := validTestAppManifest()
-	manifest.SchemaVersion = "nextop.app.manifest.v1"
-
-	if err := ValidateAppManifest(manifest); err != nil {
-		t.Fatalf("ValidateAppManifest() error = %v, want legacy schema accepted", err)
-	}
-}
-
-func TestReadAppManifestFileFallsBackToLegacyNextopManifestName(t *testing.T) {
-	t.Parallel()
-
-	packageDir := t.TempDir()
-	legacyManifestPath := filepath.Join(packageDir, "nextop.app.json")
-	if err := os.WriteFile(legacyManifestPath, []byte(`{
-  "schemaVersion": "nextop.app.manifest.v1",
-  "appId": "legacy-app",
-  "version": "0.1.0",
-  "name": "Legacy App",
-  "description": "Legacy app",
-  "runtime": {
-    "bootstrap": "bootstrap.sh",
-    "healthcheckPath": "/healthz"
-  }
-}`), 0o644); err != nil {
-		t.Fatalf("write legacy manifest: %v", err)
-	}
-
-	manifest, _, err := ReadAppManifestFile(filepath.Join(packageDir, "tutti.app.json"))
-	if err != nil {
-		t.Fatalf("ReadAppManifestFile() error = %v", err)
-	}
-	if manifest.AppID != "legacy-app" {
-		t.Fatalf("manifest app id = %q", manifest.AppID)
-	}
-}
-
 func TestValidateAppManifestRejectsInvalidWindowMinimumSize(t *testing.T) {
 	t.Parallel()
 

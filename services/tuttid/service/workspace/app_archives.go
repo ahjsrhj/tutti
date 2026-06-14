@@ -480,12 +480,7 @@ func resolveExtractedPackageRoot(stagingDir string) (string, error) {
 }
 
 func appManifestFileExists(packageDir string) (bool, error) {
-	if _, err := os.Stat(filepath.Join(packageDir, "tutti.app.json")); err == nil {
-		return true, nil
-	} else if err != nil && !os.IsNotExist(err) {
-		return false, err
-	}
-	_, err := os.Stat(filepath.Join(packageDir, "nextop.app.json"))
+	_, err := os.Stat(filepath.Join(packageDir, "tutti.app.json"))
 	if err == nil {
 		return true, nil
 	}

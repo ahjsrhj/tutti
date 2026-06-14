@@ -167,37 +167,6 @@ func TestCatalogRetriesRemoteURLFetch(t *testing.T) {
 	}
 }
 
-func TestCatalogDefaultURLDoesNotFallBackToLegacyURL(t *testing.T) {
-	var requests atomic.Int32
-	var legacyRequests atomic.Int32
-	server := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
-		requests.Add(1)
-		switch request.URL.Path {
-		case "/tutti/catalog.json":
-			http.Error(writer, "not migrated yet", http.StatusForbidden)
-		case "/nextop/catalog.json":
-			legacyRequests.Add(1)
-			http.Error(writer, "legacy catalog must not be requested", http.StatusInternalServerError)
-		default:
-			http.NotFound(writer, request)
-		}
-	}))
-	t.Cleanup(server.Close)
-
-	apps, err := fetchRemoteCatalogWithFallbacks([]string{
-		server.URL + "/tutti/catalog.json",
-	})
-	if err == nil {
-		t.Fatalf("fetchRemoteCatalogWithFallbacks() error = nil, apps = %#v", apps)
-	}
-	if requests.Load() != 1 {
-		t.Fatalf("catalog requests = %d, want 1", requests.Load())
-	}
-	if legacyRequests.Load() != 0 {
-		t.Fatalf("legacy catalog requests = %d, want 0", legacyRequests.Load())
-	}
-}
-
 func TestCatalogKeepsEmbeddedAppsWhenRemoteURLFails(t *testing.T) {
 	t.Setenv(remoteCatalogFileEnv, "")
 	server := httptest.NewServer(http.HandlerFunc(func(writer http.ResponseWriter, _ *http.Request) {

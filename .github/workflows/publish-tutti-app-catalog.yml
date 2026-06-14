@@ -16,19 +16,19 @@ on:
         required: false
         type: string
       aws_region:
-        description: AWS region. Defaults to vars.TUTTI_APP_RELEASES_AWS_REGION, then vars.NEXTOP_APP_RELEASES_AWS_REGION.
+        description: AWS region. Defaults to vars.TUTTI_APP_RELEASES_AWS_REGION.
         required: false
         type: string
       aws_role_arn:
-        description: AWS role ARN. Defaults to vars.TUTTI_APP_RELEASES_AWS_ROLE_ARN, then vars.NEXTOP_APP_RELEASES_AWS_ROLE_ARN.
+        description: AWS role ARN. Defaults to vars.TUTTI_APP_RELEASES_AWS_ROLE_ARN.
         required: false
         type: string
       s3_bucket:
-        description: S3 bucket. Defaults to vars.TUTTI_APP_RELEASES_S3_BUCKET, then vars.NEXTOP_APP_RELEASES_S3_BUCKET.
+        description: S3 bucket. Defaults to vars.TUTTI_APP_RELEASES_S3_BUCKET.
         required: false
         type: string
       s3_prefix:
-        description: S3 prefix. Defaults to vars.TUTTI_APP_RELEASES_S3_PREFIX, then vars.NEXTOP_APP_RELEASES_S3_PREFIX.
+        description: S3 prefix. Defaults to vars.TUTTI_APP_RELEASES_S3_PREFIX.
         required: false
         type: string
       cloudfront_distribution_id:
@@ -49,11 +49,11 @@ jobs:
     env:
       CATALOG_MODE: ${{ inputs.catalog_mode }}
       APP_IDS_INPUT: ${{ inputs.app_ids }}
-      AWS_REGION_VALUE: ${{ inputs.aws_region || vars.TUTTI_APP_RELEASES_AWS_REGION || vars.NEXTOP_APP_RELEASES_AWS_REGION }}
-      AWS_ROLE_ARN_VALUE: ${{ inputs.aws_role_arn || vars.TUTTI_APP_RELEASES_AWS_ROLE_ARN || vars.NEXTOP_APP_RELEASES_AWS_ROLE_ARN }}
-      S3_BUCKET_VALUE: ${{ inputs.s3_bucket || vars.TUTTI_APP_RELEASES_S3_BUCKET || vars.NEXTOP_APP_RELEASES_S3_BUCKET }}
-      S3_PREFIX_VALUE: ${{ inputs.s3_prefix || vars.TUTTI_APP_RELEASES_S3_PREFIX || vars.NEXTOP_APP_RELEASES_S3_PREFIX }}
-      CLOUDFRONT_DISTRIBUTION_ID_VALUE: ${{ inputs.cloudfront_distribution_id || vars.TUTTI_APP_RELEASES_CLOUDFRONT_DISTRIBUTION_ID || vars.NEXTOP_APP_RELEASES_CLOUDFRONT_DISTRIBUTION_ID }}
+      AWS_REGION_VALUE: ${{ inputs.aws_region || vars.TUTTI_APP_RELEASES_AWS_REGION }}
+      AWS_ROLE_ARN_VALUE: ${{ inputs.aws_role_arn || vars.TUTTI_APP_RELEASES_AWS_ROLE_ARN }}
+      S3_BUCKET_VALUE: ${{ inputs.s3_bucket || vars.TUTTI_APP_RELEASES_S3_BUCKET }}
+      S3_PREFIX_VALUE: ${{ inputs.s3_prefix || vars.TUTTI_APP_RELEASES_S3_PREFIX }}
+      CLOUDFRONT_DISTRIBUTION_ID_VALUE: ${{ inputs.cloudfront_distribution_id || vars.TUTTI_APP_RELEASES_CLOUDFRONT_DISTRIBUTION_ID }}
 
     steps:
       - name: Checkout
@@ -63,6 +63,20 @@ jobs:
         uses: actions/setup-node@v6
         with:
           node-version-file: .node-version
+
+      - name: Validate AWS configuration
+        shell: bash
+        run: |
+          missing=()
+          for name in AWS_REGION_VALUE AWS_ROLE_ARN_VALUE S3_BUCKET_VALUE; do
+            if [ -z "${!name:-}" ]; then
+              missing+=("${name}")
+            fi
+          done
+          if [ "${#missing[@]}" -gt 0 ]; then
+            printf 'Missing required AWS configuration: %s\n' "${missing[*]}" >&2
+            exit 1
+          fi
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
@@ -74,10 +88,6 @@ jobs:
         id: releases
         shell: bash
         run: |
-          if [ -z "${S3_BUCKET_VALUE}" ]; then
-            echo "S3 bucket is required" >&2
-            exit 1
-          fi
           if [ "${CATALOG_MODE}" != "merge" ] && [ "${CATALOG_MODE}" != "replace" ]; then
             echo "Unknown catalog mode: ${CATALOG_MODE}" >&2
             exit 1

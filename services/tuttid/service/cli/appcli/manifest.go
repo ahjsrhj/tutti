@@ -13,12 +13,11 @@ import (
 )
 
 const (
-	ManifestSchemaVersion       = "tutti.app.cli.v1"
-	LegacyManifestSchemaVersion = "nextop.app.cli.v1"
-	maxManifestBytes            = 256 * 1024
-	defaultTimeoutMs            = 30000
-	minTimeoutMs                = 1000
-	maxTimeoutMs                = 300000
+	ManifestSchemaVersion = "tutti.app.cli.v1"
+	maxManifestBytes      = 256 * 1024
+	defaultTimeoutMs      = 30000
+	minTimeoutMs          = 1000
+	maxTimeoutMs          = 300000
 )
 
 var segmentPattern = regexp.MustCompile(`^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$`)
@@ -142,7 +141,7 @@ func ValidateManifest(manifest Manifest) error {
 }
 
 func isSupportedManifestSchemaVersion(schemaVersion string) bool {
-	return schemaVersion == ManifestSchemaVersion || schemaVersion == LegacyManifestSchemaVersion
+	return schemaVersion == ManifestSchemaVersion
 }
 
 func validateSegment(segment string, location string) error {
@@ -317,13 +316,5 @@ func CLIManifestPath(packageDir string, manifestPath string) (string, error) {
 		}
 	}
 	resolvedPath := filepath.Join(packageDir, filepath.FromSlash(manifestPath))
-	if filepath.Base(manifestPath) == "tutti.cli.json" {
-		if _, err := os.Stat(resolvedPath); os.IsNotExist(err) {
-			legacyPath := filepath.Join(filepath.Dir(resolvedPath), "nextop.cli.json")
-			if _, legacyErr := os.Stat(legacyPath); legacyErr == nil {
-				return legacyPath, nil
-			}
-		}
-	}
 	return resolvedPath, nil
 }
