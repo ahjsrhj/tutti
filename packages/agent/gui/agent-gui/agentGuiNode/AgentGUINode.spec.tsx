@@ -1468,6 +1468,35 @@ describe("AgentGUINode", () => {
     );
   });
 
+  it("shows the timeline skeleton instead of unavailable empty while active conversation messages are loading", () => {
+    const conversation = {
+      id: "session-1",
+      provider: "codex" as const,
+      title: "Session 1",
+      status: "ready" as const,
+      cwd: "/workspace",
+      updatedAtUnixMs: 1
+    };
+    mockViewModel = createViewModel({
+      conversations: [conversation],
+      activeConversation: conversation,
+      activeConversationId: "session-1",
+      isLoadingMessages: true
+    });
+
+    renderAgentGUINode();
+
+    expect(
+      screen.getByTestId("agent-gui-transcript-loading-skeleton")
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByTestId("agent-gui-unavailable-chat-empty")
+    ).not.toBeInTheDocument();
+    expect(screen.getByTestId("agent-gui-timeline")).not.toHaveClass(
+      "agent-gui-node__timeline-unavailable-chat-empty"
+    );
+  });
+
   it("lets session list items receive clicks inside the node window", () => {
     mockViewModel = createViewModel({
       conversations: [

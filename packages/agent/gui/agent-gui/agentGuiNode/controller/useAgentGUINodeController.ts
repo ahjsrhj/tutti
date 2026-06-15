@@ -171,11 +171,13 @@ const AGENT_PROVIDER_SESSION_NOT_FOUND_FALLBACK_MESSAGE =
 const AGENT_RESUME_SESSION_NOT_LOCAL_FALLBACK_MESSAGE =
   "The previous agent session is not available on this machine.";
 const AGENT_GUI_CAUGHT_ERROR_STACK_LIMIT = 4000;
+const SELECTED_SESSION_NOT_FOUND_RETRY_DELAY_MS = 150;
 
 type AgentGUIRuntimeErrorPhase =
   | "create_conversation"
   | "drain_queued_prompt_interrupt"
   | "interrupt_current_turn"
+  | "load_session_messages"
   | "load_session_state"
   | "retry_activation"
   | "send_prompt"
@@ -2477,11 +2479,23 @@ export function useAgentGUINodeController({
   const stateReloadInFlightRef = useRef(false);
   const stateReloadQueuedRef = useRef(false);
   const stateReloadTargetSessionIdRef = useRef<string | null>(null);
+  const selectedConversationMessageLoadSeqRef = useRef(0);
+  const selectedConversationPendingMessageLoadIdsRef = useRef(
+    new Set<string>()
+  );
+  const selectedConversationInitialStateLoadedIdsRef = useRef(
+    new Set<string>()
+  );
+  const selectedConversationInitialMessagesLoadedIdsRef = useRef(
+    new Set<string>()
+  );
   const stateReloadCauseRef = useRef<{
     source: "activity-stream";
     eventType?: string;
     requestId?: number;
   } | null>(null);
+  const selectedConversationNotFoundRetryIdsRef = useRef(new Set<string>());
+  const selectedConversationNotFoundRetryTimerRef = useRef<number | null>(null);
   const sessionStateSnapshotCauseBySessionIdRef = useRef<
     Record<
       string,
@@ -2950,6 +2964,63 @@ export function useAgentGUINodeController({
     },
     []
   );
+  const clearSelectedConversationNotFoundRetry = useCallback(() => {
+    if (selectedConversationNotFoundRetryTimerRef.current !== null) {
+      window.clearTimeout(selectedConversationNotFoundRetryTimerRef.current);
+      selectedConversationNotFoundRetryTimerRef.current = null;
+    }
+  }, []);
+  const clearSelectedConversationNotFoundRetryWhenInitialLoadsSettled =
+    useCallback((agentSessionId: string) => {
+      const normalizedAgentSessionId = agentSessionId.trim();
+      if (
+        normalizedAgentSessionId &&
+        selectedConversationInitialStateLoadedIdsRef.current.has(
+          normalizedAgentSessionId
+        ) &&
+        selectedConversationInitialMessagesLoadedIdsRef.current.has(
+          normalizedAgentSessionId
+        )
+      ) {
+        selectedConversationNotFoundRetryIdsRef.current.delete(
+          normalizedAgentSessionId
+        );
+        selectedConversationInitialStateLoadedIdsRef.current.delete(
+          normalizedAgentSessionId
+        );
+        selectedConversationInitialMessagesLoadedIdsRef.current.delete(
+          normalizedAgentSessionId
+        );
+      }
+    }, []);
+  const markSelectedConversationDetailPending = useCallback(
+    (agentSessionId: string) => {
+      const normalizedAgentSessionId = agentSessionId.trim();
+      if (!normalizedAgentSessionId) {
+        return null;
+      }
+      clearSelectedConversationNotFoundRetry();
+      selectedConversationNotFoundRetryIdsRef.current.add(
+        normalizedAgentSessionId
+      );
+      selectedConversationInitialStateLoadedIdsRef.current.delete(
+        normalizedAgentSessionId
+      );
+      selectedConversationInitialMessagesLoadedIdsRef.current.delete(
+        normalizedAgentSessionId
+      );
+      selectedConversationPendingMessageLoadIdsRef.current.add(
+        normalizedAgentSessionId
+      );
+      setIsLoadingMessages(true);
+      setAgentSessionViewMessagesLoading(
+        sessionViewRef(normalizedAgentSessionId),
+        true
+      );
+      return normalizedAgentSessionId;
+    },
+    [clearSelectedConversationNotFoundRetry, sessionViewRef]
+  );
   const updateSelectedProjectPath = useCallback(
     (
       path: string | null,
@@ -3029,6 +3100,9 @@ export function useAgentGUINodeController({
         activatedConversationIdsRef.current.delete(previous);
         void activation.unactivate(previous);
       }
+      if (previous !== normalized) {
+        markSelectedConversationDetailPending(normalized);
+      }
       if (pendingNewConversationId && pendingNewConversationId !== normalized) {
         activatedConversationIdsRef.current.delete(pendingNewConversationId);
         void activation.unactivate(pendingNewConversationId);
@@ -3069,7 +3143,11 @@ export function useAgentGUINodeController({
       }
       persistActiveConversation(normalized);
     },
-    [activation, persistActiveConversation]
+    [
+      activation,
+      markSelectedConversationDetailPending,
+      persistActiveConversation
+    ]
   );
 
   const syncConversationListProjection = useCallback(
@@ -3087,6 +3165,69 @@ export function useAgentGUINodeController({
       );
     },
     [conversationListQuery, persistActiveConversation]
+  );
+
+  const scheduleSelectedConversationNotFoundRetry = useCallback(
+    (agentSessionId: string) => {
+      const normalizedAgentSessionId = agentSessionId.trim();
+      if (
+        !normalizedAgentSessionId ||
+        !selectedConversationNotFoundRetryIdsRef.current.has(
+          normalizedAgentSessionId
+        )
+      ) {
+        return false;
+      }
+      setAgentSessionViewError(sessionViewRef(normalizedAgentSessionId), null);
+      setAgentSessionViewMessagesLoading(
+        sessionViewRef(normalizedAgentSessionId),
+        true
+      );
+      if (activeConversationIdRef.current === normalizedAgentSessionId) {
+        setIsLoadingMessages(true);
+      }
+      if (conversationListQuery) {
+        scheduleAgentGUIConversationListProjection(
+          conversationListQuery,
+          "projection-sync"
+        );
+      }
+      selectedConversationPendingMessageLoadIdsRef.current.add(
+        normalizedAgentSessionId
+      );
+      clearSelectedConversationNotFoundRetry();
+      selectedConversationNotFoundRetryTimerRef.current = window.setTimeout(
+        () => {
+          selectedConversationNotFoundRetryTimerRef.current = null;
+          selectedConversationNotFoundRetryIdsRef.current.delete(
+            normalizedAgentSessionId
+          );
+          selectedConversationInitialStateLoadedIdsRef.current.delete(
+            normalizedAgentSessionId
+          );
+          selectedConversationInitialMessagesLoadedIdsRef.current.delete(
+            normalizedAgentSessionId
+          );
+          if (
+            !isMountedRef.current ||
+            activeConversationIdRef.current !== normalizedAgentSessionId
+          ) {
+            return;
+          }
+          reloadSelectedConversationRef.current(normalizedAgentSessionId, {
+            reloadConversations: false,
+            reloadDetail: true
+          });
+        },
+        SELECTED_SESSION_NOT_FOUND_RETRY_DELAY_MS
+      );
+      return true;
+    },
+    [
+      clearSelectedConversationNotFoundRetry,
+      conversationListQuery,
+      sessionViewRef
+    ]
   );
 
   useEffect(() => {
@@ -3283,7 +3424,7 @@ export function useAgentGUINodeController({
         false
       );
     },
-    [agentActivityRuntime, sessionViewRef, updateConversationList, workspaceId]
+    [sessionViewRef, updateConversationList]
   );
 
   const applySessionStateSnapshot = useCallback(
@@ -3481,6 +3622,12 @@ export function useAgentGUINodeController({
           return;
         }
         clearFailedLiveState(agentSessionId);
+        selectedConversationInitialStateLoadedIdsRef.current.add(
+          agentSessionId
+        );
+        clearSelectedConversationNotFoundRetryWhenInitialLoadsSettled(
+          agentSessionId
+        );
         blockedActivityStreamStateReloadSessionIdsRef.current.delete(
           agentSessionId
         );
@@ -3504,6 +3651,18 @@ export function useAgentGUINodeController({
           return;
         }
         const errorCode = getAgentGUIErrorCode(error);
+        if (
+          isSessionNotFoundErrorCode(errorCode) &&
+          cause?.source === "conversation-selected" &&
+          scheduleSelectedConversationNotFoundRetry(agentSessionId)
+        ) {
+          return;
+        }
+        if (cause?.source === "conversation-selected") {
+          selectedConversationNotFoundRetryIdsRef.current.delete(
+            agentSessionId
+          );
+        }
         reportAgentGUIRuntimeError({
           agentSessionId,
           context: {
@@ -3574,12 +3733,115 @@ export function useAgentGUINodeController({
       }
     },
     [
+      agentActivityRuntime,
       applySessionStateSnapshot,
       clearFailedLiveState,
+      clearSelectedConversationNotFoundRetryWhenInitialLoadsSettled,
       markFailedLiveState,
       persistActiveConversation,
+      scheduleSelectedConversationNotFoundRetry,
       workspaceId,
+      conversationListQuery,
       sessionViewRef
+    ]
+  );
+
+  const loadSelectedConversationMessages = useCallback(
+    async (agentSessionId: string) => {
+      const normalizedAgentSessionId = agentSessionId.trim();
+      if (!normalizedAgentSessionId) {
+        return;
+      }
+      const requestId = ++selectedConversationMessageLoadSeqRef.current;
+      setDetailError(null);
+      setAgentSessionViewError(sessionViewRef(normalizedAgentSessionId), null);
+      setAgentSessionViewMessagesLoading(
+        sessionViewRef(normalizedAgentSessionId),
+        true
+      );
+      if (activeConversationIdRef.current === normalizedAgentSessionId) {
+        setIsLoadingMessages(true);
+      }
+      try {
+        const page = await agentActivityRuntime.listSessionMessages({
+          workspaceId,
+          agentSessionId: normalizedAgentSessionId
+        });
+        if (
+          !isMountedRef.current ||
+          activeConversationIdRef.current !== normalizedAgentSessionId ||
+          selectedConversationMessageLoadSeqRef.current !== requestId
+        ) {
+          return;
+        }
+        selectedConversationInitialMessagesLoadedIdsRef.current.add(
+          normalizedAgentSessionId
+        );
+        clearSelectedConversationNotFoundRetryWhenInitialLoadsSettled(
+          normalizedAgentSessionId
+        );
+        const durableMessages = mergeWorkspaceAgentMessages(
+          [],
+          agentActivitySnapshotRef.current.sessionMessagesById[
+            normalizedAgentSessionId
+          ] ?? []
+        );
+        const currentOverlayMessages =
+          getAgentSessionView(sessionViewRef(normalizedAgentSessionId))
+            ?.overlayMessages ?? [];
+        const localMessages = mergeWorkspaceAgentMessages(
+          currentOverlayMessages,
+          page.messages as WorkspaceAgentActivityMessage[]
+        );
+        const overlayMessages = selectWorkspaceAgentActivityOverlayMessages({
+          durableMessages,
+          localMessages
+        });
+        setAgentSessionViewOverlayMessages(
+          sessionViewRef(normalizedAgentSessionId),
+          overlayMessages
+        );
+        refreshMessagesFromSnapshot(normalizedAgentSessionId);
+      } catch (error) {
+        if (
+          !isMountedRef.current ||
+          activeConversationIdRef.current !== normalizedAgentSessionId ||
+          selectedConversationMessageLoadSeqRef.current !== requestId
+        ) {
+          return;
+        }
+        const errorCode = getAgentGUIErrorCode(error);
+        if (
+          isSessionNotFoundErrorCode(errorCode) &&
+          scheduleSelectedConversationNotFoundRetry(normalizedAgentSessionId)
+        ) {
+          return;
+        }
+        selectedConversationNotFoundRetryIdsRef.current.delete(
+          normalizedAgentSessionId
+        );
+        reportAgentGUIRuntimeError({
+          agentSessionId: normalizedAgentSessionId,
+          error,
+          phase: "load_session_messages",
+          provider: dataRef.current.provider,
+          runtime: agentActivityRuntime,
+          workspaceId
+        });
+        setAgentSessionViewMessagesLoading(
+          sessionViewRef(normalizedAgentSessionId),
+          false
+        );
+        setIsLoadingMessages(false);
+      }
+    },
+    [
+      agentActivityRuntime,
+      clearSelectedConversationNotFoundRetryWhenInitialLoadsSettled,
+      refreshMessagesFromSnapshot,
+      scheduleSelectedConversationNotFoundRetry,
+      sessionViewRef,
+      workspaceId
     ]
   );
 
@@ -3601,7 +3863,16 @@ export function useAgentGUINodeController({
         void syncConversationListProjection(agentSessionId);
       }
       if (options.reloadDetail) {
-        void refreshMessagesFromSnapshot(agentSessionId);
+        const normalizedAgentSessionId = agentSessionId.trim();
+        const hadPendingMessageLoad =
+          selectedConversationPendingMessageLoadIdsRef.current.delete(
+            normalizedAgentSessionId
+          );
+        if (hadPendingMessageLoad) {
+          void loadSelectedConversationMessages(normalizedAgentSessionId);
+        } else {
+          void refreshMessagesFromSnapshot(normalizedAgentSessionId);
+        }
         void loadSessionState(agentSessionId, {
           source: "conversation-selected"
         });
@@ -3609,6 +3880,7 @@ export function useAgentGUINodeController({
     },
     [
       syncConversationListProjection,
+      loadSelectedConversationMessages,
       refreshMessagesFromSnapshot,
       loadSessionState
     ]
@@ -4247,6 +4519,7 @@ export function useAgentGUINodeController({
     isMountedRef.current = true;
     return () => {
       clearPendingSessionStateReload();
+      clearSelectedConversationNotFoundRetry();
       const current = activeConversationIdRef.current;
       const pendingNewConversationId = startingConversationIdRef.current;
       isMountedRef.current = false;
@@ -4260,7 +4533,7 @@ export function useAgentGUINodeController({
         void unactivateRef.current(pendingNewConversationId);
       }
     };
-  }, [clearPendingSessionStateReload]);
+  }, [clearPendingSessionStateReload, clearSelectedConversationNotFoundRetry]);
 
   const startConversation = useCallback(
     (initialContentInput?: unknown) => {
@@ -6137,6 +6410,11 @@ export function useAgentGUINodeController({
     }
     setIsDeletingConversation(true);
     setDetailError(null);
+    if (activeConversationIdRef.current === target.id) {
+      clearSelectedConversationNotFoundRetry();
+      setIsLoadingMessages(true);
+      setAgentSessionViewMessagesLoading(sessionViewRef(target.id), true);
+    }
     void activation
       .unactivate(target.id)
       .then(() =>
@@ -6198,24 +6476,31 @@ export function useAgentGUINodeController({
           return next;
         });
         deleteAgentSessionView(sessionViewRef(target.id));
-        updateConversationList((current) => {
-          const targetIndex = current.findIndex(
-            (conversation) => conversation.id === target.id
-          );
-          const next = current.filter(
-            (conversation) => conversation.id !== target.id
-          );
-          if (activeConversationIdRef.current === target.id) {
-            const nextActive =
-              next[Math.max(0, targetIndex)]?.id ??
-              next[Math.max(0, targetIndex - 1)]?.id ??
-              null;
-            activeConversationIdRef.current = nextActive;
-            setActiveConversationId(nextActive);
-            persistActiveConversation(nextActive);
+        const currentConversations = conversationsRef.current;
+        const targetIndex = currentConversations.findIndex(
+          (conversation) => conversation.id === target.id
+        );
+        const nextConversations = currentConversations.filter(
+          (conversation) => conversation.id !== target.id
+        );
+        if (activeConversationIdRef.current === target.id) {
+          const nextActive =
+            nextConversations[Math.max(0, targetIndex)]?.id ??
+            nextConversations[Math.max(0, targetIndex - 1)]?.id ??
+            null;
+          if (nextActive) {
+            markSelectedConversationDetailPending(nextActive);
+          } else {
+            clearSelectedConversationNotFoundRetry();
+            setIsLoadingMessages(false);
           }
-          return next;
-        });
+          activeConversationIdRef.current = nextActive;
+          setActiveConversationId(nextActive);
+          persistActiveConversation(nextActive);
+        }
+        updateConversationList((current) =>
+          current.filter((conversation) => conversation.id !== target.id)
+        );
         setPendingDeleteConversation(null);
       })
       .catch((error) => {
@@ -6230,18 +6515,26 @@ export function useAgentGUINodeController({
         });
         toast.error(message);
         setDetailError(message);
+        if (activeConversationIdRef.current === target.id) {
+          setIsLoadingMessages(false);
+          setAgentSessionViewMessagesLoading(sessionViewRef(target.id), false);
+        }
       })
       .finally(() => {
         setIsDeletingConversation(false);
       });
   }, [
     activation,
+    conversationListQuery,
     isDeletingConversation,
     pendingDeleteConversation,
+    clearSelectedConversationNotFoundRetry,
+    markSelectedConversationDetailPending,
     persistActiveConversation,
     workspaceId,
     sessionViewRef,
-    agentActivityRuntime
+    agentActivityRuntime,
+    updateConversationList
   ]);
 
   const confirmDeleteProjectConversations = useCallback(
@@ -6285,6 +6578,18 @@ export function useAgentGUINodeController({
       setIsDeletingProjectConversations(true);
       setDetailError(null);
       setListError(null);
+      const activeDeletedConversationId = activeConversationIdRef.current;
+      if (
+        activeDeletedConversationId &&
+        targetIds.has(activeDeletedConversationId)
+      ) {
+        clearSelectedConversationNotFoundRetry();
+        setIsLoadingMessages(true);
+        setAgentSessionViewMessagesLoading(
+          sessionViewRef(activeDeletedConversationId),
+          true
+        );
+      }
       void Promise.all(
         targetConversations.map(async (conversation) => {
           await activation.unactivate(conversation.id);
@@ -6329,19 +6634,25 @@ export function useAgentGUINodeController({
           setQueuedPromptRetryBlockBySessionId((current) =>
             omitConversationLocalState(current, targetIds)
           );
-          updateConversationList((current) => {
-            const next = current.filter(
-              (conversation) => !targetIds.has(conversation.id)
-            );
-            const currentActiveId = activeConversationIdRef.current;
-            if (currentActiveId && targetIds.has(currentActiveId)) {
-              const nextActive = next[0]?.id ?? null;
-              activeConversationIdRef.current = nextActive;
-              setActiveConversationId(nextActive);
-              persistActiveConversation(nextActive);
+          const nextConversations = conversationsRef.current.filter(
+            (conversation) => !targetIds.has(conversation.id)
+          );
+          const currentActiveId = activeConversationIdRef.current;
+          if (currentActiveId && targetIds.has(currentActiveId)) {
+            const nextActive = nextConversations[0]?.id ?? null;
+            if (nextActive) {
+              markSelectedConversationDetailPending(nextActive);
+            } else {
+              clearSelectedConversationNotFoundRetry();
+              setIsLoadingMessages(false);
             }
-            return next;
-          });
+            activeConversationIdRef.current = nextActive;
+            setActiveConversationId(nextActive);
+            persistActiveConversation(nextActive);
+          }
+          updateConversationList((current) =>
+            current.filter((conversation) => !targetIds.has(conversation.id))
+          );
           setPendingDeleteProjectConversations(null);
         })
         .catch((error) => {
@@ -6360,6 +6671,16 @@ export function useAgentGUINodeController({
           setListError(message);
           toast.error(message);
           setDetailError(message);
+          if (
+            activeDeletedConversationId &&
+            activeConversationIdRef.current === activeDeletedConversationId
+          ) {
+            setIsLoadingMessages(false);
+            setAgentSessionViewMessagesLoading(
+              sessionViewRef(activeDeletedConversationId),
+              false
+            );
+          }
         })
         .finally(() => {
           setIsDeletingProjectConversations(false);
@@ -6369,7 +6690,9 @@ export function useAgentGUINodeController({
       activation,
       agentActivityRuntime,
       conversationListQuery,
+      clearSelectedConversationNotFoundRetry,
       isDeletingProjectConversations,
+      markSelectedConversationDetailPending,
       pendingDeleteProjectConversations,
       persistActiveConversation,
       sessionViewRef,
