@@ -58,6 +58,19 @@ function resolveWorkbenchCaptureElement(
   );
 }
 
+function waitForNextAnimationFrame(): Promise<void> {
+  return new Promise((resolve) => {
+    window.requestAnimationFrame(() => resolve());
+  });
+}
+
+function isFocusedWorkbenchNode<TData>(
+  controller: WorkbenchController<TData>,
+  nodeID: string
+): boolean {
+  return controller.getSnapshot().nodeStack.at(-1) === nodeID;
+}
+
 export interface WorkbenchGenieController {
   genieLayer: ReactNode;
   isNodeGenieHidden: (nodeID: string) => boolean;
@@ -678,9 +691,7 @@ export function useWorkbenchGenieAnimation<TData>({
         return;
       }
 
-      await new Promise<void>((resolve) => {
-        window.requestAnimationFrame(() => resolve());
-      });
+      await waitForNextAnimationFrame();
       if (generation !== animationGenerationRef.current) {
         return;
       }
@@ -806,6 +817,16 @@ export function useWorkbenchGenieAnimation<TData>({
         const runMinimize =
           minimize ?? (() => controller.commands.minimizeNode(nodeID));
         if (shouldReduceMotion()) {
+          const wasFocusedForCapture = isFocusedWorkbenchNode(
+            controller,
+            nodeID
+          );
+          if (!wasFocusedForCapture) {
+            flushSync(() => {
+              controller.commands.focusNode(nodeID);
+            });
+            await waitForNextAnimationFrame();
+          }
           await captureWorkbenchNodePreviewImageForNode(target, {
             captureNodePreviewImage,
             dockPreviewCache,
@@ -830,6 +851,16 @@ export function useWorkbenchGenieAnimation<TData>({
         if (!preparedTexture) {
           runMinimize();
           return;
+        }
+        const wasFocusedForCapture = isFocusedWorkbenchNode(controller, nodeID);
+        if (!wasFocusedForCapture) {
+          flushSync(() => {
+            controller.commands.focusNode(nodeID);
+          });
+          await waitForNextAnimationFrame();
+          if (generation !== animationGenerationRef.current) {
+            return;
+          }
         }
         const previewImageUrlPromise = Promise.resolve(
           captureNodePreviewImage?.(target) ?? null
@@ -884,9 +915,7 @@ export function useWorkbenchGenieAnimation<TData>({
           runMinimize();
         });
 
-        await new Promise<void>((resolve) => {
-          window.requestAnimationFrame(() => resolve());
-        });
+        await waitForNextAnimationFrame();
         if (generation !== animationGenerationRef.current) {
           releaseMinimizedDockEnterAnimation(nodeID);
           return;

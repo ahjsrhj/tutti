@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import test from "node:test";
 import { TuttidProtocolError } from "@tutti-os/client-tuttid-ts";
 import { createI18nRuntime } from "@tutti-os/ui-i18n-runtime";
@@ -12,6 +13,11 @@ import {
   createTerminalCloseDialogRequest,
   createWindowCloseDialogRequest
 } from "./workspaceCloseDialogRequests.ts";
+
+const workspaceWorkbenchHostServiceSource = readFileSync(
+  new URL("./workspaceWorkbenchHostService.ts", import.meta.url),
+  "utf8"
+);
 
 test("shouldCloseTerminalNodeAfterError closes stale terminal nodes", () => {
   assert.equal(
@@ -138,4 +144,23 @@ test("createWindowCloseDialogRequest summarizes close effects for window close",
     title: "Close this window?",
     variant: "destructive"
   });
+});
+
+test("desktop dock preview capture avoids visible window isolation", () => {
+  assert.match(
+    workspaceWorkbenchHostServiceSource,
+    /isForegroundWorkspaceNodeCaptureTarget\(windowElement\)/
+  );
+  assert.match(
+    workspaceWorkbenchHostServiceSource,
+    /const capturePromise = hostWindowApi\.capturePreview\(\{/
+  );
+  assert.doesNotMatch(
+    workspaceWorkbenchHostServiceSource,
+    new RegExp("data-workbench-" + "preview-capture-" + "active")
+  );
+  assert.doesNotMatch(
+    workspaceWorkbenchHostServiceSource,
+    new RegExp("captureIsolated" + "WorkspaceWindowPreview")
+  );
 });

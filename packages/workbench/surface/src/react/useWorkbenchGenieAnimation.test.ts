@@ -39,3 +39,15 @@ test("genie dock launch does not synchronously flush missing nodes", () => {
     /const shouldAnimate = target\?\.isMinimized === true \|\| !target;/
   );
 });
+
+test("genie minimize foregrounds the target before preview capture", () => {
+  assert.match(source, /function isFocusedWorkbenchNode/);
+  assert.match(
+    source,
+    /controller\.commands\.focusNode\(nodeID\);\s*\}\);\s*await waitForNextAnimationFrame\(\);/
+  );
+  assert.match(
+    source,
+    /const previewImageUrlPromise = Promise\.resolve\(\s*captureNodePreviewImage\?\.\(target\) \?\? null\s*\)/
+  );
+});
