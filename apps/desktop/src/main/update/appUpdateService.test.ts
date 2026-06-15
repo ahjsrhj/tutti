@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import {
   createAppUpdateService,
+  createElectronAppUpdateDriver,
   createElectronUpdaterLogger
 } from "./appUpdateService.ts";
 
@@ -61,6 +62,24 @@ test("createAppUpdateService can simulate a dev prerelease update", async () => 
   } finally {
     env.restore();
   }
+});
+
+test("createElectronAppUpdateDriver keeps downgrade checks disabled after setting channel", () => {
+  const updater = createFakeElectronUpdater();
+  const driver = createElectronAppUpdateDriver(updater as never, {
+    shouldSuppressNoPublishedVersionsError: () => false
+  });
+
+  driver.configure({
+    allowPrerelease: true,
+    autoDownload: false,
+    autoInstallOnAppQuit: false,
+    channel: "rc",
+    forceDevUpdateConfig: true
+  });
+
+  assert.equal(updater.channel, "rc");
+  assert.equal(updater.allowDowngrade, false);
 });
 
 test("createAppUpdateService recognizes prefixed GitHub rc release tags", async () => {
@@ -201,3 +220,27 @@ function createFakeDriver(
 }
 
 function noop() {}
+
+function createFakeElectronUpdater() {
+  let channel: string | null = null;
+  return {
+    allowDowngrade: false,
+    allowPrerelease: false,
+    autoDownload: true,
+    autoInstallOnAppQuit: true,
+    forceDevUpdateConfig: false,
+    logger: null,
+    get channel() {
+      return channel;
+    },
+    set channel(value: string | null) {
+      channel = value;
+      this.allowDowngrade = true;
+    },
+    checkForUpdates: async () => null,
+    downloadUpdate: async () => [],
+    on() {},
+    quitAndInstall() {},
+    removeListener() {}
+  };
+}

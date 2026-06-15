@@ -79,7 +79,7 @@ interface AppUpdateServiceOptions {
   unsupportedMessage?: string;
 }
 
-function createElectronAppUpdateDriver(
+export function createElectronAppUpdateDriver(
   updater: AppUpdater,
   options: {
     shouldSuppressNoPublishedVersionsError(): boolean;
@@ -126,6 +126,7 @@ function createElectronAppUpdateDriver(
       updater.autoInstallOnAppQuit = options.autoInstallOnAppQuit;
       updater.allowPrerelease = options.allowPrerelease;
       updater.channel = options.channel;
+      updater.allowDowngrade = false;
       updater.forceDevUpdateConfig = options.forceDevUpdateConfig;
     },
     downloadUpdate: () => updater.downloadUpdate().then(() => undefined),
