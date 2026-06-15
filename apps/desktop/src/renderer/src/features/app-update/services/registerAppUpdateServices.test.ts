@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import type { ServiceRegistry } from "@zk-tech/bedrock/di";
+import type { ServiceRegistry } from "@tutti-os/infra/di";
 import type { DesktopApi } from "@preload/types";
 import type { AppUpdateState } from "@shared/contracts/ipc";
 import type { IAppUpdateService } from "./appUpdateService.interface.ts";
