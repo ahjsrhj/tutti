@@ -224,6 +224,41 @@ Use this shape for new entries:
   [activity_projection.go](../../services/tuttid/service/agent/activity_projection.go)
   [WorkspaceChrome.tsx](../../apps/desktop/src/renderer/src/features/workspace-workbench/ui/WorkspaceChrome.tsx)
 
+### Codex ACP warns about user-level config as project-local config
+
+- Symptom:
+  Codex ACP startup logs include
+  `Ignored unsupported project-local config keys` for user-level Codex config
+  keys such as `model_provider`, `model_providers`, or `notify`.
+- Quick checks:
+  Inspect the session cwd and its parents for an accidental project root, such
+  as a `.git` directory under `$HOME`, plus a sibling `.codex/config.toml`.
+  Inspect the generated `codex-home/config.toml`; it should be a session-scoped
+  file, not a symlink to the user's global Codex config.
+- Root cause:
+  Codex walks upward from the session cwd to identify the project root. If it
+  reaches a parent directory that also contains `.codex/config.toml`, Codex can
+  read the user's global config as project-local config, where user-level keys
+  are unsupported.
+- Fix:
+  Codex sidecar preparation must treat `CODEX_HOME` as the run-scoped
+  user-level Codex home for application-wide injection, not as a project root.
+  Copy the user's `config.toml` into the run-scoped `codex-home`, then merge
+  `project_root_markers = []` there so ACP sessions do not read accidental
+  parent `.codex/config.toml` files as project-local config. Do not symlink the
+  config, because the run may need session-specific config that must not mutate
+  the global Codex config. Do not create marker files or directories in the
+  user's cwd.
+- Validation:
+  Add or update `agentsidecar` tests that verify no cwd marker is created, the
+  generated Codex config preserves user-level provider settings while disabling
+  project root markers, and the user's global config is not modified. Run
+  `pnpm lint:go` plus
+  `cd services/tuttid && go test ./... && go build ./...`.
+- References:
+  [codex.go](../../services/tuttid/service/agentsidecar/codex.go)
+  [preparer_test.go](../../services/tuttid/service/agentsidecar/preparer_test.go)
+
 ### Concurrent agent CLI installs corrupt shared npm global state
 
 - Symptom:
