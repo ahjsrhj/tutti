@@ -315,10 +315,10 @@ export const en = {
           apiKey: "API key",
           baseUrl: "Base URL",
           customProvider: "Custom provider",
-          delete: "Delete",
-          deleting: "Deleting...",
-          deleteFailed: "We couldn't delete that managed provider.",
-          deleteSucceeded: "Managed provider deleted.",
+          delete: "Clear",
+          deleting: "Clearing...",
+          deleteFailed: "We couldn't clear that managed provider.",
+          deleteSucceeded: "Managed provider cleared.",
           addModel: "Add",
           description:
             "Store provider credentials in Tutti and let workspace apps request short-lived access.",
@@ -349,6 +349,7 @@ export const en = {
             openaiOfficial: "OpenAI official"
           },
           removeModel: "Remove model",
+          requiredFieldsMissing: "Fill in API key and Base URL first.",
           quickFillProvider: "Quick fill provider",
           save: "Save",
           saveFailed: "We couldn't save that managed provider.",

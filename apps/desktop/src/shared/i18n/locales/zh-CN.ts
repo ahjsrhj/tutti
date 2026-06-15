@@ -298,10 +298,10 @@ export const zhCN = {
           apiKey: "API Key",
           baseUrl: "Base URL",
           customProvider: "自定义 provider",
-          delete: "删除",
-          deleting: "删除中...",
-          deleteFailed: "暂时无法删除这个托管 provider。",
-          deleteSucceeded: "托管 provider 已删除。",
+          delete: "清空",
+          deleting: "清空中...",
+          deleteFailed: "暂时无法清空这个托管 provider。",
+          deleteSucceeded: "托管 provider 已清空。",
           addModel: "添加",
           description:
             "在 Tutti 中保存 provider 凭证，并允许工作区应用申请短期访问。",
@@ -332,6 +332,7 @@ export const zhCN = {
             openaiOfficial: "OpenAI official"
           },
           removeModel: "移除模型",
+          requiredFieldsMissing: "请先填写 API Key 和 Base URL。",
           quickFillProvider: "快速填充 provider",
           save: "保存",
           saveFailed: "暂时无法保存这个托管 provider。",
