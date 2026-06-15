@@ -7,6 +7,7 @@
   "exports": {
     ".": "./index.ts",
     "./agent-message-center": "./agent-message-center/index.ts",
+    "./agent-conversation": "./agent-conversation/index.ts",
     "./plan-decision-ops": "./shared/agentConversation/planImplementation.ts",
     "./agent-rich-text-at-provider": "./agent-gui/agentGuiNode/agentRichTextAtProvider.ts",
     "./mention-file-presentation": "./agent-gui/shared/mentionFilePresentation.ts",
@@ -94,6 +95,10 @@
         "types": "./dist/agent-message-center/index.d.ts",
         "import": "./dist/agent-message-center/index.js"
       },
+      "./agent-conversation": {
+        "types": "./dist/agent-conversation/index.d.ts",
+        "import": "./dist/agent-conversation/index.js"
+      },
       "./plan-decision-ops": {
         "types": "./dist/plan-decision-ops.d.ts",
         "import": "./dist/plan-decision-ops.js"
@@ -149,6 +154,9 @@
       "*": {
         "agent-message-center": [
           "./dist/agent-message-center/index.d.ts"
+        ],
+        "agent-conversation": [
+          "./dist/agent-conversation/index.d.ts"
         ],
         "plan-decision-ops": [
           "./dist/plan-decision-ops.d.ts"

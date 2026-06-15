@@ -6,6 +6,7 @@ export default defineConfig({
   entry: {
     index: "index.ts",
     "agent-message-center/index": "agent-message-center/index.ts",
+    "agent-conversation/index": "agent-conversation/index.ts",
     "agent-rich-text-at-provider":
       "agent-gui/agentGuiNode/agentRichTextAtProvider.ts",
     "agent-title-text": "shared/utils/agentTitleText.ts",
