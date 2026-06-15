@@ -18,6 +18,12 @@ import {
   resolveMacAppBundlePath,
   resolveMacUpdaterSupport
 } from "./macosUpdaterSupport.ts";
+import {
+  compareDesktopVersions,
+  createGitHubPrefixedDesktopReleaseResolver,
+  parseDesktopVersion,
+  type PrefixedDesktopReleaseResolver
+} from "./prefixedDesktopReleaseResolver.ts";
 
 const { app, BrowserWindow } = electron;
 
@@ -61,6 +67,7 @@ export interface AppUpdateService {
 }
 
 interface AppUpdateServiceOptions {
+  prefixedReleaseResolver?: PrefixedDesktopReleaseResolver | null;
   supportsUpdates?: boolean;
   unsupportedMessage?: string;
 }
@@ -190,6 +197,14 @@ function normalizeMessage(error: unknown): string {
   return "Unknown update error";
 }
 
+function formatErrorDetail(error: unknown): string {
+  if (error instanceof Error) {
+    return `${error.name}: ${error.message}`;
+  }
+
+  return typeof error === "string" ? error : String(error);
+}
+
 function envFlagEnabled(name: string): boolean {
   const value = process.env[name]?.trim().toLowerCase();
   return value === "1" || value === "true" || value === "yes" || value === "on";
@@ -211,6 +226,13 @@ function resolveMockLatestVersion(currentVersion: string): string {
   return (
     process.env.TUTTI_APP_UPDATE_LATEST_VERSION?.trim() ||
     `${currentVersion}-dev-update`
+  );
+}
+
+function isNoPublishedVersionsError(error: unknown): boolean {
+  return (
+    error instanceof Error &&
+    error.message.includes("No published versions on GitHub")
   );
 }
 
@@ -326,6 +348,10 @@ export function createAppUpdateService(
     driver ??
     createDevelopmentMockAppUpdateDriver(currentVersion) ??
     createElectronAppUpdateDriver(electronUpdater.autoUpdater);
+  const prefixedReleaseResolver =
+    options.prefixedReleaseResolver === undefined
+      ? createGitHubPrefixedDesktopReleaseResolver()
+      : options.prefixedReleaseResolver;
   let supportsUpdates =
     options.supportsUpdates ??
     ((process.env.NODE_ENV !== "test" && isPackaged) || devUpdatesEnabled);
@@ -409,7 +435,7 @@ export function createAppUpdateService(
     }
 
     intervalId = setInterval(() => {
-      void service.checkForUpdates();
+      runBackgroundCheck("interval");
     }, updateCheckIntervalMs);
   };
 
@@ -524,7 +550,14 @@ export function createAppUpdateService(
       activeCheckPromise = resolvedDriver.checkForUpdates().finally(() => {
         activeCheckPromise = null;
       });
-      await activeCheckPromise;
+      try {
+        await activeCheckPromise;
+      } catch (error) {
+        const fallbackState = await applyPrefixedReleaseFallback(error);
+        if (!fallbackState) {
+          throw error;
+        }
+      }
       return state;
     },
     configure(input) {
@@ -572,7 +605,7 @@ export function createAppUpdateService(
       });
       resetConfiguredState("idle");
       scheduleChecks();
-      void service.checkForUpdates();
+      runBackgroundCheck("configure");
       return Promise.resolve(state);
     },
     dispose() {
@@ -628,6 +661,87 @@ export function createAppUpdateService(
       return () => {
         stateChangedListeners.delete(listener);
       };
+    }
+  };
+
+  const runBackgroundCheck = (reason: string): void => {
+    void service.checkForUpdates().catch((error) => {
+      getDesktopLogger().warn("background application update check failed", {
+        error: formatErrorDetail(error),
+        reason
+      });
+    });
+  };
+
+  const applyPrefixedReleaseFallback = async (
+    error: unknown
+  ): Promise<AppUpdateState | null> => {
+    if (!prefixedReleaseResolver || !isNoPublishedVersionsError(error)) {
+      return null;
+    }
+
+    try {
+      const release = await prefixedReleaseResolver({
+        channel: state.channel,
+        currentVersion
+      });
+      const checkedAt = new Date().toISOString();
+      if (!release) {
+        return applyState({
+          ...buildBaseState(
+            currentVersion,
+            state.policy,
+            state.channel,
+            "up_to_date"
+          ),
+          checkedAt
+        });
+      }
+
+      const current = parseDesktopVersion(currentVersion);
+      const latest = parseDesktopVersion(release.version);
+      if (current && latest && compareDesktopVersions(latest, current) <= 0) {
+        return applyState({
+          ...buildBaseState(
+            currentVersion,
+            state.policy,
+            state.channel,
+            "up_to_date"
+          ),
+          checkedAt
+        });
+      }
+
+      getDesktopLogger().info(
+        "application update found from prefixed GitHub release tag",
+        {
+          channel: state.channel,
+          tag_name: release.tagName,
+          version: release.version
+        }
+      );
+      return applyState({
+        ...buildBaseState(
+          currentVersion,
+          state.policy,
+          state.channel,
+          "available"
+        ),
+        checkedAt,
+        latestVersion: release.version,
+        releaseDate: release.publishedAt,
+        releaseName: release.name ?? release.tagName,
+        releaseNotesUrl: release.htmlUrl
+      });
+    } catch (fallbackError) {
+      getDesktopLogger().warn(
+        "failed to resolve prefixed GitHub desktop release",
+        {
+          error: formatErrorDetail(fallbackError),
+          original_error: formatErrorDetail(error)
+        }
+      );
+      return null;
     }
   };
 

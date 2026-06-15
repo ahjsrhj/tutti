@@ -60,6 +60,49 @@ test("createAppUpdateService can simulate a dev prerelease update", async () => 
   }
 });
 
+test("createAppUpdateService recognizes prefixed GitHub rc release tags", async () => {
+  const env = withAppUpdateEnv({
+    TUTTI_APP_UPDATE_CURRENT_VERSION: "0.0.1-rc.16",
+    TUTTI_APP_UPDATE_DEV: "1"
+  });
+  const driver = createFakeDriver({
+    checkForUpdates: async () => {
+      throw new Error("No published versions on GitHub");
+    }
+  });
+
+  try {
+    const service = createAppUpdateService(driver, {
+      prefixedReleaseResolver: async () => ({
+        htmlUrl:
+          "https://github.com/tutti-os/tutti/releases/tag/tutti-desktop-v0.0.1-rc.17",
+        name: "tutti-desktop-v0.0.1-rc.17",
+        publishedAt: "2026-06-15T00:00:00.000Z",
+        tagName: "tutti-desktop-v0.0.1-rc.17",
+        version: "0.0.1-rc.17"
+      }),
+      supportsUpdates: true
+    });
+    await service.configure({
+      channel: "rc",
+      policy: "prompt"
+    });
+    const state = await service.checkForUpdates();
+
+    assert.equal(state.currentVersion, "0.0.1-rc.16");
+    assert.equal(state.latestVersion, "0.0.1-rc.17");
+    assert.equal(state.releaseName, "tutti-desktop-v0.0.1-rc.17");
+    assert.equal(
+      state.releaseNotesUrl,
+      "https://github.com/tutti-os/tutti/releases/tag/tutti-desktop-v0.0.1-rc.17"
+    );
+    assert.equal(state.status, "available");
+    service.dispose();
+  } finally {
+    env.restore();
+  }
+});
+
 function withAppUpdateEnv(values: Record<string, string>): {
   restore(): void;
 } {
@@ -90,7 +133,9 @@ type DriverConfigureCall = {
   forceDevUpdateConfig: boolean;
 };
 
-function createFakeDriver(): Parameters<typeof createAppUpdateService>[0] & {
+function createFakeDriver(
+  overrides: Partial<Parameters<typeof createAppUpdateService>[0]> = {}
+): Parameters<typeof createAppUpdateService>[0] & {
   configureCalls: DriverConfigureCall[];
 } {
   const configureCalls: DriverConfigureCall[] = [];
@@ -107,7 +152,8 @@ function createFakeDriver(): Parameters<typeof createAppUpdateService>[0] & {
     onUpdateAvailable: () => noop,
     onUpdateDownloaded: () => noop,
     onUpdateNotAvailable: () => noop,
-    quitAndInstall() {}
+    quitAndInstall() {},
+    ...overrides
   };
 }
 
