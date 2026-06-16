@@ -15,13 +15,11 @@
 
 ---
 
-Join our Discord to meet the team and other builders:
-
-<img src="docs/assets/join-discord.jpg" alt="Join our Discord — scan to meet Tutti" width="360" />
-
 Like Tutti? Give us a star, fork the repo, open an issue, or send a PR.
 
-We're building Tutti with the community. Join our Discord to share feedback, ask questions, and help shape what comes next.
+We're building Tutti with the community. Join our Discord to meet the team and other builders, share feedback, ask questions, and help shape what comes next:
+
+<img src="docs/assets/join-discord.jpg" alt="Join our Discord — scan to meet Tutti" width="360" />
 
 ## What is Tutti?
 

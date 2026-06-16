@@ -15,13 +15,11 @@
 
 ---
 
-加入我們的 Discord，認識團隊與其他開發者：
-
-<img src="docs/assets/join-discord.jpg" alt="加入我們的 Discord —— 掃碼認識 Tutti" width="360" />
-
 喜歡 Tutti？歡迎給我們一顆 Star、Fork 儲存庫、提交 Issue，或發起 PR。
 
-我們正在和社群一起打造 Tutti。歡迎加入我們的 Discord，分享回饋、提出問題，並一起參與接下來的建設。
+我們正在和社群一起打造 Tutti。歡迎加入我們的 Discord，認識團隊與其他開發者，分享回饋、提出問題，並一起參與接下來的建設：
+
+<img src="docs/assets/join-discord.jpg" alt="加入我們的 Discord —— 掃碼認識 Tutti" width="360" />
 
 ## Tutti 是什麼？
 
