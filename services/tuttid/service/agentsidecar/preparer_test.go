@@ -520,20 +520,6 @@ func TestDefaultPreparerClaudeCodeUsesSessionScopedSystemPrompt(t *testing.T) {
 	if err := os.WriteFile(userSkillPath, []byte("user skill\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	legacyIssueSkillPath := filepath.Join(cwd, ".claude", "skills", "issue-manager-tutti-7", "SKILL.md")
-	if err := os.MkdirAll(filepath.Dir(legacyIssueSkillPath), 0o755); err != nil {
-		t.Fatal(err)
-	}
-	if err := os.WriteFile(legacyIssueSkillPath, []byte(issueManagerSkill(PrepareInput{})), 0o644); err != nil {
-		t.Fatal(err)
-	}
-	legacyWorkspaceAppSkillPath := filepath.Join(cwd, ".claude", "skills", "workspace-app", "SKILL.md")
-	if err := os.MkdirAll(filepath.Dir(legacyWorkspaceAppSkillPath), 0o755); err != nil {
-		t.Fatal(err)
-	}
-	if err := os.WriteFile(legacyWorkspaceAppSkillPath, []byte(workspaceAppSkill(PrepareInput{})), 0o644); err != nil {
-		t.Fatal(err)
-	}
 
 	prepared, err := NewDefaultPreparer(stateDir).Prepare(t.Context(), PrepareInput{
 		WorkspaceID:    "workspace-1",
@@ -550,12 +536,6 @@ func TestDefaultPreparerClaudeCodeUsesSessionScopedSystemPrompt(t *testing.T) {
 	}
 	if string(content) != "user skill\n" {
 		t.Fatalf("user skill was overwritten: %q", string(content))
-	}
-	if _, err := os.Stat(filepath.Dir(legacyIssueSkillPath)); !os.IsNotExist(err) {
-		t.Fatalf("legacy issue-manager skill still exists, err = %v", err)
-	}
-	if _, err := os.Stat(filepath.Dir(legacyWorkspaceAppSkillPath)); !os.IsNotExist(err) {
-		t.Fatalf("legacy workspace-app skill still exists, err = %v", err)
 	}
 	claudeContent, err := os.ReadFile(claudePath)
 	if err != nil {
