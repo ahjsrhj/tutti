@@ -23,6 +23,53 @@ export interface MentionPaletteGroup<TItem> {
    * shell stays free of surface-specific i18n.
    */
   expandLabel?: string;
+  /**
+   * Optional extra class names applied to the group `<section>` element. Lets a
+   * consumer add bespoke spacing between specific groups (e.g. extra top margin
+   * when one group directly follows a related one) without the shell needing to
+   * know about surface-specific group relationships.
+   */
+  sectionClassName?: string;
+  /**
+   * When true the shell omits the divider it would otherwise render above this
+   * group (the divider normally appears before every group after the first).
+   * Lets a consumer suppress inter-group chrome in specific contexts (e.g. while
+   * showing a flat, ungrouped search result list).
+   */
+  hideTopDivider?: boolean;
+}
+
+/**
+ * Generic theming hooks so a consumer can keep its own stylesheet class names,
+ * test ids, and divider data-attribute when migrating onto the shared shell.
+ * Every field is optional and defaults to the shell's own `rich-text-at-*`
+ * identifiers, so the shell stays surface-agnostic.
+ */
+export interface MentionPaletteTheme {
+  classNames?: {
+    palette?: string;
+    header?: string;
+    footer?: string;
+    tabs?: string;
+    scrollRegion?: string;
+    scrollbar?: string;
+    hint?: string;
+    hintItem?: string;
+    hintButton?: string;
+    hintSeparator?: string;
+    shortcut?: string;
+    shortcutArrow?: string;
+    shortcutButton?: string;
+    shortcutGroup?: string;
+  };
+  testIds?: {
+    emptyState?: string;
+    hint?: string;
+    scrollbar?: string;
+    loadingSpinner?: string;
+  };
+  /** data-attribute (without value) used to mark the inter-group divider. */
+  groupDividerAttribute?: string;
 }
 
 export type MentionPaletteState<TItem> =
@@ -67,7 +114,18 @@ export interface MentionPaletteProps<TItem> {
   highlightedKey: string | null;
   getItemKey: (item: TItem, group: MentionPaletteGroup<TItem>) => string;
   renderItem: (item: TItem, ctx: { active: boolean }) => ReactNode;
-  labels: { loading: string; empty: string; error: string; tabHint: string };
+  labels: {
+    loading: string;
+    empty: string;
+    error: string;
+    tabHint: string;
+    /**
+     * Accessible name for the listbox container. Defaults to `tabHint` when
+     * omitted; consumers that label the whole palette differently from the
+     * keyboard-hint bar supply it explicitly.
+     */
+    listbox?: string;
+  };
   hintLabels: { cycleFilter: string; moveSelection: string };
   maxHeightPx: number;
   onHighlightChange: (key: string) => void;
@@ -79,4 +137,17 @@ export interface MentionPaletteProps<TItem> {
   onMoveSelection: (delta: 1 | -1) => void;
   /** Rendered after the groups, before the keyboard hint bar. */
   renderListFooter?: () => ReactNode;
+  /**
+   * Rendered inside the header, directly under the category tabs, while results
+   * are refreshing in-place (i.e. existing results stay visible). Consumers that
+   * want an inline "refreshing" banner supply it here; omit for none.
+   */
+  loadingBanner?: ReactNode;
+  /**
+   * When true, scrolling the highlighted row into view centers it within the
+   * scroll container instead of using the default `block: "nearest"` behavior.
+   */
+  scrollHighlightedIntoViewCentered?: boolean;
+  /** Optional generic theming overrides; defaults to the shell's own styling. */
+  theme?: MentionPaletteTheme;
 }

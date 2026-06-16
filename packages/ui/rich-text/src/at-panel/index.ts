@@ -7,7 +7,8 @@ export type {
   MentionPaletteGroup,
   MentionPaletteGroupId,
   MentionPaletteProps,
-  MentionPaletteState
+  MentionPaletteState,
+  MentionPaletteTheme
 } from "./mentionPaletteTypes.ts";
 export {
   RichTextAtPanel,

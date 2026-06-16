@@ -1,21 +1,15 @@
 import {
-  useCallback,
-  useEffect,
-  useRef,
-  useState,
-  type MouseEvent as ReactMouseEvent,
-  type CSSProperties,
-  type MutableRefObject,
-  type RefObject
-} from "react";
-import {
   normalizeAgentActivityDisplayStatus,
   type AgentActivityDisplayStatus
 } from "@tutti-os/agent-activity-core";
-import { FolderFailedFilledIcon } from "../../app/renderer/components/icons/FolderFailedFilledIcon";
-import { KeyboardFilledIcon } from "../../app/renderer/components/icons/KeyboardFilledIcon";
+import {
+  MentionPalette,
+  flattenMentionPaletteEntries,
+  type MentionPaletteEntry,
+  type MentionPaletteState,
+  type MentionPaletteTheme
+} from "@tutti-os/ui-rich-text/at-panel";
 import { Spinner } from "../../app/renderer/components/ui/spinner";
-import { UnderlineTabs } from "../../app/renderer/components/ui/underline-tabs";
 import userAvatarPlaceholderUrl from "../../app/renderer/assets/icons/user-avatar-placeholder.png";
 import { translate } from "../../i18n/index";
 import { cn } from "../../app/renderer/lib/utils";
@@ -26,7 +20,7 @@ import {
   resolveAgentMentionFileThumbnailUrl,
   resolveAgentMentionFileVisualKind
 } from "../shared/mentionFilePresentation";
-import { Badge, StatusDot, menuItemClassName } from "@tutti-os/ui-system";
+import { Badge, StatusDot } from "@tutti-os/ui-system";
 import {
   agentMentionEmptyGroupLabel,
   agentMentionFilterLabel,
@@ -73,58 +67,70 @@ interface AgentFileMentionPaletteProps {
   onMoveSelection: (delta: 1 | -1) => void;
 }
 
-const paletteStyles = {
-  palette:
-    "agent-gui-node__mention-palette nodrag grid h-full max-h-[320px] min-h-0 grid-rows-[auto_minmax(0,1fr)_auto] overflow-hidden text-[13px] [-webkit-app-region:no-drag]",
-  header: "agent-gui-node__mention-palette-header relative z-10 shrink-0",
-  footer: "agent-gui-node__mention-palette-footer shrink-0",
-  scrollShell: "relative min-h-0 overflow-hidden",
-  scrollBody:
-    "agent-gui-node__mention-palette-scroll-region h-full min-h-0 overflow-y-auto overscroll-contain px-1 pb-1 pt-2",
-  categoryButton:
-    "nodrag flex min-h-[72px] w-full items-center gap-3.5 rounded-[6px] border-0 bg-transparent px-2.5 py-2.5 text-left text-[var(--text-primary)] transition-[background-color,color] hover:bg-[var(--transparency-block)] focus-visible:bg-[var(--transparency-block)] focus-visible:outline-none active:bg-[var(--transparency-active)]",
-  rowButton: cn(
-    menuItemClassName,
-    "nodrag min-h-9 w-full min-w-0 justify-start overflow-hidden rounded-[6px] border-0 bg-transparent px-2.5 py-2 text-left hover:bg-[var(--transparency-block)] focus:bg-[var(--transparency-block)] data-[highlighted]:bg-[var(--transparency-block)] active:bg-[var(--transparency-active)]"
-  ),
-  expandButton:
-    "nodrag flex w-full items-center justify-center rounded-[6px] px-3 py-2 text-[13px] font-medium text-[var(--text-secondary)] transition hover:bg-[var(--transparency-block)] focus-visible:bg-[var(--transparency-block)] focus-visible:outline-none active:bg-[var(--transparency-active)]"
+const AGENT_MENTION_PALETTE_THEME: MentionPaletteTheme = {
+  classNames: {
+    palette: "agent-gui-node__mention-palette",
+    header: "agent-gui-node__mention-palette-header",
+    footer: "agent-gui-node__mention-palette-footer",
+    tabs: "agent-gui-node__mention-palette-tabs",
+    scrollRegion: "agent-gui-node__mention-palette-scroll-region",
+    scrollbar: "agent-gui-node__mention-palette-scrollbar",
+    hint: "agent-gui-node__mention-palette-hint",
+    hintItem: "agent-gui-node__mention-palette-hint-item",
+    hintButton: "agent-gui-node__mention-palette-hint-button",
+    hintSeparator: "agent-gui-node__mention-palette-hint-separator",
+    shortcut: "agent-gui-node__mention-palette-shortcut",
+    shortcutArrow: "agent-gui-node__mention-palette-shortcut--arrow",
+    shortcutButton: "agent-gui-node__mention-palette-shortcut-button",
+    shortcutGroup: "agent-gui-node__mention-palette-shortcut-group"
+  },
+  testIds: {
+    emptyState: "agent-gui-mention-palette-empty-state",
+    hint: "agent-gui-mention-palette-hint",
+    scrollbar: "agent-gui-mention-palette-scrollbar",
+    loadingSpinner: "agent-mention-loading-spinner"
+  },
+  groupDividerAttribute: "data-agent-mention-group-divider"
 };
-const MENTION_PALETTE_LOADING_MIN_VISIBLE_MS = 320;
+
+/**
+ * Stable per-item key suffix. The shared shell composes the full entry key as
+ * `${group.id}:${agentMentionItemKey(item)}`, matching the agent's historical
+ * `${group.id}:${item.kind}:${...}` format so highlight keys stay compatible.
+ */
+function agentMentionItemKey(item: AgentContextMentionItem): string {
+  return `${item.kind}:${
+    item.kind === "file" ? agentGeneratedMentionItemKey(item) : item.targetId
+  }`;
+}
 
 export function flattenAgentMentionPaletteEntries(
   state: AgentMentionSearchState
 ): AgentMentionPaletteEntry[] {
-  if (state.mode === "browse" && !hasInteractiveGroupEntries(state.groups)) {
-    return state.categories.map((category) => ({
-      key: `category:${category.id}`,
-      type: "category",
-      categoryId: category.id as AgentMentionFilterId
-    }));
-  }
-  const entries: AgentMentionPaletteEntry[] = [];
-  for (const group of state.groups) {
-    for (const item of group.items) {
-      entries.push({
-        key: `${group.id}:${item.kind}:${
-          item.kind === "file"
-            ? agentGeneratedMentionItemKey(item)
-            : item.targetId
-        }`,
+  return flattenMentionPaletteEntries(state, (item) =>
+    agentMentionItemKey(item)
+  ).map((entry: MentionPaletteEntry): AgentMentionPaletteEntry => {
+    if (entry.type === "item") {
+      const item =
+        entry.groupId !== undefined && entry.itemIndex !== undefined
+          ? state.groups.find((group) => group.id === entry.groupId)?.items[
+              entry.itemIndex
+            ]
+          : undefined;
+      return {
+        key: entry.key,
         type: "item",
-        groupId: group.id as AgentMentionGroupId,
+        groupId: entry.groupId as AgentMentionGroupId | undefined,
         item
-      });
+      };
     }
-    if (group.hasMore) {
-      entries.push({
-        key: `expand:${group.id}`,
-        type: "expand",
-        groupId: group.id as AgentMentionGroupId
-      });
-    }
-  }
-  return entries;
+    return {
+      key: entry.key,
+      type: entry.type,
+      categoryId: entry.categoryId as AgentMentionFilterId | undefined,
+      groupId: entry.groupId as AgentMentionGroupId | undefined
+    };
+  });
 }
 
 export function groupStartKeys(state: AgentMentionSearchState): string[] {
@@ -164,271 +170,147 @@ export function AgentFileMentionPalette({
   onMoveSelection
 }: AgentFileMentionPaletteProps): React.JSX.Element {
   "use memo";
-  const highlightedOptionRef = useRef<HTMLButtonElement | null>(null);
-  const scrollBodyRef = useRef<HTMLDivElement | null>(null);
-  const loadingVisibleUntilRef = useRef(0);
-  const loadingHideTimerRef = useRef<ReturnType<typeof setTimeout> | null>(
-    null
-  );
-  const [loadingIndicatorVisible, setLoadingIndicatorVisible] = useState(
-    state.status === "loading"
-  );
-  const browseFilter = state.filter as AgentMentionFilterId;
+  const filter = state.filter as AgentMentionFilterId;
   const highlightedBrowseCategory = highlightedKey?.startsWith("category:")
     ? highlightedKey.slice("category:".length)
     : null;
   const browseDisplayFilter = isBrowseCategoryId(highlightedBrowseCategory)
     ? highlightedBrowseCategory
-    : browseFilter;
-  const hasInteractiveEntries = hasInteractiveGroupEntries(state.groups);
+    : filter;
   const showBrowseHint = shouldShowBrowseSearchHint({
-    browseFilter,
+    browseFilter: filter,
     groups: state.groups,
     highlightedBrowseCategory,
     mode: state.mode
   });
-  const showLoadingState =
-    loadingIndicatorVisible &&
-    (!hasInteractiveEntries || state.mode === "browse");
-  const showLoadingBanner =
-    loadingIndicatorVisible &&
-    hasInteractiveEntries &&
-    state.mode === "results";
 
-  useEffect(() => {
-    const highlightedElement = highlightedOptionRef.current;
-    if (!highlightedElement) {
-      return;
-    }
+  // Browse mode carries its own category list (with labels); results mode tabs
+  // are the fixed agent filter order. The shared shell renders a single tab
+  // source, so resolve the right one here.
+  const categories =
+    state.mode === "browse"
+      ? state.categories
+      : AGENT_MENTION_FILTER_TAB_ORDER.map((id) => ({
+          id,
+          label: agentMentionFilterLabel(id)
+        }));
 
-    const scrollContainer = scrollBodyRef.current;
-    if (!scrollContainer || !scrollContainer.contains(highlightedElement)) {
-      highlightedElement.scrollIntoView({ block: "nearest" });
-      return;
-    }
+  // When the agent wants the single keyboard browse hint we hand the shell an
+  // empty group list so it renders its (keyboard-icon) empty state with our
+  // computed hint copy. Otherwise we map the real groups, decorating each with
+  // the agent-specific label / empty / expand / spacing chrome.
+  const shellState: MentionPaletteState<AgentContextMentionItem> =
+    showBrowseHint
+      ? { ...state, categories, groups: [] }
+      : {
+          ...state,
+          categories,
+          groups: state.groups.map((group, index) =>
+            decorateMentionGroup(
+              group,
+              index,
+              state.groups,
+              filter,
+              state.query
+            )
+          )
+        };
 
-    if (!shouldCenterHighlightedItem) {
-      return;
-    }
+  const emptyLabelForShell = showBrowseHint
+    ? browseHintForFilter(browseDisplayFilter)
+    : resolveMentionPaletteEmptyLabel({
+        emptyLabel,
+        filter,
+        mode: state.mode,
+        query: state.query
+      });
 
-    centerElementInScrollContainer(scrollContainer, highlightedElement);
-  }, [highlightedKey, shouldCenterHighlightedItem]);
+  const showFileSearchMoreHint = shouldShowFileSearchMoreHint({
+    filter,
+    groups: state.groups,
+    mode: state.mode,
+    query: state.query
+  });
 
-  useEffect(() => {
-    if (loadingHideTimerRef.current !== null) {
-      clearTimeout(loadingHideTimerRef.current);
-      loadingHideTimerRef.current = null;
-    }
-
-    if (state.status === "loading") {
-      loadingVisibleUntilRef.current =
-        Date.now() + MENTION_PALETTE_LOADING_MIN_VISIBLE_MS;
-      setLoadingIndicatorVisible(true);
-      return;
-    }
-
-    const remainingMs = loadingVisibleUntilRef.current - Date.now();
-    if (remainingMs <= 0) {
-      setLoadingIndicatorVisible(false);
-      return;
-    }
-
-    loadingHideTimerRef.current = setTimeout(() => {
-      loadingHideTimerRef.current = null;
-      setLoadingIndicatorVisible(false);
-    }, remainingMs);
-
-    return () => {
-      if (loadingHideTimerRef.current !== null) {
-        clearTimeout(loadingHideTimerRef.current);
-        loadingHideTimerRef.current = null;
+  return (
+    <MentionPalette<AgentContextMentionItem>
+      state={shellState}
+      highlightedKey={highlightedKey}
+      getItemKey={agentMentionItemKey}
+      renderItem={(item) => renderMentionRow(item)}
+      labels={{
+        loading: loadingLabel,
+        empty: emptyLabelForShell,
+        error: errorLabel,
+        tabHint: tabHintLabel,
+        listbox: label
+      }}
+      hintLabels={{
+        cycleFilter: translate("agentHost.agentGui.fileMentionSwitchCategory"),
+        moveSelection: translate(
+          "agentHost.agentGui.fileMentionSwitchSelection"
+        )
+      }}
+      maxHeightPx={maxHeightPx}
+      scrollHighlightedIntoViewCentered={shouldCenterHighlightedItem}
+      loadingBanner={<MentionPaletteLoadingBanner label={loadingLabel} />}
+      theme={AGENT_MENTION_PALETTE_THEME}
+      renderListFooter={
+        showFileSearchMoreHint ? () => <MentionFileSearchMoreHint /> : undefined
       }
-    };
-  }, [state.status]);
-
-  const paletteMaxHeightStyle: CSSProperties | undefined =
-    maxHeightPx > 0 ? { maxHeight: `${maxHeightPx}px` } : undefined;
-
-  if (state.status === "error") {
-    return (
-      <div
-        className={paletteStyles.palette}
-        style={paletteMaxHeightStyle}
-        role="listbox"
-        aria-label={label}
-      >
-        <MentionPaletteEmptyState label={errorLabel} />
-      </div>
-    );
-  }
-
-  if (state.mode === "browse") {
-    return (
-      <div
-        className={paletteStyles.palette}
-        style={paletteMaxHeightStyle}
-        role="listbox"
-        aria-label={label}
-      >
-        <div className={paletteStyles.header}>
-          <UnderlineTabs
-            tabs={state.categories.map((category) => ({
-              value: category.id as AgentMentionFilterId,
-              label: agentMentionFilterLabel(
-                category.id as AgentMentionFilterId
-              )
-            }))}
-            value={browseFilter}
-            onValueChange={onSelectCategory}
-            className="agent-gui-node__mention-palette-tabs"
-            preventMouseDownDefault
-          />
-          {showLoadingBanner ? (
-            <MentionPaletteLoadingBanner label={loadingLabel} />
-          ) : null}
-        </div>
-        <div className={paletteStyles.scrollShell}>
-          <div ref={scrollBodyRef} className={paletteStyles.scrollBody}>
-            {showLoadingState ? (
-              <MentionPaletteLoading label={loadingLabel} />
-            ) : showBrowseHint ? (
-              <MentionPaletteEmptyState
-                icon="keyboard"
-                label={browseHintForFilter(browseDisplayFilter)}
-              />
-            ) : (
-              renderMentionPaletteGroups({
-                filter: state.filter as AgentMentionFilterId,
-                groups: state.groups,
-                highlightedKey,
-                highlightedOptionRef,
-                mode: state.mode,
-                onExpandGroup,
-                onHighlightChange,
-                onSelectItem,
-                query: state.query
-              })
-            )}
-          </div>
-          <MentionPaletteScrollbar scrollBodyRef={scrollBodyRef} />
-        </div>
-        <div className={paletteStyles.footer}>
-          <MentionPaletteHint
-            ariaLabel={tabHintLabel}
-            onCycleFilter={onCycleFilter}
-            onMoveSelection={onMoveSelection}
-          />
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <div
-      className={paletteStyles.palette}
-      style={paletteMaxHeightStyle}
-      role="listbox"
-      aria-label={label}
-    >
-      <div className={paletteStyles.header}>
-        <UnderlineTabs
-          tabs={AGENT_MENTION_FILTER_TAB_ORDER.map((filter) => ({
-            value: filter,
-            label: agentMentionFilterLabel(filter)
-          }))}
-          value={state.filter as AgentMentionFilterId}
-          onValueChange={onSelectFilter}
-          className="agent-gui-node__mention-palette-tabs"
-          preventMouseDownDefault
-        />
-        {showLoadingBanner ? (
-          <MentionPaletteLoadingBanner label={loadingLabel} />
-        ) : null}
-      </div>
-      <div className={paletteStyles.scrollShell}>
-        <div ref={scrollBodyRef} className={paletteStyles.scrollBody}>
-          {showLoadingState ? (
-            <MentionPaletteLoading label={loadingLabel} />
-          ) : state.groups.length === 0 ? (
-            <MentionPaletteEmptyState
-              label={resolveMentionPaletteEmptyLabel({
-                emptyLabel,
-                filter: state.filter as AgentMentionFilterId,
-                mode: state.mode,
-                query: state.query
-              })}
-            />
-          ) : (
-            renderMentionPaletteGroups({
-              filter: state.filter as AgentMentionFilterId,
-              groups: state.groups,
-              highlightedKey,
-              highlightedOptionRef,
-              mode: state.mode,
-              onExpandGroup,
-              onHighlightChange,
-              onSelectItem,
-              query: state.query
-            })
-          )}
-        </div>
-        <MentionPaletteScrollbar scrollBodyRef={scrollBodyRef} />
-      </div>
-      <div className={paletteStyles.footer}>
-        <MentionPaletteHint
-          ariaLabel={tabHintLabel}
-          onCycleFilter={onCycleFilter}
-          onMoveSelection={onMoveSelection}
-        />
-      </div>
-    </div>
+      onHighlightChange={onHighlightChange}
+      onSelectItem={(item) => onSelectItem(item)}
+      onSelectCategory={(categoryId) =>
+        onSelectCategory(categoryId as AgentMentionBrowseCategory["id"])
+      }
+      onSelectFilter={(nextFilter) =>
+        onSelectFilter(nextFilter as AgentMentionFilterId)
+      }
+      onExpandGroup={(groupId) => onExpandGroup(groupId as AgentMentionGroupId)}
+      onCycleFilter={() => onCycleFilter()}
+      onMoveSelection={onMoveSelection}
+    />
   );
 }
 
-function MentionPaletteEmptyState({
-  icon = "folder-failed",
-  label
-}: {
-  icon?: "folder-failed" | "keyboard";
-  label: string;
-}): React.JSX.Element {
-  "use memo";
-  const EmptyStateIcon =
-    icon === "keyboard" ? KeyboardFilledIcon : FolderFailedFilledIcon;
-
-  return (
-    <div
-      className="flex h-full min-h-0 flex-1 items-center justify-center px-4 py-6 text-center text-[13px] text-[var(--text-tertiary)]"
-      data-empty-state-icon={icon}
-      data-testid="agent-gui-mention-palette-empty-state"
-    >
-      <div className="flex max-w-[28ch] flex-col items-center justify-center gap-3">
-        <EmptyStateIcon
-          className="h-6 w-6 text-[var(--text-tertiary)]"
-          aria-hidden="true"
-        />
-        <span className="leading-5 text-[var(--text-tertiary)]">{label}</span>
-      </div>
-    </div>
-  );
-}
-
-function MentionPaletteLoading({
-  label
-}: {
-  label: string;
-}): React.JSX.Element {
-  "use memo";
-  return (
-    <div className="flex min-h-[52px] items-center gap-2 rounded-xl px-3 text-[13px] text-[var(--text-secondary)]">
-      <Spinner
-        size={16}
-        className="text-[var(--text-secondary)]"
-        testId="agent-mention-loading-spinner"
-      />
-      <span>{label}</span>
-    </div>
-  );
+/**
+ * Map a controller group onto the shared shell group, layering in the
+ * agent-specific chrome the generic shell intentionally omits: translated
+ * group / empty / expand labels, file-search chrome suppression, and the extra
+ * top margin between the "my sessions" and "collab sessions" groups.
+ */
+function decorateMentionGroup(
+  group: AgentMentionGroup,
+  index: number,
+  groups: ReadonlyArray<AgentMentionGroup>,
+  filter: AgentMentionFilterId,
+  query: string
+): AgentMentionGroup {
+  const groupId = group.id as AgentMentionGroupId;
+  const suppressChrome = shouldSuppressFileSearchGroupChrome(filter, query);
+  const followsMySessions =
+    groupId === "collab_sessions" &&
+    (groups[index - 1]?.id as AgentMentionGroupId) === "my_sessions";
+  const showLabel = shouldRenderMentionGroupLabel({
+    filter,
+    groupCount: groups.length,
+    groupId,
+    query
+  });
+  return {
+    ...group,
+    label: showLabel ? agentMentionGroupLabel(groupId) : undefined,
+    emptyLabel: suppressChrome
+      ? undefined
+      : agentMentionEmptyGroupLabel(groupId, query),
+    expandLabel: group.hasMore
+      ? translate("agentHost.agentGui.contextPickerExpandMore", {
+          count: mentionGroupExpandCount(group, filter)
+        })
+      : undefined,
+    sectionClassName: followsMySessions ? "mt-2" : undefined,
+    hideTopDivider: suppressChrome
+  };
 }
 
 function MentionPaletteLoadingBanner({
@@ -452,356 +334,6 @@ function MentionPaletteLoadingBanner({
   );
 }
 
-function MentionPaletteHint({
-  ariaLabel,
-  onCycleFilter,
-  onMoveSelection
-}: {
-  ariaLabel: string;
-  onCycleFilter: () => void;
-  onMoveSelection: (delta: 1 | -1) => void;
-}): React.JSX.Element {
-  "use memo";
-  const switchCategoryLabel = translate(
-    "agentHost.agentGui.fileMentionSwitchCategory"
-  );
-  const switchSelectionLabel = translate(
-    "agentHost.agentGui.fileMentionSwitchSelection"
-  );
-  return (
-    <div
-      className="agent-gui-node__mention-palette-hint"
-      aria-label={ariaLabel}
-      data-testid="agent-gui-mention-palette-hint"
-    >
-      <button
-        className="agent-gui-node__mention-palette-hint-item agent-gui-node__mention-palette-hint-button"
-        type="button"
-        aria-label={switchCategoryLabel}
-        onMouseDown={(event) => event.preventDefault()}
-        onClick={onCycleFilter}
-      >
-        {/* i18n-check-ignore: Keyboard key label. */}
-        <kbd className="agent-gui-node__mention-palette-shortcut">Tab</kbd>
-        <span>{switchCategoryLabel}</span>
-      </button>
-      <span
-        className="agent-gui-node__mention-palette-hint-separator"
-        aria-hidden="true"
-      >
-        ｜
-      </span>
-      <span className="agent-gui-node__mention-palette-hint-item">
-        <span className="agent-gui-node__mention-palette-shortcut-group">
-          <button
-            className="agent-gui-node__mention-palette-shortcut agent-gui-node__mention-palette-shortcut--arrow agent-gui-node__mention-palette-shortcut-button"
-            type="button"
-            aria-label={`↑ ${switchSelectionLabel}`}
-            onMouseDown={(event) => event.preventDefault()}
-            onClick={() => onMoveSelection(-1)}
-          >
-            ↑
-          </button>
-          <button
-            className="agent-gui-node__mention-palette-shortcut agent-gui-node__mention-palette-shortcut--arrow agent-gui-node__mention-palette-shortcut-button"
-            type="button"
-            aria-label={`↓ ${switchSelectionLabel}`}
-            onMouseDown={(event) => event.preventDefault()}
-            onClick={() => onMoveSelection(1)}
-          >
-            ↓
-          </button>
-        </span>
-        <span>{switchSelectionLabel}</span>
-      </span>
-    </div>
-  );
-}
-
-interface MentionPaletteScrollbarState {
-  scrollable: boolean;
-  thumbHeight: number;
-  thumbTop: number;
-}
-
-interface MentionPaletteScrollbarDragState {
-  maxScrollTop: number;
-  maxThumbTop: number;
-  startClientY: number;
-  startScrollTop: number;
-}
-
-const MENTION_PALETTE_SCROLLBAR_MIN_THUMB_HEIGHT = 24;
-const MENTION_PALETTE_SCROLLBAR_HIDDEN_STATE: MentionPaletteScrollbarState = {
-  scrollable: false,
-  thumbHeight: 0,
-  thumbTop: 0
-};
-
-function MentionPaletteScrollbar({
-  scrollBodyRef
-}: {
-  scrollBodyRef: RefObject<HTMLDivElement | null>;
-}): React.JSX.Element {
-  "use memo";
-  const trackRef = useRef<HTMLDivElement | null>(null);
-  const dragStateRef = useRef<MentionPaletteScrollbarDragState | null>(null);
-  const [scrollbarState, setScrollbarState] =
-    useState<MentionPaletteScrollbarState>({
-      scrollable: false,
-      thumbHeight: 0,
-      thumbTop: 0
-    });
-  const [dragging, setDragging] = useState(false);
-
-  const hideScrollbar = useCallback((): void => {
-    setScrollbarState((previous) =>
-      previous.scrollable ||
-      previous.thumbHeight !== 0 ||
-      previous.thumbTop !== 0
-        ? MENTION_PALETTE_SCROLLBAR_HIDDEN_STATE
-        : previous
-    );
-  }, []);
-
-  const syncScrollbarState = useCallback((): void => {
-    const contentElement = scrollBodyRef.current;
-    if (!contentElement) {
-      hideScrollbar();
-      return;
-    }
-
-    const { scrollHeight, scrollTop, clientHeight } = contentElement;
-    const measuredTrackHeight = trackRef.current?.clientHeight ?? 0;
-    const trackHeight =
-      measuredTrackHeight > 0 ? measuredTrackHeight : clientHeight;
-    const maxScrollTop = Math.max(0, scrollHeight - clientHeight);
-
-    if (clientHeight <= 0 || trackHeight <= 0 || maxScrollTop <= 0) {
-      hideScrollbar();
-      return;
-    }
-
-    const thumbHeight = Math.max(
-      MENTION_PALETTE_SCROLLBAR_MIN_THUMB_HEIGHT,
-      Math.round((clientHeight / scrollHeight) * trackHeight)
-    );
-    const maxThumbTop = Math.max(0, trackHeight - thumbHeight);
-    const thumbTop = Math.round((scrollTop / maxScrollTop) * maxThumbTop);
-    setScrollbarState((previous) =>
-      previous.scrollable &&
-      previous.thumbHeight === thumbHeight &&
-      previous.thumbTop === thumbTop
-        ? previous
-        : { scrollable: true, thumbHeight, thumbTop }
-    );
-  }, [hideScrollbar, scrollBodyRef]);
-
-  useEffect(() => {
-    const contentElement = scrollBodyRef.current;
-    if (!contentElement) {
-      hideScrollbar();
-      return;
-    }
-
-    syncScrollbarState();
-    contentElement.addEventListener("scroll", syncScrollbarState, {
-      passive: true
-    });
-    const resizeObserver =
-      typeof ResizeObserver !== "undefined"
-        ? new ResizeObserver(syncScrollbarState)
-        : null;
-    resizeObserver?.observe(contentElement);
-    if (trackRef.current) {
-      resizeObserver?.observe(trackRef.current);
-    }
-    const animationFrameId = window.requestAnimationFrame(syncScrollbarState);
-    return () => {
-      contentElement.removeEventListener("scroll", syncScrollbarState);
-      resizeObserver?.disconnect();
-      window.cancelAnimationFrame(animationFrameId);
-    };
-  }, [hideScrollbar, scrollBodyRef, syncScrollbarState]);
-
-  useEffect(() => {
-    if (!dragging) {
-      return;
-    }
-
-    const handleMouseMove = (event: MouseEvent): void => {
-      const contentElement = scrollBodyRef.current;
-      const dragState = dragStateRef.current;
-      if (!contentElement || !dragState || dragState.maxThumbTop <= 0) {
-        return;
-      }
-      const delta = event.clientY - dragState.startClientY;
-      const nextThumbTop =
-        (dragState.startScrollTop / dragState.maxScrollTop) *
-          dragState.maxThumbTop +
-        delta;
-      contentElement.scrollTop =
-        (Math.min(Math.max(0, nextThumbTop), dragState.maxThumbTop) /
-          dragState.maxThumbTop) *
-        dragState.maxScrollTop;
-      syncScrollbarState();
-    };
-
-    const handleMouseUp = (): void => {
-      dragStateRef.current = null;
-      setDragging(false);
-    };
-
-    window.addEventListener("mousemove", handleMouseMove);
-    window.addEventListener("mouseup", handleMouseUp);
-    return () => {
-      window.removeEventListener("mousemove", handleMouseMove);
-      window.removeEventListener("mouseup", handleMouseUp);
-    };
-  }, [dragging, scrollBodyRef, syncScrollbarState]);
-
-  const scrollContentToThumbTop = (thumbTop: number): void => {
-    const contentElement = scrollBodyRef.current;
-    const trackElement = trackRef.current;
-    if (!contentElement || !trackElement) {
-      return;
-    }
-    const maxScrollTop = Math.max(
-      0,
-      contentElement.scrollHeight - contentElement.clientHeight
-    );
-    const maxThumbTop = Math.max(
-      0,
-      trackElement.clientHeight - scrollbarState.thumbHeight
-    );
-    if (maxScrollTop <= 0 || maxThumbTop <= 0) {
-      return;
-    }
-    contentElement.scrollTop =
-      (Math.min(Math.max(0, thumbTop), maxThumbTop) / maxThumbTop) *
-      maxScrollTop;
-    syncScrollbarState();
-  };
-
-  const handleTrackMouseDown = (
-    event: ReactMouseEvent<HTMLDivElement>
-  ): void => {
-    if (
-      event.button !== 0 ||
-      !scrollbarState.scrollable ||
-      event.target !== event.currentTarget
-    ) {
-      return;
-    }
-    event.preventDefault();
-    const trackRect = event.currentTarget.getBoundingClientRect();
-    scrollContentToThumbTop(
-      event.clientY - trackRect.top - scrollbarState.thumbHeight / 2
-    );
-  };
-
-  const handleThumbMouseDown = (
-    event: ReactMouseEvent<HTMLDivElement>
-  ): void => {
-    if (event.button !== 0 || !scrollbarState.scrollable) {
-      return;
-    }
-    const contentElement = scrollBodyRef.current;
-    const trackElement = trackRef.current;
-    if (!contentElement || !trackElement) {
-      return;
-    }
-    event.preventDefault();
-    event.stopPropagation();
-    dragStateRef.current = {
-      maxScrollTop: Math.max(
-        0,
-        contentElement.scrollHeight - contentElement.clientHeight
-      ),
-      maxThumbTop: Math.max(
-        0,
-        trackElement.clientHeight - scrollbarState.thumbHeight
-      ),
-      startClientY: event.clientY,
-      startScrollTop: contentElement.scrollTop
-    };
-    setDragging(true);
-  };
-
-  if (!scrollbarState.scrollable && !dragging) {
-    return <div ref={trackRef} className="hidden" aria-hidden="true" />;
-  }
-
-  return (
-    <div
-      ref={trackRef}
-      className="workspace-agents-status-panel__scrollbar agent-gui-node__mention-palette-scrollbar group/status-scrollbar"
-      data-scrollable={scrollbarState.scrollable ? "true" : "false"}
-      data-dragging={dragging ? "true" : "false"}
-      data-testid="agent-gui-mention-palette-scrollbar"
-      aria-hidden="true"
-      onMouseDown={handleTrackMouseDown}
-    >
-      <div
-        className="workspace-agents-status-panel__scrollbar-thumb"
-        onMouseDown={handleThumbMouseDown}
-        style={{
-          height: `${scrollbarState.thumbHeight}px`,
-          transform: `translateY(${scrollbarState.thumbTop}px)`
-        }}
-      />
-    </div>
-  );
-}
-
-function centerElementInScrollContainer(
-  container: HTMLElement,
-  element: HTMLElement
-): void {
-  const containerRect = container.getBoundingClientRect();
-  const elementRect = element.getBoundingClientRect();
-  const currentScrollTop = container.scrollTop;
-  const elementTop = elementRect.top - containerRect.top + currentScrollTop;
-  const centeredScrollTop =
-    elementTop - (container.clientHeight - elementRect.height) / 2;
-  const maxScrollTop = Math.max(
-    0,
-    container.scrollHeight - container.clientHeight
-  );
-  const nextScrollTop = Math.min(Math.max(0, centeredScrollTop), maxScrollTop);
-  container.scrollTo({ top: nextScrollTop, behavior: "auto" });
-}
-
-function renderMentionPaletteGroups(input: {
-  filter: AgentMentionFilterId;
-  groups: ReadonlyArray<AgentMentionGroup>;
-  highlightedKey: string | null;
-  highlightedOptionRef: MutableRefObject<HTMLButtonElement | null>;
-  mode: AgentMentionSearchState["mode"];
-  onExpandGroup: (groupId: AgentMentionGroupId) => void;
-  onHighlightChange: (key: string) => void;
-  onSelectItem: (entry: AgentContextMentionItem) => void;
-  query: string;
-}): React.JSX.Element {
-  return (
-    <div className="grid gap-3">
-      {renderMentionGroups(
-        input.groups,
-        input.query,
-        input.filter,
-        input.highlightedKey,
-        input.highlightedOptionRef,
-        input.onHighlightChange,
-        input.onSelectItem,
-        input.onExpandGroup
-      )}
-      {shouldShowFileSearchMoreHint(input) ? (
-        <MentionFileSearchMoreHint />
-      ) : null}
-    </div>
-  );
-}
-
 function MentionFileSearchMoreHint(): React.JSX.Element {
   "use memo";
   return (
@@ -812,108 +344,6 @@ function MentionFileSearchMoreHint(): React.JSX.Element {
       {translate("agentHost.agentGui.mentionFileSearchMoreHint")}
     </p>
   );
-}
-
-function renderMentionGroups(
-  groups: ReadonlyArray<AgentMentionGroup>,
-  query: string,
-  filter: AgentMentionFilterId,
-  highlightedKey: string | null,
-  highlightedOptionRef: MutableRefObject<HTMLButtonElement | null>,
-  onHighlightChange: (key: string) => void,
-  onSelectItem: (entry: AgentContextMentionItem) => void,
-  onExpandGroup: (groupId: AgentMentionGroupId) => void
-): React.JSX.Element[] {
-  return groups.map((group, index) => {
-    const groupId = group.id as AgentMentionGroupId;
-    const followsMySessions =
-      groupId === "collab_sessions" &&
-      (groups[index - 1]?.id as AgentMentionGroupId) === "my_sessions";
-    const showGroupLabel = shouldRenderMentionGroupLabel({
-      filter,
-      groupCount: groups.length,
-      groupId,
-      query
-    });
-    const showGroupDivider =
-      index > 0 && !shouldSuppressFileSearchGroupChrome(filter, query);
-    return (
-      <section
-        key={group.id}
-        className={cn("grid gap-1", followsMySessions && "mt-2")}
-      >
-        {showGroupDivider ? (
-          <div
-            className="mx-3 mb-2 border-t border-[var(--line-1)]"
-            data-agent-mention-group-divider="true"
-            aria-hidden="true"
-          />
-        ) : null}
-        {showGroupLabel ? (
-          <div className="px-3 text-[13px] font-normal text-[var(--text-secondary)]">
-            {agentMentionGroupLabel(groupId)}
-          </div>
-        ) : null}
-        <div className="grid gap-1">
-          {group.items.length === 0 &&
-          !shouldSuppressFileSearchGroupChrome(filter, query) ? (
-            <div className="px-3 py-1 text-[13px] font-normal text-[var(--text-tertiary)]">
-              {agentMentionEmptyGroupLabel(groupId, query)}
-            </div>
-          ) : null}
-          {group.items.map((item) => {
-            const itemKey = `${group.id}:${item.kind}:${
-              item.kind === "file"
-                ? agentGeneratedMentionItemKey(item)
-                : item.targetId
-            }`;
-            const isHighlighted = itemKey === highlightedKey;
-            return (
-              <button
-                key={itemKey}
-                ref={isHighlighted ? highlightedOptionRef : null}
-                type="button"
-                className={cn(
-                  paletteStyles.rowButton,
-                  isHighlighted && "bg-[var(--transparency-block)]"
-                )}
-                role="option"
-                aria-selected={isHighlighted}
-                onMouseEnter={() => onHighlightChange(itemKey)}
-                onMouseDown={(event) => event.preventDefault()}
-                onClick={() => onSelectItem(item)}
-              >
-                {renderMentionRow(item)}
-              </button>
-            );
-          })}
-          {group.hasMore ? (
-            <button
-              key={`expand:${group.id}`}
-              ref={
-                `expand:${group.id}` === highlightedKey
-                  ? highlightedOptionRef
-                  : null
-              }
-              type="button"
-              className={cn(
-                paletteStyles.expandButton,
-                `expand:${group.id}` === highlightedKey &&
-                  "bg-[var(--transparency-block)] text-[var(--text-primary)]"
-              )}
-              onMouseEnter={() => onHighlightChange(`expand:${group.id}`)}
-              onMouseDown={(event) => event.preventDefault()}
-              onClick={() => onExpandGroup(groupId)}
-            >
-              {translate("agentHost.agentGui.contextPickerExpandMore", {
-                count: mentionGroupExpandCount(group, filter)
-              })}
-            </button>
-          ) : null}
-        </div>
-      </section>
-    );
-  });
 }
 
 function shouldSuppressFileSearchGroupChrome(
