@@ -537,6 +537,24 @@ export const en = {
       copyMessage: "Copy message",
       messageCopied: "Copied",
       promptTipsPrefix: "Tips: ",
+      reviewPicker: {
+        title: "Code review",
+        targetLabel: "What to review",
+        searchPlaceholder: "Search",
+        noResults: "No matches",
+        uncommitted: "Uncommitted changes",
+        baseBranch: "Compare against a branch",
+        commit: "A specific commit",
+        custom: "Custom instructions",
+        branchLabel: "Base branch",
+        branchPlaceholder: "Select a branch",
+        branchLoading: "Loading branches…",
+        branchEmpty: "No branches found",
+        commitPlaceholder: "Commit SHA",
+        customPlaceholder: "Describe what to review",
+        submit: "Start review",
+        cancel: "Cancel"
+      },
       promptTips: {
         setWorkspace: {
           label: "Set the workspace",

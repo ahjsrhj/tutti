@@ -20,6 +20,8 @@ type AgentSessionService interface {
 	Create(context.Context, string, agentservice.CreateSessionInput) (agentservice.Session, error)
 	Get(context.Context, string, string) (agentservice.Session, error)
 	ReadAttachment(context.Context, string, string, string) (agentservice.PromptAttachment, error)
+	ListGitBranches(context.Context, string, string) (agentservice.GitBranches, error)
+	ListGitBranchesForPath(context.Context, string, string) (agentservice.GitBranches, error)
 	Delete(context.Context, string, string) (bool, error)
 	Cancel(context.Context, string, string) (agentservice.CancelSessionResult, error)
 	SendInput(context.Context, string, string, agentservice.SendInput) (agentservice.Session, error)
@@ -277,6 +279,48 @@ func (api DaemonAPI) ReadWorkspaceAgentSessionAttachment(ctx context.Context, re
 		MimeType:     tuttigenerated.WorkspaceAgentSessionAttachmentResponseMimeType(attachment.MimeType),
 		Data:         attachment.Data,
 	}, nil
+}
+
+func (api DaemonAPI) ListWorkspaceAgentSessionGitBranches(ctx context.Context, request tuttigenerated.ListWorkspaceAgentSessionGitBranchesRequestObject) (tuttigenerated.ListWorkspaceAgentSessionGitBranchesResponseObject, error) {
+	if api.AgentSessionService == nil {
+		return tuttigenerated.ListWorkspaceAgentSessionGitBranches503JSONResponse{
+			ServiceUnavailableErrorJSONResponse: agentSessionServiceUnavailableError(),
+		}, nil
+	}
+	branches, err := api.AgentSessionService.ListGitBranches(ctx, string(request.WorkspaceID), string(request.AgentSessionID))
+	if err != nil {
+		return writeListWorkspaceAgentSessionGitBranchesError(err), nil
+	}
+	response := tuttigenerated.ListWorkspaceAgentSessionGitBranches200JSONResponse{Branches: branches.Branches}
+	if response.Branches == nil {
+		response.Branches = []string{}
+	}
+	if branches.CurrentBranch != "" {
+		current := branches.CurrentBranch
+		response.CurrentBranch = &current
+	}
+	return response, nil
+}
+
+func (api DaemonAPI) ListWorkspaceGitBranches(ctx context.Context, request tuttigenerated.ListWorkspaceGitBranchesRequestObject) (tuttigenerated.ListWorkspaceGitBranchesResponseObject, error) {
+	if api.AgentSessionService == nil {
+		return tuttigenerated.ListWorkspaceGitBranches503JSONResponse{
+			ServiceUnavailableErrorJSONResponse: agentSessionServiceUnavailableError(),
+		}, nil
+	}
+	branches, err := api.AgentSessionService.ListGitBranchesForPath(ctx, string(request.WorkspaceID), request.Params.WorkingDirectory)
+	if err != nil {
+		return writeListWorkspaceGitBranchesError(err), nil
+	}
+	response := tuttigenerated.ListWorkspaceGitBranches200JSONResponse{Branches: branches.Branches}
+	if response.Branches == nil {
+		response.Branches = []string{}
+	}
+	if branches.CurrentBranch != "" {
+		current := branches.CurrentBranch
+		response.CurrentBranch = &current
+	}
+	return response, nil
 }
 
 func (api DaemonAPI) UpdateWorkspaceAgentSessionSettings(ctx context.Context, request tuttigenerated.UpdateWorkspaceAgentSessionSettingsRequestObject) (tuttigenerated.UpdateWorkspaceAgentSessionSettingsResponseObject, error) {

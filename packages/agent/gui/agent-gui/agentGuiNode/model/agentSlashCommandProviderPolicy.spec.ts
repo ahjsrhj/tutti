@@ -6,7 +6,7 @@ import {
 } from "./agentSlashCommandProviderPolicy";
 
 describe("agentSlashCommandProviderPolicy", () => {
-  it("adds Codex compact, status, fast, and goal fallback commands after provider commands", () => {
+  it("adds Codex compact, status, fast, goal, and review fallback commands after provider commands", () => {
     expect(
       resolveSlashCommandsForProvider({
         provider: "codex",
@@ -17,7 +17,8 @@ describe("agentSlashCommandProviderPolicy", () => {
       { name: "compact", description: "ACP" },
       { name: "status" },
       { name: "fast" },
-      { name: "goal" }
+      { name: "goal" },
+      { name: "review" }
     ]);
   });
 
@@ -37,7 +38,12 @@ describe("agentSlashCommandProviderPolicy", () => {
         commands: [{ name: "compact", description: "from provider" }],
         hasCompactableContext: false
       })
-    ).toEqual([{ name: "status" }, { name: "fast" }, { name: "goal" }]);
+    ).toEqual([
+      { name: "status" },
+      { name: "fast" },
+      { name: "goal" },
+      { name: "review" }
+    ]);
   });
 
   it("filters Claude Code plan commands from provider and fallback commands", () => {
@@ -217,5 +223,69 @@ describe("agentSlashCommandProviderPolicy", () => {
         draft: "/unknown"
       })
     ).toBeNull();
+  });
+
+  it("opens the review picker when picking codex /review from the palette", () => {
+    expect(
+      resolveSlashCommandSelectionEffect({
+        provider: "codex",
+        command: { name: "review", description: "Review code changes" },
+        currentDraft: "/rev"
+      })
+    ).toEqual({ kind: "showReviewPicker" });
+  });
+
+  it("opens the review picker when submitting bare /review on codex", () => {
+    const commands = resolveSlashCommandsForProvider({
+      provider: "codex",
+      commands: [{ name: "review", description: "Review code changes" }]
+    });
+    expect(
+      resolveSlashCommandSubmitEffect({
+        provider: "codex",
+        commands,
+        draft: "/review"
+      })
+    ).toEqual({ kind: "showReviewPicker" });
+  });
+
+  it("opens the review picker for Codex fallback /review before provider commands arrive", () => {
+    const commands = resolveSlashCommandsForProvider({
+      provider: "codex",
+      commands: [],
+      hasCompactableContext: false
+    });
+    expect(commands.map((command) => command.name)).toContain("review");
+    expect(
+      resolveSlashCommandSubmitEffect({
+        provider: "codex",
+        commands,
+        draft: "/review"
+      })
+    ).toEqual({ kind: "showReviewPicker" });
+  });
+
+  it("submits /review <text> straight through as a custom review", () => {
+    const commands = resolveSlashCommandsForProvider({
+      provider: "codex",
+      commands: [{ name: "review", description: "Review code changes" }]
+    });
+    expect(
+      resolveSlashCommandSubmitEffect({
+        provider: "codex",
+        commands,
+        draft: "/review check the auth flow"
+      })
+    ).toBeNull();
+  });
+
+  it("does not open the review picker for non-codex providers", () => {
+    expect(
+      resolveSlashCommandSelectionEffect({
+        provider: "claude-code",
+        command: { name: "review", description: "Review" },
+        currentDraft: "/rev"
+      })
+    ).toEqual({ kind: "fillDraft", draft: "/review " });
   });
 });
