@@ -18,9 +18,10 @@ const defaultIdleTTL = 5 * time.Minute
 // chrome-devtools-mcp subprocess per workspace, reused across CLI calls and
 // torn down on idle or daemon shutdown.
 type Service struct {
-	transport   agentruntime.ProcessTransport
-	preferences PreferencesReader
-	idleTTL     time.Duration
+	transport            agentruntime.ProcessTransport
+	preferences          PreferencesReader
+	idleTTL              time.Duration
+	autoConnectPreflight func() error
 
 	mu       sync.Mutex
 	sessions map[string]*browserSession
@@ -38,10 +39,11 @@ func NewService(preferences ...PreferencesReader) *Service {
 		reader = preferences[0]
 	}
 	return &Service{
-		transport:   agentruntime.NewLocalProcessTransport(),
-		preferences: reader,
-		idleTTL:     defaultIdleTTL,
-		sessions:    make(map[string]*browserSession),
+		transport:            agentruntime.NewLocalProcessTransport(),
+		preferences:          reader,
+		idleTTL:              defaultIdleTTL,
+		autoConnectPreflight: validateAutoConnectChromeReady,
+		sessions:             make(map[string]*browserSession),
 	}
 }
 
@@ -49,7 +51,29 @@ func NewService(preferences ...PreferencesReader) *Service {
 // session, lazily starting it on first use.
 func (s *Service) CallTool(ctx context.Context, workspaceID, cwd, tool string, args map[string]any) (ToolResult, error) {
 	workspaceID = strings.TrimSpace(workspaceID)
-	session := s.getOrCreate(workspaceID)
+	currentMode := resolveBrowserUseConnectionMode(ctx, s.preferences)
+
+	s.mu.Lock()
+	session, sessionExisted := s.sessions[workspaceID]
+	if session != nil && session.connectionMode != "" && session.connectionMode != currentMode {
+		s.mu.Unlock()
+		s.Shutdown(workspaceID)
+		s.mu.Lock()
+		session, sessionExisted = s.sessions[workspaceID], false
+	}
+	s.mu.Unlock()
+
+	if currentMode == "autoConnect" && !sessionExisted {
+		preflight := s.autoConnectPreflight
+		if preflight == nil {
+			preflight = validateAutoConnectChromeReady
+		}
+		if err := preflight(); err != nil {
+			return ToolResult{}, err
+		}
+	}
+
+	session = s.getOrCreate(workspaceID, currentMode)
 	if err := session.start(ctx, cwd); err != nil {
 		// A failed start should not be cached; drop the session so the next
 		// call retries (e.g. transient npx/network failure).
@@ -60,15 +84,16 @@ func (s *Service) CallTool(ctx context.Context, workspaceID, cwd, tool string, a
 	return session.callTool(ctx, tool, args)
 }
 
-func (s *Service) getOrCreate(workspaceID string) *browserSession {
+func (s *Service) getOrCreate(workspaceID, connectionMode string) *browserSession {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	if session, ok := s.sessions[workspaceID]; ok {
 		return session
 	}
 	session := &browserSession{
-		transport: s.transport,
-		command:   s.resolveCommand,
+		transport:      s.transport,
+		command:        s.resolveCommand,
+		connectionMode: connectionMode,
 	}
 	s.sessions[workspaceID] = session
 	return session

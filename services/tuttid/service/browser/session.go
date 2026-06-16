@@ -34,8 +34,9 @@ type ToolImage struct {
 // browserSession owns one chrome-devtools-mcp subprocess (one Chrome). Tool
 // calls are serialized because the underlying Chrome is single-instance.
 type browserSession struct {
-	transport agentruntime.ProcessTransport
-	command   func(context.Context) []string
+	transport      agentruntime.ProcessTransport
+	command        func(context.Context) []string
+	connectionMode string
 
 	startOnce sync.Once
 	startErr  error
@@ -61,6 +62,7 @@ func (s *browserSession) start(ctx context.Context, cwd string) error {
 			Provider: "browser",
 			CWD:      cwd,
 			Command:  command,
+			Env:      browserMCPSubprocessEnv(),
 		})
 		if err != nil {
 			s.startErr = fmt.Errorf("browser MCP failed to start: %w", err)

@@ -1,5 +1,9 @@
 import type { AgentSessionCommand } from "../../../shared/agentSessionTypes";
 import {
+  buildTuttiBrowserUseSubmitPrompt,
+  parseTuttiBrowserUseInvocation
+} from "./agentBrowserUseSubmit";
+import {
   draftForSlashCommand,
   mergeSlashCommands,
   parseSlashCommandInvocation,
@@ -27,6 +31,7 @@ export type SlashCommandSelectionEffect =
   | {
       kind: "submitPrompt";
       prompt: string;
+      enableBrowserUse?: boolean;
     }
   | {
       kind: "showStatus";
@@ -146,6 +151,31 @@ export function resolveSlashCommandSelectionEffect({
   return {
     kind: "fillDraft",
     draft: draftForSlashCommand(command, currentDraft)
+  };
+}
+
+export function resolveTuttiBrowserUseSubmitEffect(input: {
+  browserSupported: boolean;
+  commands: readonly AgentSlashCommand[];
+  draft: string;
+}): SlashCommandSelectionEffect | null {
+  if (!input.browserSupported) {
+    return null;
+  }
+  const invocation = parseTuttiBrowserUseInvocation(input.draft);
+  if (!invocation) {
+    return null;
+  }
+  const command = input.commands.find((candidate) =>
+    slashCommandMatchesInvocation(candidate, invocation.commandName)
+  );
+  if (!command || !isBrowserUseCapability(command)) {
+    return null;
+  }
+  return {
+    kind: "submitPrompt",
+    prompt: buildTuttiBrowserUseSubmitPrompt(invocation.args),
+    enableBrowserUse: true
   };
 }
 

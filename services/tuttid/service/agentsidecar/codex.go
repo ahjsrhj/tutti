@@ -44,7 +44,7 @@ func prepareCodexHome(codexHome string, input PrepareInput) error {
 	if err := exposeUserCodexFiles(codexHome); err != nil {
 		return err
 	}
-	if err := exposeUserCodexSkillFolders(filepath.Join(codexHome, "skills")); err != nil {
+	if err := exposeUserCodexSkillFolders(filepath.Join(codexHome, "skills"), input); err != nil {
 		return err
 	}
 	if _, err := installProviderNativeSkills(filepath.Join(codexHome, "skills"), input); err != nil {
@@ -94,7 +94,7 @@ func exposeUserCodexFiles(codexHome string) error {
 	return nil
 }
 
-func exposeUserCodexSkillFolders(targetRoot string) error {
+func exposeUserCodexSkillFolders(targetRoot string, input PrepareInput) error {
 	userHome, err := os.UserHomeDir()
 	if err != nil || strings.TrimSpace(userHome) == "" {
 		return nil
@@ -113,6 +113,9 @@ func exposeUserCodexSkillFolders(targetRoot string) error {
 	for _, entry := range entries {
 		name := strings.TrimSpace(entry.Name())
 		if name == "" || strings.HasPrefix(name, ".") {
+			continue
+		}
+		if shouldSkipUserCodexSkillForTuttiBrowserUse(name, input) {
 			continue
 		}
 		source := filepath.Join(sourceRoot, name)
@@ -135,6 +138,13 @@ func exposeUserCodexSkillFolders(targetRoot string) error {
 		}
 	}
 	return nil
+}
+
+func shouldSkipUserCodexSkillForTuttiBrowserUse(name string, input PrepareInput) bool {
+	if !input.BrowserUse || !BrowserUseDefaultEnabled() {
+		return false
+	}
+	return strings.EqualFold(strings.TrimSpace(name), "browser")
 }
 
 func copyFile(source string, target string, mode os.FileMode) error {

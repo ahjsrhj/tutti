@@ -59,6 +59,7 @@ import {
   resolveSlashCommandsForProvider,
   resolveSlashCommandSelectionEffect,
   resolveSlashCommandSubmitEffect,
+  resolveTuttiBrowserUseSubmitEffect,
   type AgentSlashCommand,
   type AgentSlashCommandCapability,
   type SlashCommandSelectionEffect
@@ -845,6 +846,9 @@ export function AgentComposer({
     (effect: SlashCommandSelectionEffect): void => {
       if (effect.kind === "submitPrompt") {
         clearSlashCommandDraft();
+        if (effect.enableBrowserUse && !settingsControlsDisabled) {
+          onSettingsChange({ browserUse: true });
+        }
         onSubmit(textPromptContent(effect.prompt));
         return;
       }
@@ -870,10 +874,7 @@ export function AgentComposer({
         setPaletteDraftPrompt(nextDraft);
         onDraftChange(nextDraft);
         setIsPaletteOpen(false);
-        if (
-          !settingsControlsDisabled &&
-          composerSettings.sessionSettings === null
-        ) {
+        if (!settingsControlsDisabled) {
           onSettingsChange({ browserUse: true });
         }
         return;
@@ -956,6 +957,15 @@ export function AgentComposer({
     }
     if (draftImages.length > 0 && !promptImagesSupported) {
       onPromptImagesUnsupported?.();
+      return;
+    }
+    const browserUseEffect = resolveTuttiBrowserUseSubmitEffect({
+      browserSupported: Boolean(composerSettings.supportsBrowser),
+      commands: resolvedSlashCommands,
+      draft: nextPrompt
+    });
+    if (browserUseEffect) {
+      executeSlashCommandEffect(browserUseEffect);
       return;
     }
     const slashCommandEffect = resolveSlashCommandSubmitEffect({

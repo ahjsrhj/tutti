@@ -2,7 +2,8 @@ import { describe, expect, it } from "vitest";
 import {
   resolveSlashCommandsForProvider,
   resolveSlashCommandSelectionEffect,
-  resolveSlashCommandSubmitEffect
+  resolveSlashCommandSubmitEffect,
+  resolveTuttiBrowserUseSubmitEffect
 } from "./agentSlashCommandProviderPolicy";
 
 describe("agentSlashCommandProviderPolicy", () => {
@@ -47,10 +48,32 @@ describe("agentSlashCommandProviderPolicy", () => {
       })
     ).toBeNull();
     expect(
-      resolveSlashCommandSubmitEffect({
-        provider: "codex",
+      resolveTuttiBrowserUseSubmitEffect({
+        browserSupported: true,
         commands,
         draft: "/browser"
+      })
+    ).toEqual({
+      kind: "submitPrompt",
+      prompt: expect.stringContaining("browser-use"),
+      enableBrowserUse: true
+    });
+    expect(
+      resolveTuttiBrowserUseSubmitEffect({
+        browserSupported: true,
+        commands,
+        draft: "$browser 帮我访问下 google.com"
+      })
+    ).toEqual({
+      kind: "submitPrompt",
+      prompt: expect.stringContaining("帮我访问下 google.com"),
+      enableBrowserUse: true
+    });
+    expect(
+      resolveTuttiBrowserUseSubmitEffect({
+        browserSupported: false,
+        commands,
+        draft: "$browser test"
       })
     ).toBeNull();
   });

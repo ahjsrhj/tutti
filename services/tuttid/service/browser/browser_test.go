@@ -94,7 +94,9 @@ func (t *scriptedTransport) Start(_ context.Context, spec agentruntime.ProcessSp
 }
 
 func newTestService(t *scriptedTransport) *Service {
-	return &Service{transport: t, idleTTL: time.Hour, sessions: make(map[string]*browserSession)}
+	svc := &Service{transport: t, idleTTL: time.Hour, sessions: make(map[string]*browserSession)}
+	svc.autoConnectPreflight = func() error { return nil }
+	return svc
 }
 
 func TestCallToolNavigatesAndAutoAcceptsElicitation(t *testing.T) {
@@ -153,6 +155,9 @@ func TestCallToolReusesSession(t *testing.T) {
 }
 
 func TestCallToolUsesAutoConnectWhenDesktopPreferenceReusesChrome(t *testing.T) {
+	home := t.TempDir()
+	t.Setenv("HOME", home)
+
 	transport := &scriptedTransport{}
 	svc := newTestService(transport)
 	svc.preferences = staticPreferencesReader{
@@ -170,11 +175,44 @@ func TestCallToolUsesAutoConnectWhenDesktopPreferenceReusesChrome(t *testing.T) 
 		t.Fatalf("started specs len = %d, want 1", len(transport.specs))
 	}
 	command := transport.specs[0].Command
-	if !slices.Contains(command, "--autoConnect") {
-		t.Fatalf("command = %#v, want --autoConnect", command)
+	if !slices.Contains(command, "--autoConnect") && !slices.Contains(command, "--wsEndpoint") {
+		t.Fatalf("command = %#v, want --autoConnect or --wsEndpoint", command)
 	}
 	if slices.Contains(command, "--isolated") {
 		t.Fatalf("command = %#v, did not want --isolated", command)
+	}
+}
+
+func TestCallToolRestartsSessionWhenConnectionModeChanges(t *testing.T) {
+	transport := &scriptedTransport{}
+	svc := newTestService(transport)
+	prefs := &mutablePreferencesReader{
+		preferences: preferencesbiz.DesktopPreferences{
+			BrowserUseConnectionMode: "isolated",
+		},
+	}
+	svc.preferences = prefs
+	ctx := context.Background()
+
+	if _, err := svc.CallTool(ctx, "ws-1", "", "list_pages", nil); err != nil {
+		t.Fatalf("CallTool isolated: %v", err)
+	}
+	if len(transport.specs) != 1 {
+		t.Fatalf("started specs len = %d, want 1", len(transport.specs))
+	}
+	if !slices.Contains(transport.specs[0].Command, "--isolated") {
+		t.Fatalf("first command = %#v, want --isolated", transport.specs[0].Command)
+	}
+
+	prefs.setMode("autoConnect")
+	if _, err := svc.CallTool(ctx, "ws-1", "", "list_pages", nil); err != nil {
+		t.Fatalf("CallTool autoConnect: %v", err)
+	}
+	if transport.startCnt != 2 {
+		t.Fatalf("start count = %d, want 2 after connection mode change", transport.startCnt)
+	}
+	if !slices.Contains(transport.specs[1].Command, "--autoConnect") && !slices.Contains(transport.specs[1].Command, "--wsEndpoint") {
+		t.Fatalf("second command = %#v, want --autoConnect or --wsEndpoint", transport.specs[1].Command)
 	}
 }
 
@@ -195,6 +233,23 @@ type staticPreferencesReader struct {
 
 func (r staticPreferencesReader) GetDesktopPreferences(context.Context) (preferencesbiz.DesktopPreferences, error) {
 	return r.preferences, nil
+}
+
+type mutablePreferencesReader struct {
+	mu          sync.Mutex
+	preferences preferencesbiz.DesktopPreferences
+}
+
+func (r *mutablePreferencesReader) GetDesktopPreferences(context.Context) (preferencesbiz.DesktopPreferences, error) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	return r.preferences, nil
+}
+
+func (r *mutablePreferencesReader) setMode(mode string) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	r.preferences.BrowserUseConnectionMode = mode
 }
 
 // TestE2ENavigateRealChrome drives a real chrome-devtools-mcp + Chrome through

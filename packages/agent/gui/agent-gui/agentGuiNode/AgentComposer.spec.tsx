@@ -495,8 +495,9 @@ describe("AgentComposer", () => {
     expect(onSettingsChange).toHaveBeenCalledWith({ browserUse: true });
   });
 
-  it("submits browser capability tokens as prompt text", () => {
+  it("submits browser capability tokens through the tutti browser-use handoff", () => {
     const onSubmit = vi.fn();
+    const onSettingsChange = vi.fn();
     const { container } = render(
       <AgentComposer
         workspaceId="workspace-1"
@@ -521,7 +522,7 @@ describe("AgentComposer", () => {
         labels={createLabels()}
         workspaceUserProjectI18n={workspaceUserProjectI18n}
         onDraftChange={vi.fn()}
-        onSettingsChange={vi.fn()}
+        onSettingsChange={onSettingsChange}
         onSubmit={onSubmit}
         onSendQueuedPromptNext={vi.fn()}
         onRemoveQueuedPrompt={vi.fn()}
@@ -533,8 +534,12 @@ describe("AgentComposer", () => {
 
     fireEvent.submit(container.querySelector("form")!);
 
+    expect(onSettingsChange).toHaveBeenCalledWith({ browserUse: true });
     expect(onSubmit).toHaveBeenCalledWith([
-      { type: "text", text: "/browser inspect this page" }
+      {
+        type: "text",
+        text: expect.stringMatching(/browser-use[\s\S]*inspect this page/)
+      }
     ]);
   });
 

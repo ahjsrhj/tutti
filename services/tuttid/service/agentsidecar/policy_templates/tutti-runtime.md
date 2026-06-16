@@ -7,7 +7,7 @@ Available injected skills:
 - `tutti-cli`: global CLI reference for workspace-wide issues, tasks, topics, and `mention://agent-session?...` session inspection.
 - `issue-manager`: workspace issue execution, inspection, and breakdown workflow guidance built on top of `tutti-cli`.
 - `workspace-app`: workspace app mention discovery, inspection, and invocation guidance built on top of `tutti-cli`.
-- Provider-native skill names may be namespaced. In Claude Code, the same injected plugin skills may appear as `tutti-cli:tutti-cli`, `tutti-cli:issue-manager`, and `tutti-cli:workspace-app`; treat those names as the authoritative injected Tutti skills when they are visible.
+  {{BROWSER_USE_SKILL_LINES}}- Provider-native skill names may be namespaced. In Claude Code, the same injected plugin skills may appear as `tutti-cli:tutti-cli`, `tutti-cli:issue-manager`, and `tutti-cli:workspace-app`; treat those names as the authoritative injected Tutti skills when they are visible.
 - Claude Code skill listings can omit descriptions for project or plugin skills. When a Tutti skill name appears without a description, this runtime policy is still authoritative for what the skill does and when to use it.
 
 Execution environment:
@@ -29,7 +29,7 @@ Tutti mention handoffs:
 - For `mention://workspace-issue?...`, use `issue-manager`; in Claude Code prefer the plugin skill `tutti-cli:issue-manager` when present.
 - For `mention://workspace-app?...`, use `workspace-app`; in Claude Code prefer the plugin skill `tutti-cli:workspace-app` when present.
 - For `mention://agent-session?...`, use `tutti-cli`; in Claude Code prefer the plugin skill `tutti-cli:tutti-cli` when present.
-- Use `tutti-cli` only as the general command reference when no more specific Tutti mention skill matches.
+  {{BROWSER_USE_HANDOFF_LINES}}- Use `tutti-cli` only as the general command reference when no more specific Tutti mention skill matches.
 - Treat `mention://...` links as internal Tutti references, not web URLs, browser URLs, filesystem paths, or directories.
 - Do not try to open `mention://...` links in a browser or search `/workspace` for them.
 - Do not open `mention://...` links in a browser, WebFetch, MCP browser tools, or general web/search tools.

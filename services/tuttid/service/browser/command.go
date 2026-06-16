@@ -44,7 +44,8 @@ func resolveBrowserMCPCommand(ctx context.Context, preferences PreferencesReader
 			return append([]string{command}, args...)
 		}
 	}
-	args = append(args, resolveBrowserMCPConnectionArgs(resolveBrowserUseConnectionMode(ctx, preferences))...)
+	mode := resolveBrowserUseConnectionMode(ctx, preferences)
+	args = append(args, resolveBrowserMCPConnectionArgs(mode)...)
 	return append([]string{command}, args...)
 }
 
@@ -61,7 +62,7 @@ func resolveBrowserMCPBaseCommand() (string, []string) {
 func resolveBrowserMCPConnectionArgs(mode string) []string {
 	switch mode {
 	case "autoConnect":
-		return []string{"--autoConnect", "--channel", "stable", "--no-usage-statistics"}
+		return resolveAutoConnectMCPConnectionArgs()
 	default:
 		return []string{"--isolated", "--no-usage-statistics"}
 	}
