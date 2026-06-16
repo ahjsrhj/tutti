@@ -12,16 +12,10 @@ export type {
   MentionPaletteTheme
 } from "./mentionPaletteTypes.ts";
 export {
-  RichTextAtPanel,
-  type RichTextAtPanelProps
-} from "./RichTextAtPanel.tsx";
-export { RichTextAtSearchController } from "./RichTextAtSearchController.ts";
-export {
   DEFAULT_RICH_TEXT_AT_PANEL_PAGE_SIZE,
   RICH_TEXT_AT_ALL_FILTER_ID,
   buildDefaultRichTextAtProviderGroups,
   buildRichTextAtFilterTabs,
-  filterGroupsForRichTextAtPanel,
   findRichTextAtProviderGroup,
   groupRichTextAtMatches,
   normalizeAtPanelQuery,
@@ -37,10 +31,7 @@ export type {
   RichTextAtFilterId,
   RichTextAtFilterTab,
   RichTextAtGroupId,
-  RichTextAtPanelMatch,
-  RichTextAtPanelReferenceItem,
   RichTextAtProviderGroup,
-  RichTextAtSearchControllerOptions,
   RichTextAtSearchGroup,
   RichTextAtSearchInput,
   RichTextAtSearchState
