@@ -64,7 +64,7 @@ export function resolveIssueManagerStatusLabel(
     case "running":
       return copy.t("status.running");
     case "in_progress":
-      return copy.t("status.inProgress");
+      return copy.t("status.running");
     case "pending_acceptance":
       return copy.t("status.pendingAcceptance");
     case "completed":

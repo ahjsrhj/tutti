@@ -66,7 +66,7 @@ test("launchpad model includes installed apps, system nodes, and all agent provi
         dockEntryId: "task-center",
         iconUrl: "task-center.png",
         id: "task-center",
-        label: "Issues",
+        label: "Tasks",
         typeId: "task-center"
       },
       {

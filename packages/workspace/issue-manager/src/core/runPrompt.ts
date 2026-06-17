@@ -53,7 +53,7 @@ export function buildIssueManagerRunPrompt(input: {
     mode: "execute"
   });
   return [
-    input.copy?.t("runPrompts.executeIntro") ?? "Handle this issue reference.",
+    input.copy?.t("runPrompts.executeIntro") ?? "Handle this task reference.",
     "",
     mentionMarkdown
   ].join("\n");
@@ -76,7 +76,7 @@ export function buildIssueManagerTaskBreakdownPrompt(input: {
 
   return [
     input.copy?.t("runPrompts.breakdownIntro") ??
-      "Break this issue reference down into executable tasks.",
+      "Break this task reference down into executable tasks.",
     "",
     issueMention
   ].join("\n");

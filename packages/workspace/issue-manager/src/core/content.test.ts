@@ -68,7 +68,7 @@ test("issue-manager run prompt keeps execute handoff issue-scoped", () => {
     workspaceRoot: "/tmp/workspace"
   });
 
-  assert.match(prompt, /Handle this issue reference/);
+  assert.match(prompt, /Handle this task reference/);
   assert.match(
     prompt,
     /\[@Plan migration\]\(mention:\/\/workspace-issue\/issue-1\?workspaceId=workspace-1&topicId=topic-1&mode=execute\)/
@@ -134,8 +134,8 @@ test("issue-manager run prompt follows injected locale copy", () => {
     workspaceRoot: "/tmp/workspace"
   });
 
-  assert.match(prompt, /请处理这个 Issue 引用/);
-  assert.doesNotMatch(prompt, /Handle this issue reference/);
+  assert.match(prompt, /请处理这个任务引用/);
+  assert.doesNotMatch(prompt, /Handle this task reference/);
 });
 
 test("issue-manager task breakdown prompt captures issue context", () => {
@@ -180,8 +180,8 @@ test("issue-manager task breakdown prompt captures issue context", () => {
     prompt,
     /\[@Plan migration\]\(mention:\/\/workspace-issue\/issue-1\?workspaceId=workspace-1&topicId=topic-1&mode=breakdown\)/
   );
-  assert.match(prompt, /Break this issue reference down into executable tasks/);
-  assert.doesNotMatch(prompt, /现有子事项数：1/);
+  assert.match(prompt, /Break this task reference down into executable tasks/);
+  assert.doesNotMatch(prompt, /现有子任务数：1/);
   assert.doesNotMatch(prompt, /引用资料数：1/);
 });
 
@@ -206,10 +206,10 @@ test("issue-manager task breakdown prompt follows injected locale copy", () => {
     workspaceId: "workspace-1"
   });
 
-  assert.match(prompt, /请基于这个 Issue 引用做任务拆解/);
+  assert.match(prompt, /请基于这个任务引用做任务拆解/);
   assert.doesNotMatch(
     prompt,
-    /Break this issue reference down into executable tasks/
+    /Break this task reference down into executable tasks/
   );
 });
 

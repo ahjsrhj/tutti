@@ -6,6 +6,7 @@ import {
   buildIssueManagerStatusCounts,
   resolveIssueManagerStatusCounts,
   resolveIssueManagerShellContentViewState,
+  resolveIssueManagerSubtaskProgress,
   resolveIssueManagerSidebarViewState
 } from "./IssueManagerShellState.ts";
 
@@ -123,10 +124,34 @@ test("buildIssueManagerStatusCounts includes all issues and status buckets", () 
     canceled: 0,
     completed: 1,
     failed: 0,
-    in_progress: 0,
     not_started: 0,
     pending_acceptance: 0,
     running: 1
+  });
+});
+
+test("buildIssueManagerStatusCounts folds legacy in_progress into running", () => {
+  const issues = [
+    createIssueSummary({
+      issueId: "issue-1",
+      status: "running",
+      title: "Plan migration"
+    }),
+    createIssueSummary({
+      issueId: "issue-2",
+      status: "in_progress",
+      title: "Port renderer"
+    })
+  ];
+
+  assert.deepEqual(buildIssueManagerStatusCounts(issues), {
+    all: 2,
+    canceled: 0,
+    completed: 0,
+    failed: 0,
+    not_started: 0,
+    pending_acceptance: 0,
+    running: 2
   });
 });
 
@@ -152,7 +177,6 @@ test("resolveIssueManagerStatusCounts prefers backend totals over current filter
       canceled: 0,
       completed: 0,
       failed: 0,
-      in_progress: 0,
       not_started: 2,
       pending_acceptance: 0,
       running: 0
@@ -182,10 +206,52 @@ test("resolveIssueManagerStatusCounts maps backend in-progress totals", () => {
       canceled: 0,
       completed: 0,
       failed: 0,
-      in_progress: 3,
       not_started: 0,
       pending_acceptance: 0,
-      running: 0
+      running: 3
+    }
+  );
+});
+
+test("subtask progress is hidden when an issue has no subtasks", () => {
+  assert.equal(
+    resolveIssueManagerSubtaskProgress(
+      createIssueSummary({ issueId: "issue-1", taskCount: 0 })
+    ),
+    null
+  );
+});
+
+test("subtask progress clamps completed count to the available total", () => {
+  assert.deepEqual(
+    resolveIssueManagerSubtaskProgress(
+      createIssueSummary({
+        completedCount: 9,
+        issueId: "issue-1",
+        taskCount: 7
+      })
+    ),
+    {
+      completed: 7,
+      percent: 100,
+      total: 7
+    }
+  );
+});
+
+test("subtask progress uses completed subtasks over total subtasks", () => {
+  assert.deepEqual(
+    resolveIssueManagerSubtaskProgress(
+      createIssueSummary({
+        completedCount: 2,
+        issueId: "issue-1",
+        taskCount: 7
+      })
+    ),
+    {
+      completed: 2,
+      percent: 28.57142857142857,
+      total: 7
     }
   );
 });
@@ -259,14 +325,19 @@ function createCopy(): IssueManagerI18nRuntime {
 }
 
 function createIssueSummary(
-  input: Pick<IssueManagerIssueSummary, "issueId" | "title"> &
-    Partial<Pick<IssueManagerIssueSummary, "status">>
+  input: Pick<IssueManagerIssueSummary, "issueId"> &
+    Partial<Pick<IssueManagerIssueSummary, "title">> &
+    Partial<
+      Pick<IssueManagerIssueSummary, "completedCount" | "status" | "taskCount">
+    >
 ): IssueManagerIssueSummary {
   return {
+    completedCount: input.completedCount,
     creatorUserId: "local",
     issueId: input.issueId,
     status: input.status ?? "not_started",
-    title: input.title,
+    taskCount: input.taskCount,
+    title: input.title ?? "Task",
     topicId: "topic-1",
     workspaceId: "workspace-1"
   };

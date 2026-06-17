@@ -21,6 +21,7 @@ import {
 } from "../../../services/controllerModel.ts";
 import {
   issueManagerStatusFilters,
+  resolveIssueManagerSubtaskProgress,
   type IssueManagerSidebarViewState
 } from "./IssueManagerShellState.ts";
 import { issueManagerStatusBadgeVariant } from "../status/IssueManagerStatusBadge.ts";
@@ -288,6 +289,8 @@ function IssueManagerSidebarItem({
   onSelect: (issueId: string | null) => void;
   selected: boolean;
 }): JSX.Element {
+  const subtaskProgress = resolveIssueManagerSubtaskProgress(issue);
+
   return (
     <button
       className={cn(
@@ -316,9 +319,29 @@ function IssueManagerSidebarItem({
           {issue.title}
         </p>
       </div>
-      <div className="mt-2 text-[11px] leading-[1.55] text-[var(--text-secondary)]">
-        {copy.t("labels.taskCount", { count: issue.taskCount ?? 0 })}
-      </div>
+      {subtaskProgress ? (
+        <div className="mt-3 space-y-1.5">
+          <div className="flex items-center justify-between gap-3 text-[11px] leading-[1.55] text-[var(--text-secondary)]">
+            <span>
+              {copy.t("labels.taskCount", { count: subtaskProgress.total })}
+            </span>
+            <span
+              aria-label={`${subtaskProgress.completed}/${subtaskProgress.total}`}
+            >
+              {subtaskProgress.completed}/{subtaskProgress.total}
+            </span>
+          </div>
+          <div
+            aria-hidden="true"
+            className="h-1 overflow-hidden rounded-full bg-[var(--transparency-block)]"
+          >
+            <div
+              className="h-full rounded-full bg-[var(--status-running)]"
+              style={{ width: `${subtaskProgress.percent}%` }}
+            />
+          </div>
+        </div>
+      ) : null}
     </button>
   );
 }

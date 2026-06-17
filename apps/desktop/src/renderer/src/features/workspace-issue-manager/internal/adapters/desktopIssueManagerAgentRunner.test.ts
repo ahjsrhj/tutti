@@ -30,7 +30,7 @@ test("desktop issue-manager agent runner opens execute prompt as an agent draft"
   assert.equal(capturedLaunch?.provider, "codex");
   assert.equal(capturedLaunch?.userProjectPath, undefined);
   assert.equal(capturedLaunch?.workspaceId, "workspace-1");
-  assert.match(capturedPrompt, /Handle this issue reference/);
+  assert.match(capturedPrompt, /Handle this task reference/);
   assert.match(
     capturedPrompt,
     /\[@Plan migration \/ Port renderer\]\(mention:\/\/workspace-issue\/issue-1\?workspaceId=workspace-1&topicId=topic-1&mode=execute&taskId=task-1\)/
@@ -78,8 +78,8 @@ test("desktop issue-manager agent runner sends localized execute prompt", async 
 
   await runner.runTask(createRunRequest());
 
-  assert.match(capturedPrompt, /请处理这个 Issue 引用/);
-  assert.doesNotMatch(capturedPrompt, /Handle this issue reference/);
+  assert.match(capturedPrompt, /请处理这个任务引用/);
+  assert.doesNotMatch(capturedPrompt, /Handle this task reference/);
 });
 
 test("desktop issue-manager agent runner passes selected execution directory to the draft launch", async () => {
@@ -154,7 +154,7 @@ test("desktop issue-manager agent breakdown launcher opens breakdown prompt as a
   assert.equal(capturedLaunch?.agentSessionId, undefined);
   assert.match(
     capturedLaunch?.draftPrompt ?? "",
-    /Break this issue reference down into executable tasks/
+    /Break this task reference down into executable tasks/
   );
   assert.match(
     capturedLaunch?.draftPrompt ?? "",
@@ -196,10 +196,10 @@ test("desktop issue-manager agent breakdown launcher sends localized prompt", as
     workspaceId: "workspace-1"
   });
 
-  assert.match(capturedPrompt, /请基于这个 Issue 引用做任务拆解/);
+  assert.match(capturedPrompt, /请基于这个任务引用做任务拆解/);
   assert.doesNotMatch(
     capturedPrompt,
-    /Break this issue reference down into executable tasks/
+    /Break this task reference down into executable tasks/
   );
 });
 

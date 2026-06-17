@@ -23,7 +23,7 @@ test("strips terminal sentence punctuation from description text", () => {
 
 test("summarizes issue content without terminal sentence punctuation", () => {
   assert.equal(
-    summarizeIssueManagerContent("这个事项还没有描述。", ""),
-    "这个事项还没有描述"
+    summarizeIssueManagerContent("这个任务还没有描述。", ""),
+    "这个任务还没有描述"
   );
 });

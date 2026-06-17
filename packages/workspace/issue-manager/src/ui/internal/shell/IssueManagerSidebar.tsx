@@ -1,6 +1,5 @@
 import { type JSX } from "react";
 import { cn } from "@tutti-os/ui-system";
-import type { IssueManagerNodeState } from "../../../contracts/index.ts";
 import {
   IssueManagerSidebarBody,
   IssueManagerSidebarHeader,
@@ -9,7 +8,10 @@ import {
 } from "./IssueManagerSidebarSections.tsx";
 import { resolveIssueManagerSidebarPresentationState } from "./IssueManagerSidebarState.ts";
 import type { IssueManagerController } from "../../react/index.ts";
-import type { IssueManagerSidebarViewState } from "./IssueManagerShellState.ts";
+import type {
+  issueManagerStatusFilters,
+  IssueManagerSidebarViewState
+} from "./IssueManagerShellState.ts";
 
 export interface IssueManagerSidebarProps {
   controller: IssueManagerController;
@@ -17,7 +19,7 @@ export interface IssueManagerSidebarProps {
   isNarrowLayout: boolean;
   showStandaloneState: boolean;
   sidebarViewState: IssueManagerSidebarViewState;
-  statusCounts: Record<IssueManagerNodeState["issueStatusFilter"], number>;
+  statusCounts: Record<(typeof issueManagerStatusFilters)[number], number>;
 }
 
 export function IssueManagerSidebar({

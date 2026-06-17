@@ -160,7 +160,7 @@ test("desktop issue-manager node state source drops non-whitelisted updates", (t
       selectedIssueId: "issue-1",
       selectedTaskId: null,
       taskDraftContent: "拼音 composing",
-      taskDraftTitle: "事项草稿",
+      taskDraftTitle: "任务草稿",
       taskListCollapsed: false
     },
     typeId: "issue-manager"
@@ -196,7 +196,7 @@ test("desktop issue-manager node state source drops non-whitelisted updates", (t
       selectedIssueId: "issue-1",
       selectedTaskId: null,
       taskDraftContent: "拼音 composing",
-      taskDraftTitle: "事项草稿",
+      taskDraftTitle: "任务草稿",
       taskListCollapsed: false
     },
     typeId: "issue-manager"
