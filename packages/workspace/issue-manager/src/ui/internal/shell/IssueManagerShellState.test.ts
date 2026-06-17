@@ -1,12 +1,16 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import type { IssueManagerIssueSummary } from "../../../contracts/index.ts";
+import type {
+  IssueManagerIssueSummary,
+  IssueManagerTaskSummary
+} from "../../../contracts/index.ts";
 import type { IssueManagerI18nRuntime } from "../../../i18n/issueManagerI18n.ts";
 import {
   buildIssueManagerStatusCounts,
   resolveIssueManagerStatusCounts,
   resolveIssueManagerShellContentViewState,
   resolveIssueManagerSubtaskProgress,
+  resolveIssueManagerSubtaskProgressFromTasks,
   resolveIssueManagerSidebarViewState
 } from "./IssueManagerShellState.ts";
 
@@ -256,6 +260,24 @@ test("subtask progress uses completed subtasks over total subtasks", () => {
   );
 });
 
+test("subtask progress from visible tasks is hidden when all subtasks are filtered out", () => {
+  assert.equal(resolveIssueManagerSubtaskProgressFromTasks([]), null);
+});
+
+test("subtask progress from visible tasks counts only visible completed subtasks", () => {
+  assert.deepEqual(
+    resolveIssueManagerSubtaskProgressFromTasks([
+      createTaskSummary({ status: "completed", taskId: "task-1" }),
+      createTaskSummary({ status: "running", taskId: "task-2" })
+    ]),
+    {
+      completed: 1,
+      percent: 50,
+      total: 2
+    }
+  );
+});
+
 test("shell content view state prefers issue editing over task flows", () => {
   assert.deepEqual(
     resolveIssueManagerShellContentViewState({
@@ -339,6 +361,20 @@ function createIssueSummary(
     taskCount: input.taskCount,
     title: input.title ?? "Task",
     topicId: "topic-1",
+    workspaceId: "workspace-1"
+  };
+}
+
+function createTaskSummary(
+  input: Pick<IssueManagerTaskSummary, "status" | "taskId">
+): IssueManagerTaskSummary {
+  return {
+    creatorUserId: "local",
+    issueId: "issue-1",
+    priority: "medium",
+    status: input.status,
+    taskId: input.taskId,
+    title: "Task",
     workspaceId: "workspace-1"
   };
 }

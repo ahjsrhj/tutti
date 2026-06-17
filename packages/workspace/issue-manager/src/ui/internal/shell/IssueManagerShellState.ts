@@ -1,6 +1,7 @@
 import type {
   IssueManagerIssueSummary,
-  IssueManagerStatusCounts
+  IssueManagerStatusCounts,
+  IssueManagerTaskSummary
 } from "../../../contracts/index.ts";
 import type { IssueManagerI18nRuntime } from "../../../i18n/issueManagerI18n.ts";
 import type { AsyncCollectionState } from "../../../services/controllerTypes.ts";
@@ -134,6 +135,23 @@ export function resolveIssueManagerSubtaskProgress(
     total,
     Math.max(0, Math.trunc(issue.completedCount ?? 0))
   );
+
+  return {
+    completed,
+    percent: (completed / total) * 100,
+    total
+  };
+}
+
+export function resolveIssueManagerSubtaskProgressFromTasks(
+  tasks: readonly Pick<IssueManagerTaskSummary, "status">[]
+): IssueManagerSubtaskProgressViewState | null {
+  const total = tasks.length;
+  if (total <= 0) {
+    return null;
+  }
+
+  const completed = tasks.filter((task) => task.status === "completed").length;
 
   return {
     completed,

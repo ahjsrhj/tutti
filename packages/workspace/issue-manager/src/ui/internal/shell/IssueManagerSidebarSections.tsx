@@ -22,6 +22,7 @@ import {
 import {
   issueManagerStatusFilters,
   resolveIssueManagerSubtaskProgress,
+  type IssueManagerSubtaskProgressViewState,
   type IssueManagerSidebarViewState
 } from "./IssueManagerShellState.ts";
 import { issueManagerStatusBadgeVariant } from "../status/IssueManagerStatusBadge.ts";
@@ -102,6 +103,7 @@ export function IssueManagerSidebarBody({
   isNarrowLayout,
   selectedIssueId,
   sidebarViewState,
+  subtaskProgressByIssueId,
   onRetry,
   onSelectIssue
 }: {
@@ -109,6 +111,10 @@ export function IssueManagerSidebarBody({
   isNarrowLayout: boolean;
   selectedIssueId: string | null;
   sidebarViewState: IssueManagerSidebarViewState;
+  subtaskProgressByIssueId: Record<
+    string,
+    IssueManagerSubtaskProgressViewState | null
+  >;
   onRetry: () => void;
   onSelectIssue: (issueId: string | null) => void;
 }): JSX.Element {
@@ -144,6 +150,7 @@ export function IssueManagerSidebarBody({
             isNarrowLayout={isNarrowLayout}
             issues={sidebarViewState.issues}
             selectedIssueId={selectedIssueId}
+            subtaskProgressByIssueId={subtaskProgressByIssueId}
             onSelectIssue={onSelectIssue}
           />
         )}
@@ -245,12 +252,17 @@ function IssueManagerSidebarIssueList({
   isNarrowLayout,
   issues,
   selectedIssueId,
+  subtaskProgressByIssueId,
   onSelectIssue
 }: {
   copy: IssueManagerI18nRuntime;
   isNarrowLayout: boolean;
   issues: readonly IssueManagerIssueSummary[];
   selectedIssueId: string | null;
+  subtaskProgressByIssueId: Record<
+    string,
+    IssueManagerSubtaskProgressViewState | null
+  >;
   onSelectIssue: (issueId: string | null) => void;
 }): JSX.Element {
   return (
@@ -269,6 +281,11 @@ function IssueManagerSidebarIssueList({
           issue={issue}
           key={issue.issueId}
           selected={selectedIssueId === issue.issueId}
+          subtaskProgress={
+            issue.issueId in subtaskProgressByIssueId
+              ? subtaskProgressByIssueId[issue.issueId]
+              : undefined
+          }
           onSelect={onSelectIssue}
         />
       ))}
@@ -281,15 +298,20 @@ function IssueManagerSidebarItem({
   isNarrowLayout,
   issue,
   onSelect,
-  selected
+  selected,
+  subtaskProgress: subtaskProgressOverride
 }: {
   copy: IssueManagerI18nRuntime;
   isNarrowLayout: boolean;
   issue: IssueManagerIssueSummary;
   onSelect: (issueId: string | null) => void;
   selected: boolean;
+  subtaskProgress?: IssueManagerSubtaskProgressViewState | null;
 }): JSX.Element {
-  const subtaskProgress = resolveIssueManagerSubtaskProgress(issue);
+  const subtaskProgress =
+    subtaskProgressOverride === undefined
+      ? resolveIssueManagerSubtaskProgress(issue)
+      : subtaskProgressOverride;
 
   return (
     <button
