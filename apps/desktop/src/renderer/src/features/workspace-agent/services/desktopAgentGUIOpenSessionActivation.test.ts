@@ -104,8 +104,7 @@ test("consumeDesktopAgentGUIOpenSessionActivation activates and selects the requ
       composerOverridesByProvider: null,
       conversationRailCollapsed: false,
       conversationRailWidthPx: null,
-      lastActiveAgentSessionId: "session-2",
-      lastActiveConversationTitle: null
+      lastActiveAgentSessionId: "session-2"
     }
   ]);
 

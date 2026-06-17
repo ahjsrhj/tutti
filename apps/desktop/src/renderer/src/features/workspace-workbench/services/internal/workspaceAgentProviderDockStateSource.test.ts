@@ -1,7 +1,10 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import type { AgentProviderStatus } from "@tutti-os/client-tuttid-ts";
-import type { AgentProviderStatusService } from "@renderer/features/workspace-agent";
+import type {
+  AgentProviderStatusService,
+  IWorkspaceAgentActivityService
+} from "@renderer/features/workspace-agent";
 import type { WorkspaceWorkbenchDesktopI18nRuntime } from "@shared/i18n";
 import { createWorkspaceAgentProviderDockStateSource } from "./workspaceAgentProviderDockStateSource.ts";
 import { workspaceAgentGuiDockEntryId } from "./workspaceWorkbenchComposition.ts";
@@ -55,6 +58,28 @@ test("agent provider dock state source emits subscription updates", () => {
   service.emit();
   unsubscribe();
   service.emit();
+
+  assert.equal(callCount, 1);
+});
+
+test("agent provider dock state source refreshes when agent activity changes", () => {
+  const service = createAgentProviderStatusService({ statuses: [] });
+  const activityService = createWorkspaceAgentActivityService();
+  const source = createWorkspaceAgentProviderDockStateSource({
+    agentProviderStatusService: service,
+    i18n: createI18n(),
+    workspaceAgentActivityService: activityService,
+    workspaceId: "workspace-1"
+  });
+  let callCount = 0;
+
+  const unsubscribe = source.subscribe(() => {
+    callCount += 1;
+  });
+  activityService.emit("workspace-1");
+  activityService.emit("workspace-2");
+  unsubscribe();
+  activityService.emit("workspace-1");
 
   assert.equal(callCount, 1);
 });
@@ -365,6 +390,33 @@ function createAgentProviderStatusService(input: {
     },
     subscribe(listener) {
       listeners.add(listener);
+      return () => {
+        listeners.delete(listener);
+      };
+    }
+  };
+}
+
+function createWorkspaceAgentActivityService(): Pick<
+  IWorkspaceAgentActivityService,
+  "subscribe"
+> & {
+  emit(workspaceId: string): void;
+} {
+  const listenersByWorkspaceId = new Map<
+    string,
+    Set<Parameters<IWorkspaceAgentActivityService["subscribe"]>[1]>
+  >();
+  return {
+    emit(workspaceId) {
+      for (const listener of listenersByWorkspaceId.get(workspaceId) ?? []) {
+        listener({} as never);
+      }
+    },
+    subscribe(workspaceId, listener) {
+      const listeners = listenersByWorkspaceId.get(workspaceId) ?? new Set();
+      listeners.add(listener);
+      listenersByWorkspaceId.set(workspaceId, listeners);
       return () => {
         listeners.delete(listener);
       };

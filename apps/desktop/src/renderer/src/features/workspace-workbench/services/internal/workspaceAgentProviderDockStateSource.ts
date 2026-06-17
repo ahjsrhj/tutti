@@ -1,6 +1,9 @@
 import type { WorkbenchHostDockEntryStateSource } from "@tutti-os/workbench-surface";
 import type { AgentProviderStatus } from "@tutti-os/client-tuttid-ts";
-import type { AgentProviderStatusService } from "@renderer/features/workspace-agent";
+import type {
+  AgentProviderStatusService,
+  IWorkspaceAgentActivityService
+} from "@renderer/features/workspace-agent";
 import {
   workspaceWorkbenchDesktopI18nKeys,
   type WorkspaceWorkbenchDesktopI18nRuntime
@@ -27,6 +30,11 @@ const agentProviderDockBaseOrder = new Map<WorkspaceAgentGuiProvider, number>(
 export function createWorkspaceAgentProviderDockStateSource(input: {
   agentProviderStatusService: AgentProviderStatusService;
   i18n: WorkspaceWorkbenchDesktopI18nRuntime;
+  workspaceAgentActivityService?: Pick<
+    IWorkspaceAgentActivityService,
+    "subscribe"
+  >;
+  workspaceId?: string;
 }): WorkbenchHostDockEntryStateSource {
   return {
     getEntryState(entryId) {
@@ -83,7 +91,21 @@ export function createWorkspaceAgentProviderDockStateSource(input: {
       };
     },
     subscribe(listener) {
-      return input.agentProviderStatusService.subscribe(listener);
+      const unsubscribeProviderStatus =
+        input.agentProviderStatusService.subscribe(listener);
+      const unsubscribeAgentActivity =
+        input.workspaceAgentActivityService && input.workspaceId
+          ? input.workspaceAgentActivityService.subscribe(
+              input.workspaceId,
+              () => {
+                listener();
+              }
+            )
+          : undefined;
+      return () => {
+        unsubscribeProviderStatus();
+        unsubscribeAgentActivity?.();
+      };
     }
   };
 }

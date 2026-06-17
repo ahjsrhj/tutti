@@ -1,6 +1,14 @@
 import { createElement, type CSSProperties, type ReactNode } from "react";
 import { createAgentGuiWorkbenchContribution } from "@tutti-os/agent-gui/workbench/contribution";
-import type { AgentGuiWorkbenchProvider } from "@tutti-os/agent-gui/workbench/types";
+import {
+  normalizeAgentGuiWorkbenchProvider,
+  resolveAgentGuiWorkbenchProviderLabel
+} from "@tutti-os/agent-gui/workbench/providerCatalog";
+import type {
+  AgentGuiWorkbenchProvider,
+  AgentGuiWorkbenchState
+} from "@tutti-os/agent-gui/workbench/types";
+import type { AgentActivitySession } from "@tutti-os/agent-activity-core";
 import type { I18nRuntime } from "@tutti-os/ui-i18n-runtime";
 import type { TuttidClient } from "@tutti-os/client-tuttid-ts";
 import type {
@@ -134,10 +142,46 @@ export function createWorkspaceAgentGuiContribution(input: {
         { height: context.node.frame.height, width: context.node.frame.width },
         renderAgentGuiWorkbenchBody(context, helpers, { previewMode: true })
       ),
+    resolveDockPopupTitle: (state) =>
+      resolveWorkspaceAgentGuiDockPopupTitle(state, {
+        workspaceAgentActivityService: input.workspaceAgentActivityService,
+        workspaceId: input.workspaceId
+      }),
     resolveDockEntryVisibility: (provider: AgentGuiWorkbenchProvider) =>
       isWorkspaceAgentGuiDefaultDockProvider(provider) ? "always" : "never",
     workspaceId: input.workspaceId
   });
+}
+
+function resolveWorkspaceAgentGuiDockPopupTitle(
+  state: AgentGuiWorkbenchState | null,
+  input: {
+    workspaceAgentActivityService: IWorkspaceAgentActivityService;
+    workspaceId: string;
+  }
+): string | null {
+  const agentSessionId = state?.lastActiveAgentSessionId?.trim();
+  if (!agentSessionId) {
+    return null;
+  }
+  const session = input.workspaceAgentActivityService
+    .getSnapshot(input.workspaceId)
+    .sessions.find((item) => item.agentSessionId === agentSessionId);
+  return session ? resolveDisplayableAgentGuiSessionTitle(session) : null;
+}
+
+function resolveDisplayableAgentGuiSessionTitle(
+  session: Pick<AgentActivitySession, "provider" | "title">
+): string | null {
+  const title = session.title.trim();
+  if (!title) {
+    return null;
+  }
+  const provider = normalizeAgentGuiWorkbenchProvider(session.provider);
+  return title.toLowerCase() ===
+    resolveAgentGuiWorkbenchProviderLabel(provider).toLowerCase()
+    ? null
+    : title;
 }
 
 const dockPopupPreviewViewport = {

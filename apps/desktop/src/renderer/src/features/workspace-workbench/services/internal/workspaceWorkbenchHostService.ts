@@ -678,7 +678,10 @@ export class WorkspaceWorkbenchHostService implements IWorkspaceWorkbenchHostSer
       dockStateSource: createWorkspaceAgentProviderDockStateSource({
         agentProviderStatusService:
           this.dependencies.agentProviderStatusService,
-        i18n: input.i18n
+        i18n: input.i18n,
+        workspaceAgentActivityService:
+          this.dependencies.workspaceAgentActivityService,
+        workspaceId: input.workspaceId
       }),
       prepareHostClose: resolveWorkbenchHostPrepareClose(
         contributionRegistry.contributions

@@ -25,7 +25,6 @@ export function createDefaultAgentGuiWorkbenchNodeState(
     conversationRailCollapsed: false,
     conversationRailWidthPx: null,
     lastActiveAgentSessionId: null,
-    lastActiveConversationTitle: null,
     provider
   };
 }
@@ -51,10 +50,6 @@ export function normalizeAgentGuiWorkbenchState(
     lastActiveAgentSessionId:
       typeof state.lastActiveAgentSessionId === "string"
         ? state.lastActiveAgentSessionId
-        : null,
-    lastActiveConversationTitle:
-      typeof state.lastActiveConversationTitle === "string"
-        ? state.lastActiveConversationTitle
         : null
   };
 }
@@ -74,8 +69,7 @@ export function projectAgentGuiWorkbenchState(
     conversationRailWidthPx: normalizeOptionalPositiveNumber(
       state.conversationRailWidthPx
     ),
-    lastActiveAgentSessionId: state.lastActiveAgentSessionId ?? null,
-    lastActiveConversationTitle: state.lastActiveConversationTitle ?? null
+    lastActiveAgentSessionId: state.lastActiveAgentSessionId ?? null
   };
 }
 
@@ -91,8 +85,7 @@ export function areAgentGuiWorkbenchStatesEqual(
     ) &&
     left.conversationRailCollapsed === right.conversationRailCollapsed &&
     left.conversationRailWidthPx === right.conversationRailWidthPx &&
-    left.lastActiveAgentSessionId === right.lastActiveAgentSessionId &&
-    left.lastActiveConversationTitle === right.lastActiveConversationTitle
+    left.lastActiveAgentSessionId === right.lastActiveAgentSessionId
   );
 }
 
@@ -124,10 +117,6 @@ export function normalizeAgentGuiWorkbenchNodeState(
       typeof state?.lastActiveAgentSessionId === "string"
         ? state.lastActiveAgentSessionId
         : null,
-    lastActiveConversationTitle:
-      typeof state?.lastActiveConversationTitle === "string"
-        ? state.lastActiveConversationTitle
-        : null,
     provider
   };
 }
@@ -146,7 +135,6 @@ export function areAgentGuiWorkbenchNodeStatesEqual(
     left.conversationRailCollapsed === right.conversationRailCollapsed &&
     left.conversationRailWidthPx === right.conversationRailWidthPx &&
     left.lastActiveAgentSessionId === right.lastActiveAgentSessionId &&
-    left.lastActiveConversationTitle === right.lastActiveConversationTitle &&
     left.provider === right.provider
   );
 }
@@ -246,8 +234,7 @@ function createDefaultAgentGuiWorkbenchState(): AgentGuiWorkbenchState {
     composerOverridesByProvider: null,
     conversationRailCollapsed: false,
     conversationRailWidthPx: null,
-    lastActiveAgentSessionId: null,
-    lastActiveConversationTitle: null
+    lastActiveAgentSessionId: null
   };
 }
 

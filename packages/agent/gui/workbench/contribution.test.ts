@@ -254,6 +254,10 @@ describe("agent GUI workbench contribution copy", () => {
     const contribution = createAgentGuiWorkbenchContribution({
       renderBody: () => null,
       renderPreview: () => "preview",
+      resolveDockPopupTitle: (state) =>
+        state?.lastActiveAgentSessionId === "session-1"
+          ? "Current session title"
+          : null,
       workspaceId: "workspace-1"
     });
     const dockEntry = contribution.dockEntries?.find(
@@ -279,7 +283,7 @@ describe("agent GUI workbench contribution copy", () => {
       dockEntry?.providePopupItemPreview?.({
         externalNodeState: {
           lastActiveAgentSessionId: "session-1",
-          lastActiveConversationTitle: "Implement dock previews"
+          lastActiveConversationTitle: "Stale session title"
         },
         externalWorkspaceState: null,
         host: {} as never,
@@ -288,5 +292,7 @@ describe("agent GUI workbench contribution copy", () => {
         node: node as never
       }) ?? null;
     expect(preview?.kind).toBe("component");
+    expect(preview?.revision).toContain("Current session title");
+    expect(preview?.revision).not.toContain("Stale session title");
   });
 });

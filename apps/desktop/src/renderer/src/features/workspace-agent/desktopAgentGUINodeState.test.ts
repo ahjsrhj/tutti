@@ -40,8 +40,7 @@ test("desktop agent gui workbench state only preserves whitelisted data", () => 
     composerOverridesByProvider: null,
     conversationRailCollapsed: true,
     conversationRailWidthPx: null,
-    lastActiveAgentSessionId: "session-1",
-    lastActiveConversationTitle: "A title"
+    lastActiveAgentSessionId: "session-1"
   });
 });
 
@@ -61,8 +60,7 @@ test("desktop agent gui workbench projection preserves rail state and permission
       composerOverridesByProvider: null,
       conversationRailCollapsed: true,
       conversationRailWidthPx: 360,
-      lastActiveAgentSessionId: "session-1",
-      lastActiveConversationTitle: "A title"
+      lastActiveAgentSessionId: "session-1"
     }
   );
 });
@@ -108,7 +106,7 @@ test("desktop agent gui workbench state equality includes rail state", () => {
         lastActiveConversationTitle: "Second"
       })
     ),
-    false
+    true
   );
 });
 
@@ -228,8 +226,7 @@ test("desktop agent gui node state source keeps workbench rail state in memory",
       composerOverridesByProvider: null,
       conversationRailCollapsed: true,
       conversationRailWidthPx: 360,
-      lastActiveAgentSessionId: "session-1",
-      lastActiveConversationTitle: "A title"
+      lastActiveAgentSessionId: "session-1"
     }
   );
   assert.equal(

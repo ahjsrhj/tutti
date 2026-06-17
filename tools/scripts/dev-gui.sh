@@ -456,8 +456,12 @@ install_dev_cli() {
 start_desktop_dev() {
   local tuttid_bin_path="$1"
   local status
+  local why_did_you_render="${VITE_TUTTI_WHY_DID_YOU_RENDER:-1}"
 
   log "starting desktop dev with prebuilt tuttid"
+  if [[ "${why_did_you_render}" == "1" ]]; then
+    log "why-did-you-render diagnostics enabled"
+  fi
   if [[ -n "${TUTTI_APP_UPDATE_DEV:-}" || -n "${TUTTI_APP_UPDATE_MOCK:-}" || -n "${TUTTI_APP_UPDATE_CURRENT_VERSION:-}" || -n "${TUTTI_APP_UPDATE_LATEST_VERSION:-}" ]]; then
     log "app update dev: enabled=${TUTTI_APP_UPDATE_DEV:-0} mock=${TUTTI_APP_UPDATE_MOCK:-none} current=${TUTTI_APP_UPDATE_CURRENT_VERSION:-default} latest=${TUTTI_APP_UPDATE_LATEST_VERSION:-default}"
   fi
@@ -467,6 +471,7 @@ start_desktop_dev() {
     cd "${ROOT_DIR}"
     TUTTID_BIN="${tuttid_bin_path}" \
       TUTTID_LOG_OUTPUT="${TUTTID_LOG_OUTPUT:-tee}" \
+      VITE_TUTTI_WHY_DID_YOU_RENDER="${why_did_you_render}" \
       pnpm dev:desktop < /dev/null
   ) &
   DEV_GUI_CHILD_PID="$!"

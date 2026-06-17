@@ -1,3 +1,4 @@
+import "./lib/whyDidYouRender";
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { TooltipProvider } from "@tutti-os/ui-system";

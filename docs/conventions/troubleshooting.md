@@ -628,3 +628,33 @@ information is not available yet`, but `ps` or `lsof` still shows an older
   [appUpdateState.ts](../../apps/desktop/src/shared/contracts/appUpdateState.ts)
   [appUpdateService.ts](../../apps/desktop/src/main/update/appUpdateService.ts)
   [appUpdateService.ts](../../apps/desktop/src/renderer/src/features/app-update/services/internal/appUpdateService.ts)
+
+### Renderer component repeatedly re-renders without visible changes
+
+- Symptom:
+  The desktop renderer feels stuck, text flickers, or React reports
+  `Maximum update depth exceeded`, but the current stack only points at the
+  component that called `setState`.
+- Quick checks:
+  First inspect state-sync diagnostics and React Profiler to confirm the
+  component boundary. For prop identity churn, why-did-you-render is enabled by
+  default when launching with `make dev-gui`. Disable that default with
+  `VITE_TUTTI_WHY_DID_YOU_RENDER=0 make dev-gui`, or set
+  `localStorage.tuttiWhyDidYouRender = "0"` in DevTools and reload the renderer.
+  For other development entrypoints, enable it by setting
+  `localStorage.tuttiWhyDidYouRender = "1"` and reloading the renderer.
+- Root cause:
+  React StrictMode can intentionally replay setup/cleanup in development, but a
+  continuously increasing render count usually means a parent is passing a new
+  object/function every render or an effect writes state from a dependency that
+  changes on every render.
+- Fix:
+  Stabilize the value at the ownership boundary, or remove derived presentation
+  values from bidirectional state. For external/workbench state, only sync
+  canonical identifiers and derive display text from the owning service.
+- Validation:
+  With why-did-you-render enabled, reproduce once and confirm the noisy
+  component lists the expected prop or hook difference. Then disable the tool
+  and run the affected renderer tests plus desktop typecheck.
+- References:
+  [whyDidYouRender.ts](../../apps/desktop/src/renderer/src/lib/whyDidYouRender.ts)

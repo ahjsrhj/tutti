@@ -60,8 +60,7 @@ describe("agent gui workbench state", () => {
       },
       conversationRailCollapsed: true,
       conversationRailWidthPx: 360,
-      lastActiveAgentSessionId: "session-1",
-      lastActiveConversationTitle: "A title"
+      lastActiveAgentSessionId: "session-1"
     });
   });
 
@@ -93,14 +92,11 @@ describe("agent gui workbench state", () => {
           lastActiveConversationTitle: "First"
         }),
         normalizeAgentGuiWorkbenchState({
-          composerOverridesByProvider: {
-            codex: { model: "gpt-5" }
-          },
           lastActiveAgentSessionId: "session-1",
           lastActiveConversationTitle: "Second"
         })
       )
-    ).toBe(false);
+    ).toBe(true);
   });
 
   it("derives providers from workbench instance ids", () => {
@@ -157,8 +153,7 @@ describe("agent gui workbench state", () => {
       },
       conversationRailCollapsed: true,
       conversationRailWidthPx: 360,
-      lastActiveAgentSessionId: "session-1",
-      lastActiveConversationTitle: "A title"
+      lastActiveAgentSessionId: "session-1"
     });
   });
 });
