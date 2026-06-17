@@ -16,6 +16,7 @@ import type {
   WorkbenchDockPreviewCache
 } from "@tutti-os/workbench-surface";
 import type {
+  DesktopComputerUseApi,
   DesktopHostFilesApi,
   DesktopPlatformApi,
   DesktopRuntimeApi
@@ -46,12 +47,16 @@ export function createWorkspaceAgentGuiContribution(input: {
   agentProviderStatusService: AgentProviderStatusService;
   appCenterService: IWorkspaceAppCenterService;
   appI18n: I18nRuntime<string>;
+  computerUseApi: Pick<DesktopComputerUseApi, "checkStatus">;
   dockPreviewCache: WorkbenchDockPreviewCache;
   dockIconUrls?: Parameters<
     typeof createAgentGuiWorkbenchContribution
   >[0]["dockIconUrls"];
   hostFilesApi: DesktopHostFilesApi;
   i18n: WorkspaceWorkbenchDesktopI18nRuntime;
+  onCapabilitySettingsRequest?: Parameters<
+    typeof DesktopAgentGUIWorkbenchBody
+  >[0]["onCapabilitySettingsRequest"];
   tuttidClient: TuttidClient;
   platformApi: Pick<
     DesktopPlatformApi,
@@ -102,7 +107,9 @@ export function createWorkspaceAgentGuiContribution(input: {
       appCenterService: input.appCenterService,
       agentProviderStatusService: input.agentProviderStatusService,
       context,
+      computerUseApi: input.computerUseApi,
       dockPreviewCache: input.dockPreviewCache,
+      onCapabilitySettingsRequest: input.onCapabilitySettingsRequest,
       onLinkAction: handleLinkAction,
       onStateChange: (...args) => helpers.onStateChange(...args),
       previewMode: options?.previewMode,

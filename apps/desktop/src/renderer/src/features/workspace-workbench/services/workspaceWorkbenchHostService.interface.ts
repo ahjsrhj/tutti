@@ -55,6 +55,10 @@ export interface WorkspaceWorkbenchBodyRendererContext {
   workspaceId: string;
 }
 
+export type WorkspaceWorkbenchCapabilitySettingsTarget =
+  | "browserUse"
+  | "computerUse";
+
 export interface WorkspaceWorkbenchHostInput {
   readonly captureNodePreviewImage?: WorkbenchHostProps["captureNodePreviewImage"];
   readonly contributions?: readonly WorkbenchContribution[];
@@ -99,6 +103,9 @@ export interface IWorkspaceWorkbenchHostService {
     defaultAgentProvider?: string | null;
     dockIconStyle: DesktopDockIconStyle;
     i18n: WorkspaceWorkbenchDesktopI18nRuntime;
+    onCapabilitySettingsRequest?: (
+      target: WorkspaceWorkbenchCapabilitySettingsTarget
+    ) => void;
     renderFilesNodeBody: (
       context: WorkspaceWorkbenchBodyRendererContext
     ) => ReactNode;

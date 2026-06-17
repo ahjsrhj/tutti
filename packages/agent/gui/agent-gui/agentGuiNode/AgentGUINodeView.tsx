@@ -287,6 +287,18 @@ export interface AgentGUIViewLabels {
   slashPaletteSkillsGroup: string;
   browserUseCapabilityLabel: string;
   browserUseCapabilityDescription: string;
+  browserUseCapabilityDescriptionAutoConnect: string;
+  browserUseCapabilityDescriptionIsolated: string;
+  browserUseCapabilitySettingsLabel: string;
+  browserUseCapabilitySettingsDescription: string;
+  capabilityInlineSettingsLabel: string;
+  computerUseCapabilityLabel: string;
+  computerUseCapabilityDescription: string;
+  computerUseCapabilitySetupRequiredDescription: string;
+  computerUseCapabilityAuthorizationRequiredDescription: string;
+  computerUseCapabilityAuthorizationUnknownDescription: string;
+  computerUseCapabilitySettingsLabel: string;
+  computerUseCapabilitySettingsDescription: string;
   slashStatusTitle: string;
   slashStatusSession: string;
   slashStatusBaseUrl: string;
@@ -344,6 +356,8 @@ export interface AgentGUIViewLabels {
 interface AgentGUINodeViewProps {
   viewModel: AgentGUINodeViewModel;
   onLinkAction?: (action: WorkspaceLinkAction) => void;
+  capabilityMenuState?: AgentComposerProps["capabilityMenuState"];
+  onCapabilitySettingsRequest?: AgentComposerProps["onCapabilitySettingsRequest"];
   isActive?: boolean;
   composerFocusRequestSequence?: number | null;
   isAgentProviderReady: boolean;
@@ -747,6 +761,8 @@ function conversationPlainTitle(
 export function AgentGUINodeView({
   viewModel,
   onLinkAction,
+  capabilityMenuState,
+  onCapabilitySettingsRequest,
   isActive = true,
   composerFocusRequestSequence = null,
   isAgentProviderReady,
@@ -1090,6 +1106,8 @@ export function AgentGUINodeView({
             slashStatusLimitsLoading={slashStatusLimitsLoading}
             showProjectSelector={showProjectSelector}
             onLinkAction={onLinkAction}
+            capabilityMenuState={capabilityMenuState}
+            onCapabilitySettingsRequest={onCapabilitySettingsRequest}
             onAgentProviderLogin={onAgentProviderLogin}
             onRequestWorkspaceReferences={requestWorkspaceReferences}
             onRequestGitBranches={onRequestGitBranches}
@@ -1125,6 +1143,8 @@ interface AgentGUIDetailPaneProps {
   slashStatusLimitsLoading: boolean;
   showProjectSelector: boolean;
   onLinkAction?: (action: WorkspaceLinkAction) => void;
+  capabilityMenuState?: AgentComposerProps["capabilityMenuState"];
+  onCapabilitySettingsRequest?: AgentComposerProps["onCapabilitySettingsRequest"];
   onAgentProviderLogin?: (provider?: string | null) => void;
   onRequestWorkspaceReferences?:
     | (() => Promise<WorkspaceFileReference[]>)
@@ -1213,6 +1233,8 @@ const AgentGUIDetailPane = memo(function AgentGUIDetailPane({
   slashStatusLimitsLoading,
   showProjectSelector,
   onLinkAction,
+  capabilityMenuState,
+  onCapabilitySettingsRequest,
   onAgentProviderLogin,
   onRequestWorkspaceReferences,
   onRequestGitBranches,
@@ -1534,6 +1556,27 @@ const AgentGUIDetailPane = memo(function AgentGUIDetailPane({
       slashPaletteSkillsGroup: labels.slashPaletteSkillsGroup,
       browserUseCapabilityLabel: labels.browserUseCapabilityLabel,
       browserUseCapabilityDescription: labels.browserUseCapabilityDescription,
+      browserUseCapabilityDescriptionAutoConnect:
+        labels.browserUseCapabilityDescriptionAutoConnect,
+      browserUseCapabilityDescriptionIsolated:
+        labels.browserUseCapabilityDescriptionIsolated,
+      browserUseCapabilitySettingsLabel:
+        labels.browserUseCapabilitySettingsLabel,
+      browserUseCapabilitySettingsDescription:
+        labels.browserUseCapabilitySettingsDescription,
+      capabilityInlineSettingsLabel: labels.capabilityInlineSettingsLabel,
+      computerUseCapabilityLabel: labels.computerUseCapabilityLabel,
+      computerUseCapabilityDescription: labels.computerUseCapabilityDescription,
+      computerUseCapabilitySetupRequiredDescription:
+        labels.computerUseCapabilitySetupRequiredDescription,
+      computerUseCapabilityAuthorizationRequiredDescription:
+        labels.computerUseCapabilityAuthorizationRequiredDescription,
+      computerUseCapabilityAuthorizationUnknownDescription:
+        labels.computerUseCapabilityAuthorizationUnknownDescription,
+      computerUseCapabilitySettingsLabel:
+        labels.computerUseCapabilitySettingsLabel,
+      computerUseCapabilitySettingsDescription:
+        labels.computerUseCapabilitySettingsDescription,
       slashStatusTitle: labels.slashStatusTitle,
       slashStatusSession: labels.slashStatusSession,
       slashStatusBaseUrl: labels.slashStatusBaseUrl,
@@ -1604,7 +1647,19 @@ const AgentGUIDetailPane = memo(function AgentGUIDetailPane({
       labels.sendQueuedPromptNext,
       labels.slashCommandPalette,
       labels.browserUseCapabilityDescription,
+      labels.browserUseCapabilityDescriptionAutoConnect,
+      labels.browserUseCapabilityDescriptionIsolated,
       labels.browserUseCapabilityLabel,
+      labels.browserUseCapabilitySettingsDescription,
+      labels.browserUseCapabilitySettingsLabel,
+      labels.capabilityInlineSettingsLabel,
+      labels.computerUseCapabilityDescription,
+      labels.computerUseCapabilityAuthorizationRequiredDescription,
+      labels.computerUseCapabilityAuthorizationUnknownDescription,
+      labels.computerUseCapabilitySetupRequiredDescription,
+      labels.computerUseCapabilityLabel,
+      labels.computerUseCapabilitySettingsDescription,
+      labels.computerUseCapabilitySettingsLabel,
       labels.slashPaletteCapabilitiesGroup,
       labels.slashPaletteCommandsGroup,
       labels.slashPaletteSkillsGroup,
@@ -1710,6 +1765,7 @@ const AgentGUIDetailPane = memo(function AgentGUIDetailPane({
       isSubmittingPrompt: viewModel.isRespondingApproval,
       labels: composerLabels,
       workspaceUserProjectI18n,
+      capabilityMenuState,
       onDraftContentChange: updateDraftContent,
       onProjectPathChange: updateSelectedProjectPath,
       onSettingsChange: updateComposerSettings,
@@ -1720,6 +1776,7 @@ const AgentGUIDetailPane = memo(function AgentGUIDetailPane({
       onEditQueuedPrompt: editQueuedPrompt,
       onInterruptCurrentTurn: handleInterruptCurrentTurn,
       onSubmitInteractivePrompt: submitInteractivePrompt,
+      onCapabilitySettingsRequest,
       onLinkAction: stableLinkAction,
       onRequestWorkspaceReferences: stableRequestWorkspaceReferences,
       onRequestGitBranches: stableRequestGitBranches,
@@ -1727,6 +1784,7 @@ const AgentGUIDetailPane = memo(function AgentGUIDetailPane({
     }),
     [
       canQueueWhileBusy,
+      capabilityMenuState,
       composerDisabled,
       composerDisabledReason,
       composerFocusRequestSequence,
@@ -1739,6 +1797,7 @@ const AgentGUIDetailPane = memo(function AgentGUIDetailPane({
       labels.promptTips,
       composerActivePrompt,
       editQueuedPrompt,
+      onCapabilitySettingsRequest,
       contextMentionProviders,
       removeQueuedPrompt,
       sendQueuedPromptNext,
@@ -2014,6 +2073,7 @@ const AgentGUIDetailPane = memo(function AgentGUIDetailPane({
               isSubmittingPrompt: viewModel.isRespondingApproval,
               labels: composerLabels,
               workspaceUserProjectI18n,
+              capabilityMenuState,
               onDraftContentChange: updateDraftContent,
               onProjectPathChange: updateSelectedProjectPath,
               onSettingsChange: updateComposerSettings,
@@ -2024,6 +2084,7 @@ const AgentGUIDetailPane = memo(function AgentGUIDetailPane({
               onEditQueuedPrompt: editQueuedPrompt,
               onInterruptCurrentTurn: handleInterruptCurrentTurn,
               onSubmitInteractivePrompt: submitInteractivePrompt,
+              onCapabilitySettingsRequest,
               onLinkAction: stableLinkAction,
               onRequestWorkspaceReferences: stableRequestWorkspaceReferences,
               onRequestGitBranches: stableRequestGitBranches,

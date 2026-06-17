@@ -10,6 +10,7 @@ export interface AgentComposerSettingsSupport {
   permission: boolean;
   plan: boolean;
   browser: boolean;
+  computer: boolean;
 }
 
 /**
@@ -35,6 +36,11 @@ export function composerSettingsSupportFromOptions(
       }) === true,
     browser:
       resolveAgentActivityCapability("browserUse", {
+        composerOptions,
+        sessionRuntimeContext
+      }) === true,
+    computer:
+      resolveAgentActivityCapability("computerUse", {
         composerOptions,
         sessionRuntimeContext
       }) === true

@@ -14,7 +14,7 @@ export type AgentSlashCommandProvider = "codex" | "claude-code" | string;
 
 export interface AgentSlashCommandCapability {
   aliases?: readonly string[];
-  capability: "browserUse";
+  capability: "browserUse" | "computerUse";
   kind: "capability";
   name: string;
 }
@@ -41,6 +41,10 @@ export type SlashCommandSelectionEffect =
     }
   | {
       kind: "enableBrowserUse";
+      draft: string;
+    }
+  | {
+      kind: "enableComputerUse";
       draft: string;
     }
   | {
@@ -103,6 +107,12 @@ const BROWSER_USE_CAPABILITY_COMMAND: AgentSlashCommandCapability = {
   name: "browser",
   aliases: ["浏览器"]
 };
+const COMPUTER_USE_CAPABILITY_COMMAND: AgentSlashCommandCapability = {
+  kind: "capability",
+  capability: "computerUse",
+  name: "computer",
+  aliases: ["电脑"]
+};
 
 const PROVIDER_SLASH_POLICY: Record<
   "codex" | "claude-code",
@@ -137,7 +147,8 @@ export function resolveSlashCommandsForProvider({
   commands,
   hasCompactableContext = true,
   compactSupported,
-  browserSupported = false
+  browserSupported = false,
+  computerSupported = false
 }: {
   provider: AgentSlashCommandProvider;
   commands: readonly AgentSessionCommand[];
@@ -149,6 +160,7 @@ export function resolveSlashCommandsForProvider({
    */
   compactSupported?: boolean | null;
   browserSupported?: boolean;
+  computerSupported?: boolean;
 }): AgentSlashCommand[] {
   const commandEntries = mergeSlashCommands(
     filterUnavailableSlashCommands(commands, {
@@ -162,10 +174,14 @@ export function resolveSlashCommandsForProvider({
       provider
     })
   );
-  if (!browserSupported) {
-    return commandEntries;
+  const capabilityEntries: AgentSlashCommandCapability[] = [];
+  if (browserSupported) {
+    capabilityEntries.push(BROWSER_USE_CAPABILITY_COMMAND);
   }
-  return [...commandEntries, BROWSER_USE_CAPABILITY_COMMAND];
+  if (computerSupported) {
+    capabilityEntries.push(COMPUTER_USE_CAPABILITY_COMMAND);
+  }
+  return [...commandEntries, ...capabilityEntries];
 }
 
 export function resolveSlashCommandSelectionEffect({
@@ -176,6 +192,12 @@ export function resolveSlashCommandSelectionEffect({
   if (isBrowserUseCapability(command)) {
     return {
       kind: "enableBrowserUse",
+      draft: draftForSlashCommand(command, currentDraft)
+    };
+  }
+  if (isComputerUseCapability(command)) {
+    return {
+      kind: "enableComputerUse",
       draft: draftForSlashCommand(command, currentDraft)
     };
   }
@@ -338,6 +360,16 @@ function isBrowserUseCapability(
     "kind" in command &&
     command.kind === "capability" &&
     command.capability === "browserUse"
+  );
+}
+
+function isComputerUseCapability(
+  command: AgentSlashCommand
+): command is AgentSlashCommandCapability {
+  return (
+    "kind" in command &&
+    command.kind === "capability" &&
+    command.capability === "computerUse"
   );
 }
 

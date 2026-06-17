@@ -22,6 +22,7 @@ type PrepareInput struct {
 	PermissionModeID string
 	PlanMode         bool
 	BrowserUse       bool
+	ComputerUse      bool
 	Model            string
 	ReasoningEffort  string
 	ExtraSkills      []ProviderSkillBundle

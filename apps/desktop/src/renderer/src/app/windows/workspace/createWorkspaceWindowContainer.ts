@@ -174,6 +174,7 @@ export function createWorkspaceWindowContainer(): WorkspaceWindowContainerResult
   });
   registerWorkspaceWorkbenchServices(registry, {
     browserApi: desktopApi.browser,
+    computerUseApi: desktopApi.computerUse,
     developerApi: desktopApi.developer,
     dockPreviewCacheApi: desktopApi.dockPreviewCache,
     eventStreamClient: tuttidEventStreamClient,

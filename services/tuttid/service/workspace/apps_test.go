@@ -520,6 +520,7 @@ func TestAppCenterServiceListsRemoteBuiltinBeforeDownloadAndMaterializesOnDemand
 	iconURL := "https://cdn.example.test/large-builtin.png"
 	fileServer := httptest.NewServer(http.FileServer(http.Dir(filepath.Dir(archivePath))))
 	t.Cleanup(fileServer.Close)
+	sourceManifest := mustReadManifestForTest(t, sourceDir)
 
 	store := newAppStoreStub()
 	service := AppCenterService{
@@ -529,7 +530,7 @@ func TestAppCenterServiceListsRemoteBuiltinBeforeDownloadAndMaterializesOnDemand
 		StateDir:       stateDir,
 		BuiltinCatalog: func() ([]builtinapps.App, error) {
 			return []builtinapps.App{{
-				Manifest: mustReadManifestForTest(t, sourceDir),
+				Manifest: sourceManifest,
 				Distribution: builtinapps.Distribution{
 					Kind:           builtinapps.DistributionRemote,
 					ArtifactURL:    fileServer.URL + "/" + filepath.Base(archivePath),
@@ -1100,6 +1101,7 @@ func TestAppCenterServiceStartEnabledUpdatesRemoteBuiltinBeforeStartingIt(t *tes
 	if err != nil {
 		t.Fatalf("fileSHA256AndSize() error = %v", err)
 	}
+	remoteManifest := mustReadManifestForTest(t, remoteDir)
 
 	store := newAppStoreStub()
 	if err := store.PutAppPackage(ctx, workspacebiz.AppPackage{
@@ -1128,7 +1130,7 @@ func TestAppCenterServiceStartEnabledUpdatesRemoteBuiltinBeforeStartingIt(t *tes
 		ArtifactFetcher: fetcher,
 		BuiltinCatalog: func() ([]builtinapps.App, error) {
 			return []builtinapps.App{{
-				Manifest: mustReadManifestForTest(t, remoteDir),
+				Manifest: remoteManifest,
 				Distribution: builtinapps.Distribution{
 					Kind:           builtinapps.DistributionRemote,
 					ArtifactURL:    "https://cdn.example.test/large-builtin.zip",
@@ -1187,6 +1189,7 @@ func TestAppCenterServiceStartEnabledRepairsMissingRemoteBuiltinCacheBeforeStart
 	if err != nil {
 		t.Fatalf("fileSHA256AndSize() error = %v", err)
 	}
+	remoteManifest := mustReadManifestForTest(t, remoteDir)
 
 	store := newAppStoreStub()
 	missingPackageDir := filepath.Join(t.TempDir(), "missing-large-builtin")
@@ -1194,7 +1197,7 @@ func TestAppCenterServiceStartEnabledRepairsMissingRemoteBuiltinCacheBeforeStart
 		AppID:      "large-builtin",
 		Version:    "1.1.0",
 		PackageDir: missingPackageDir,
-		Manifest:   mustReadManifestForTest(t, remoteDir),
+		Manifest:   remoteManifest,
 		Source:     workspacebiz.AppPackageSourceBuiltin,
 	}); err != nil {
 		t.Fatalf("PutAppPackage() error = %v", err)
@@ -1216,7 +1219,7 @@ func TestAppCenterServiceStartEnabledRepairsMissingRemoteBuiltinCacheBeforeStart
 		ArtifactFetcher: fetcher,
 		BuiltinCatalog: func() ([]builtinapps.App, error) {
 			return []builtinapps.App{{
-				Manifest: mustReadManifestForTest(t, remoteDir),
+				Manifest: remoteManifest,
 				Distribution: builtinapps.Distribution{
 					Kind:           builtinapps.DistributionRemote,
 					ArtifactURL:    "https://cdn.example.test/large-builtin.zip",
@@ -1361,6 +1364,7 @@ func TestAppCenterServicePackageForInstallRepairsMissingRemoteBuiltinCache(t *te
 	if err != nil {
 		t.Fatalf("fileSHA256AndSize() error = %v", err)
 	}
+	remoteManifest := mustReadManifestForTest(t, remoteDir)
 
 	store := newAppStoreStub()
 	missingPackageDir := filepath.Join(t.TempDir(), "missing-large-builtin")
@@ -1368,7 +1372,7 @@ func TestAppCenterServicePackageForInstallRepairsMissingRemoteBuiltinCache(t *te
 		AppID:      "large-builtin",
 		Version:    "1.1.0",
 		PackageDir: missingPackageDir,
-		Manifest:   mustReadManifestForTest(t, remoteDir),
+		Manifest:   remoteManifest,
 		Source:     workspacebiz.AppPackageSourceBuiltin,
 	}); err != nil {
 		t.Fatalf("PutAppPackage() error = %v", err)
@@ -1381,7 +1385,7 @@ func TestAppCenterServicePackageForInstallRepairsMissingRemoteBuiltinCache(t *te
 		ArtifactFetcher: fetcher,
 		BuiltinCatalog: func() ([]builtinapps.App, error) {
 			return []builtinapps.App{{
-				Manifest: mustReadManifestForTest(t, remoteDir),
+				Manifest: remoteManifest,
 				Distribution: builtinapps.Distribution{
 					Kind:           builtinapps.DistributionRemote,
 					ArtifactURL:    "https://cdn.example.test/large-builtin.zip",
@@ -1650,6 +1654,7 @@ func TestAppCenterServiceCachedRemoteBuiltinUpdateDoesNotReplaceActiveInstall(t 
 	if err != nil {
 		t.Fatalf("fileSHA256AndSize() error = %v", err)
 	}
+	newManifest := mustReadManifestForTest(t, newDir)
 	store := newAppStoreStub()
 	if err := store.PutAppPackage(ctx, workspacebiz.AppPackage{
 		AppID:      "large-builtin",
@@ -1677,7 +1682,7 @@ func TestAppCenterServiceCachedRemoteBuiltinUpdateDoesNotReplaceActiveInstall(t 
 		),
 		BuiltinCatalog: func() ([]builtinapps.App, error) {
 			return []builtinapps.App{{
-				Manifest: mustReadManifestForTest(t, newDir),
+				Manifest: newManifest,
 				Distribution: builtinapps.Distribution{
 					Kind:           builtinapps.DistributionRemote,
 					ArtifactURL:    "https://cdn.example.test/large-builtin.zip",
@@ -1986,6 +1991,7 @@ func TestAppCenterServiceResolvesRemoteBuiltinForInstallWhenOlderLocalPackageExi
 	}
 	fileServer := httptest.NewServer(http.FileServer(http.Dir(filepath.Dir(archivePath))))
 	t.Cleanup(fileServer.Close)
+	remoteManifest := mustReadManifestForTest(t, remoteSourceDir)
 
 	store := newAppStoreStub()
 	if err := store.PutAppPackage(ctx, workspacebiz.AppPackage{
@@ -2014,7 +2020,7 @@ func TestAppCenterServiceResolvesRemoteBuiltinForInstallWhenOlderLocalPackageExi
 		StateDir:       stateDir,
 		BuiltinCatalog: func() ([]builtinapps.App, error) {
 			return []builtinapps.App{{
-				Manifest: mustReadManifestForTest(t, remoteSourceDir),
+				Manifest: remoteManifest,
 				Distribution: builtinapps.Distribution{
 					Kind:           builtinapps.DistributionRemote,
 					ArtifactURL:    fileServer.URL + "/" + filepath.Base(archivePath),
@@ -2198,6 +2204,7 @@ func TestAppCenterServiceInstallCancelsPackageDownloadAfterRuntimePreloadFailure
 	if err != nil {
 		t.Fatalf("fileSHA256AndSize() error = %v", err)
 	}
+	remoteManifest := mustReadManifestForTest(t, remoteDir)
 
 	fetcher := newTrackingArtifactFetcher(archivePath)
 	defer close(fetcher.release)
@@ -2215,7 +2222,7 @@ func TestAppCenterServiceInstallCancelsPackageDownloadAfterRuntimePreloadFailure
 		ArtifactFetcher: fetcher,
 		BuiltinCatalog: func() ([]builtinapps.App, error) {
 			return []builtinapps.App{{
-				Manifest: mustReadManifestForTest(t, remoteDir),
+				Manifest: remoteManifest,
 				Distribution: builtinapps.Distribution{
 					Kind:           builtinapps.DistributionRemote,
 					ArtifactURL:    "https://cdn.example.test/design-app.zip",

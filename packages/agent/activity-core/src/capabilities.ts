@@ -9,7 +9,8 @@ export const AGENT_CAPABILITY_KEYS = [
   "rateLimits",
   "planMode",
   "interrupt",
-  "browserUse"
+  "browserUse",
+  "computerUse"
 ] as const;
 
 export type AgentCapabilityKey = (typeof AGENT_CAPABILITY_KEYS)[number];

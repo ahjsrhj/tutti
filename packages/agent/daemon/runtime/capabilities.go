@@ -6,14 +6,15 @@ import "strings"
 // the GUI through runtimeContext.capabilities. Keep in sync with the
 // TypeScript side (packages/agent/activity-core/src/capabilities.ts).
 const (
-	CapabilityImageInput = "imageInput"
-	CapabilitySkills     = "skills"
-	CapabilityCompact    = "compact"
-	CapabilityTokenUsage = "tokenUsage"
-	CapabilityRateLimits = "rateLimits"
-	CapabilityPlanMode   = "planMode"
-	CapabilityInterrupt  = "interrupt"
-	CapabilityBrowserUse = "browserUse"
+	CapabilityImageInput  = "imageInput"
+	CapabilitySkills      = "skills"
+	CapabilityCompact     = "compact"
+	CapabilityTokenUsage  = "tokenUsage"
+	CapabilityRateLimits  = "rateLimits"
+	CapabilityPlanMode    = "planMode"
+	CapabilityInterrupt   = "interrupt"
+	CapabilityBrowserUse  = "browserUse"
+	CapabilityComputerUse = "computerUse"
 )
 
 // standardACPCapabilities derives the canonical capability list for ACP

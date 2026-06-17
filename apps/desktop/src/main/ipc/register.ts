@@ -10,6 +10,7 @@ import { registerWorkspaceAppContextIpc } from "./workspaceAppContext";
 import type { AppUpdateService } from "../update/appUpdateService";
 import type { DesktopDaemonEndpoint } from "../transport/paths";
 import { registerBrowserIpc } from "./browser";
+import { registerComputerUseIpc } from "./computerUse";
 import { registerDockPreviewCacheIpc } from "./dockPreviewCache";
 import type { DesktopLogger } from "../logging";
 import type { WorkspaceFileIconCacheStore } from "../host/workspaceFileIconCacheStore.ts";
@@ -51,6 +52,7 @@ export function registerIpcHandlers(deps: IpcRegistrationDependencies): void {
     deps.logger
   );
   registerBrowserIpc(deps.preferences);
+  registerComputerUseIpc();
   registerDockPreviewCacheIpc();
   registerDeveloperIpc(deps.preferences, deps.tuttidClient);
   registerRuntimeIpc(deps.daemonEndpoint, deps.logger);

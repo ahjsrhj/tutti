@@ -17,10 +17,12 @@ import type {
   WorkspaceCustomWallpaperSnapshot,
   WorkspaceCustomWallpaperStatus,
   WorkspaceWorkbenchBodyRendererContext,
+  WorkspaceWorkbenchCapabilitySettingsTarget,
   WorkspaceWorkbenchHostInput
 } from "../workspaceWorkbenchHostService.interface";
 import type {
   DesktopBrowserApi,
+  DesktopComputerUseApi,
   DesktopDockPreviewCacheApi,
   DesktopHostFilesApi,
   DesktopHostNotificationsApi,
@@ -111,6 +113,7 @@ export interface WorkspaceWorkbenchHostServiceDependencies {
   appCenterService: IWorkspaceAppCenterService;
   browserApi?: DesktopBrowserApi;
   browserService: WorkspaceBrowserService;
+  computerUseApi: DesktopComputerUseApi;
   dockPreviewCacheApi: DesktopDockPreviewCacheApi;
   hostFilesApi: DesktopHostFilesApi;
   hostNotificationsApi: Pick<DesktopHostNotificationsApi, "onNavigate">;
@@ -134,6 +137,7 @@ export interface WorkspaceWorkbenchHostServiceDependencies {
 
 export interface WorkspaceWorkbenchHostExternalDependencies {
   browserApi?: DesktopBrowserApi;
+  computerUseApi: DesktopComputerUseApi;
   dockPreviewCacheApi: DesktopDockPreviewCacheApi;
   eventStreamClient?: TuttidEventStreamClient;
   hostFilesApi: DesktopHostFilesApi;
@@ -199,6 +203,7 @@ export class WorkspaceWorkbenchHostService implements IWorkspaceWorkbenchHostSer
       browserService: createWorkspaceBrowserService({
         browserApi: externalDependencies.browserApi
       }),
+      computerUseApi: externalDependencies.computerUseApi,
       dockPreviewCacheApi: externalDependencies.dockPreviewCacheApi,
       eventStreamClient: externalDependencies.eventStreamClient,
       hostFilesApi: externalDependencies.hostFilesApi,
@@ -580,6 +585,9 @@ export class WorkspaceWorkbenchHostService implements IWorkspaceWorkbenchHostSer
     dockIconStyle: DesktopDockIconStyle;
     themeAppearance: DesktopThemeAppearance;
     defaultAgentProvider?: string | null;
+    onCapabilitySettingsRequest?: (
+      target: WorkspaceWorkbenchCapabilitySettingsTarget
+    ) => void;
     renderFilesNodeBody: (
       context: WorkspaceWorkbenchBodyRendererContext
     ) => ReactNode;
@@ -594,6 +602,8 @@ export class WorkspaceWorkbenchHostService implements IWorkspaceWorkbenchHostSer
       cached.i18n === input.i18n &&
       cached.themeAppearance === input.themeAppearance
     ) {
+      cached.capabilitySettingsRequestRef.current =
+        input.onCapabilitySettingsRequest;
       cached.confirmCloseGuardRef.current = input.confirmCloseGuard;
       cached.renderFilesNodeBodyRef.current = input.renderFilesNodeBody;
       return this.createHostInputWithDynamicDockEntries(
@@ -608,6 +618,9 @@ export class WorkspaceWorkbenchHostService implements IWorkspaceWorkbenchHostSer
 
     const renderFilesNodeBodyRef = {
       current: input.renderFilesNodeBody
+    };
+    const capabilitySettingsRequestRef = {
+      current: input.onCapabilitySettingsRequest
     };
     const confirmCloseGuardRef = {
       current: input.confirmCloseGuard
@@ -626,6 +639,7 @@ export class WorkspaceWorkbenchHostService implements IWorkspaceWorkbenchHostSer
           appCenterService: this.dependencies.appCenterService,
           browserApi: this.dependencies.browserApi,
           browserService: this.dependencies.browserService,
+          computerUseApi: this.dependencies.computerUseApi,
           confirmCloseGuard: (request) => confirmCloseGuardRef.current(request),
           dockPreviewCache,
           defaultAgentProvider: input.defaultAgentProvider,
@@ -639,6 +653,9 @@ export class WorkspaceWorkbenchHostService implements IWorkspaceWorkbenchHostSer
           },
           hostFilesApi: this.dependencies.hostFilesApi,
           i18n: input.i18n,
+          onCapabilitySettingsRequest: (target) => {
+            capabilitySettingsRequestRef.current?.(target);
+          },
           agentProviderStatusService:
             this.dependencies.agentProviderStatusService,
           eventStreamClient: this.dependencies.eventStreamClient,
@@ -711,6 +728,7 @@ export class WorkspaceWorkbenchHostService implements IWorkspaceWorkbenchHostSer
     this.cachedHostInputs.set(input.workspaceId, {
       appI18n: input.appI18n,
       baseHostInput,
+      capabilitySettingsRequestRef,
       confirmCloseGuardRef,
       defaultAgentProvider: input.defaultAgentProvider,
       dockIconStyle: input.dockIconStyle,
@@ -1063,6 +1081,11 @@ IWorkspaceUserProjectService(WorkspaceWorkbenchHostService, undefined, 7);
 interface CachedWorkspaceWorkbenchHostInput {
   appI18n: I18nRuntime<string>;
   baseHostInput: WorkspaceWorkbenchHostInput;
+  capabilitySettingsRequestRef: {
+    current:
+      | ((target: WorkspaceWorkbenchCapabilitySettingsTarget) => void)
+      | undefined;
+  };
   confirmCloseGuardRef: {
     current: (
       request: WorkbenchHostCloseDialogRequest

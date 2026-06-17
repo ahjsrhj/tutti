@@ -5,6 +5,7 @@ import type {
 } from "@tutti-os/client-tuttid-ts";
 import type {
   DesktopBrowserApi,
+  DesktopComputerUseApi,
   DesktopDeveloperApi,
   DesktopDockPreviewCacheApi,
   DesktopHostFilesApi,
@@ -23,6 +24,7 @@ import { IWorkspaceSettingsService } from "./workspaceSettingsService.interface"
 
 export interface WorkspaceWorkbenchServiceRegistrationInput {
   browserApi?: DesktopBrowserApi;
+  computerUseApi: DesktopComputerUseApi;
   developerApi: DesktopDeveloperApi;
   dockPreviewCacheApi: DesktopDockPreviewCacheApi;
   eventStreamClient?: TuttidEventStreamClient;
@@ -48,6 +50,7 @@ export function registerWorkspaceWorkbenchServices(
     new SyncDescriptor(WorkspaceWorkbenchHostService, [
       {
         browserApi: input.browserApi,
+        computerUseApi: input.computerUseApi,
         dockPreviewCacheApi: input.dockPreviewCacheApi,
         eventStreamClient: input.eventStreamClient,
         hostFilesApi: input.hostFilesApi,
@@ -66,6 +69,7 @@ export function registerWorkspaceWorkbenchServices(
     new SyncDescriptor(WorkspaceSettingsService, [
       {
         client: createDesktopWorkspaceSettingsClient({
+          computerUseApi: input.computerUseApi,
           developerApi: input.developerApi,
           runtimeApi: input.runtimeApi
         })

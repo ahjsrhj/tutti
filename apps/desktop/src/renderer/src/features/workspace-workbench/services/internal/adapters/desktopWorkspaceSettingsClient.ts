@@ -1,7 +1,12 @@
-import type { DesktopDeveloperApi } from "@preload/types";
-import type { DesktopRuntimeApi } from "@preload/types";
+import type {
+  DesktopComputerUseApi,
+  DesktopDeveloperApi,
+  DesktopRuntimeApi
+} from "@preload/types";
 import type {
   ClearDeveloperLogsResult,
+  DesktopComputerUseActionResult,
+  DesktopComputerUseStatus,
   DesktopDeveloperLogKind,
   DesktopDeveloperLogsState,
   ExportDeveloperLogsResult
@@ -40,6 +45,10 @@ export interface ListManagedModelProviderModelsInput {
 }
 
 export interface DesktopWorkspaceSettingsClient {
+  checkComputerUseStatus(): Promise<DesktopComputerUseStatus>;
+  installComputerUse(): Promise<DesktopComputerUseActionResult>;
+  uninstallComputerUse(): Promise<DesktopComputerUseActionResult>;
+  grantComputerUsePermissions(): Promise<DesktopComputerUseActionResult>;
   clearLogs(): Promise<ClearDeveloperLogsResult>;
   deleteManagedModelProvider(
     workspaceID: string,
@@ -69,10 +78,23 @@ export interface DesktopWorkspaceSettingsClient {
 }
 
 export function createDesktopWorkspaceSettingsClient(input: {
+  computerUseApi: DesktopComputerUseApi;
   developerApi: DesktopDeveloperApi;
   runtimeApi: DesktopRuntimeApi;
 }): DesktopWorkspaceSettingsClient {
   return {
+    checkComputerUseStatus() {
+      return input.computerUseApi.checkStatus();
+    },
+    installComputerUse() {
+      return input.computerUseApi.install();
+    },
+    uninstallComputerUse() {
+      return input.computerUseApi.uninstall();
+    },
+    grantComputerUsePermissions() {
+      return input.computerUseApi.grantPermissions();
+    },
     clearLogs() {
       return input.developerApi.clearLogs();
     },

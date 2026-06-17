@@ -5807,7 +5807,9 @@ export function useAgentGUINodeController({
           ...supportedNextSettings,
           planMode: supportedNextSettings.planMode ?? previousSettings.planMode,
           browserUse:
-            supportedNextSettings.browserUse ?? previousSettings.browserUse
+            supportedNextSettings.browserUse ?? previousSettings.browserUse,
+          computerUse:
+            supportedNextSettings.computerUse ?? previousSettings.computerUse
         };
         draftSettingsBySessionIdRef.current = {
           ...draftSettingsBySessionIdRef.current,
@@ -5848,6 +5850,8 @@ export function useAgentGUINodeController({
         speed: sessionSettings?.speed ?? currentDefaults.speed,
         planMode: sessionSettings?.planMode ?? currentDefaults.planMode,
         browserUse: sessionSettings?.browserUse ?? currentDefaults.browserUse,
+        computerUse:
+          sessionSettings?.computerUse ?? currentDefaults.computerUse,
         permissionModeId:
           sessionSettings?.permissionModeId ?? currentDefaults.permissionModeId
       };
@@ -5917,6 +5921,8 @@ export function useAgentGUINodeController({
       });
       const nextBrowserUse = supportedNextSettings.browserUse;
       const currentBrowserUse = sessionSettings?.browserUse ?? true;
+      const nextComputerUse = supportedNextSettings.computerUse;
+      const currentComputerUse = sessionSettings?.computerUse ?? true;
       const sessionSettingsPatch: AgentSessionComposerSettings = {};
 
       if (nextModel !== undefined && nextModel !== currentModel) {
@@ -5939,6 +5945,12 @@ export function useAgentGUINodeController({
         nextBrowserUse !== currentBrowserUse
       ) {
         sessionSettingsPatch.browserUse = nextBrowserUse;
+      }
+      if (
+        nextComputerUse !== undefined &&
+        nextComputerUse !== currentComputerUse
+      ) {
+        sessionSettingsPatch.computerUse = nextComputerUse;
       }
       if (
         nextPermission &&
@@ -7422,6 +7434,7 @@ export function useAgentGUINodeController({
         speed: draftSpeed,
         planMode: Boolean(draftSettings.planMode),
         browserUse: draftSettings.browserUse ?? true,
+        computerUse: draftSettings.computerUse ?? true,
         permissionModeId: normalizePermissionModeId(
           draftSettings.permissionModeId
         )
@@ -7431,6 +7444,7 @@ export function useAgentGUINodeController({
       supportsReasoningEffort: composerSupport.reasoning,
       supportsSpeed: composerSupport.speed,
       supportsBrowser: composerSupport.browser,
+      supportsComputerUse: composerSupport.computer,
       supportsPermissionMode,
       supportsPlanMode: composerSupport.plan,
       isSettingsLoading,

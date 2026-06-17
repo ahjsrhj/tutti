@@ -94,6 +94,7 @@ export interface AgentGUIComposerSettingsVM {
     // Optional like permissionModeId: the controller always sets it, fixtures
     // and consumers default an unset value to on.
     browserUse?: boolean;
+    computerUse?: boolean;
     permissionModeId?: string | null;
   };
   effectivePlanMode?: boolean;
@@ -103,6 +104,7 @@ export interface AgentGUIComposerSettingsVM {
   supportsPermissionMode?: boolean;
   supportsPlanMode: boolean;
   supportsBrowser?: boolean;
+  supportsComputerUse?: boolean;
   isSettingsLoading: boolean;
   modelUnavailable: boolean;
   reasoningUnavailable: boolean;

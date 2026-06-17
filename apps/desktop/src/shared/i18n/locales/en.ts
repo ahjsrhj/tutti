@@ -256,6 +256,36 @@ export const en = {
         defaultAgentProviderLabel: "Default provider",
         defaultAgentProviderSaveFailed:
           "We couldn't update the default provider right now.",
+        computerUseLabel: "Computer use",
+        computerUseDescription:
+          "Allows the agent to control your Mac desktop — take screenshots, click, type, and more.",
+        computerUseInstallButton: "Install",
+        computerUseInstalling: "Installing…",
+        computerUseInstallSuccess: "cua-driver installed successfully.",
+        computerUseInstallFailed: "Installation failed.",
+        computerUseUninstallButton: "Remove",
+        computerUseUninstalling: "Removing…",
+        computerUseUninstallSuccess: "cua-driver removed.",
+        computerUseUninstallFailed: "Removal failed.",
+        computerUseProgressAria: "Computer use setup progress",
+        computerUseManageButton: "Manage",
+        computerUseGrantButton: "Grant Permissions",
+        computerUseAuthorizedButton: "Authorized",
+        computerUseGranting: "Waiting for permissions…",
+        computerUseGrantSuccess: "Permissions granted.",
+        computerUseGrantFailed: "Could not grant permissions.",
+        computerUseAuthorizedTooltip:
+          "CuaDriver has Screen Recording and Accessibility permissions.",
+        computerUsePermissionUnknownTooltip:
+          "Authorization status cannot be confirmed. CuaDriver will check and guide authorization when clicked.",
+        computerUsePermissionMissingTooltip:
+          "Authorization needed: {{permissions}}.",
+        computerUsePermissionAccessibility: "Accessibility",
+        computerUsePermissionScreenRecording: "Screen Recording",
+        computerUsePermissionListSeparator: ", ",
+        computerUseStatusInstalled: "Installed",
+        computerUseStatusNotInstalled: "Not installed",
+        computerUseStatusCheckAgain: "Check again",
         browserUseConnectionModeDescription:
           "Choose which browser the agent controls when it runs web tasks — the Chrome on your computer, or a separate browser Tutti launches for it.",
         browserUseConnectionModeLabel: "Browser connection",

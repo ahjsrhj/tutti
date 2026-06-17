@@ -37,6 +37,12 @@ import type {
 } from "@tutti-os/workspace-external-core/contracts";
 
 export const desktopIpcChannels = {
+  computerUse: {
+    checkStatus: "computerUse:checkStatus",
+    install: "computerUse:install",
+    uninstall: "computerUse:uninstall",
+    grantPermissions: "computerUse:grantPermissions"
+  },
   appContext: {
     changed: "workspace-app-context:changed",
     diagnostic: "workspace-app-context:diagnostic",
@@ -468,7 +474,32 @@ export {
 };
 export type { BrowserNodeEvent };
 
+export type DesktopComputerUsePermissionStatusSource =
+  | "driver-daemon"
+  | "unknown";
+
+export interface DesktopComputerUsePermissionsStatus {
+  accessibility: boolean | null;
+  screenRecording: boolean | null;
+  screenRecordingCapturable: boolean | null;
+  source: DesktopComputerUsePermissionStatusSource;
+}
+
+export interface DesktopComputerUseStatus {
+  installed: boolean;
+  permissions: DesktopComputerUsePermissionsStatus | null;
+}
+
+export interface DesktopComputerUseActionResult {
+  success: boolean;
+  output: string;
+}
+
 export interface DesktopInvokePayloadByChannel {
+  [desktopIpcChannels.computerUse.checkStatus]: undefined;
+  [desktopIpcChannels.computerUse.install]: undefined;
+  [desktopIpcChannels.computerUse.uninstall]: undefined;
+  [desktopIpcChannels.computerUse.grantPermissions]: undefined;
   [desktopIpcChannels.appContext.get]: undefined;
   [desktopIpcChannels.appExternal.atQuery]: TuttiExternalAtQueryInput;
   [desktopIpcChannels.appExternal.filesOpen]: TuttiExternalFileOpenInput;
@@ -556,6 +587,11 @@ export interface DesktopInvokePayloadByChannel {
 }
 
 export interface DesktopInvokeResultByChannel {
+  [desktopIpcChannels.computerUse.checkStatus]: DesktopComputerUseStatus;
+  [desktopIpcChannels.computerUse.install]: DesktopComputerUseActionResult;
+  [desktopIpcChannels.computerUse.uninstall]: DesktopComputerUseActionResult;
+  [desktopIpcChannels.computerUse
+    .grantPermissions]: DesktopComputerUseActionResult;
   [desktopIpcChannels.appContext.get]: DesktopWorkspaceAppContext;
   [desktopIpcChannels.appExternal.atQuery]: TuttiExternalAtQueryResult[];
   [desktopIpcChannels.appExternal.filesOpen]: void;
