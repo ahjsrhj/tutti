@@ -1,4 +1,4 @@
-import { type JSX } from "react";
+import { type CSSProperties, type JSX } from "react";
 import { useComposedInputValue } from "@tutti-os/ui-react-hooks";
 import {
   Badge,
@@ -320,26 +320,31 @@ function IssueManagerSidebarItem({
         </p>
       </div>
       {subtaskProgress ? (
-        <div className="mt-3 space-y-1.5">
-          <div className="flex items-center justify-between gap-3 text-[11px] leading-[1.55] text-[var(--text-secondary)]">
-            <span>
-              {copy.t("labels.taskCount", { count: subtaskProgress.total })}
-            </span>
+        <div className="mt-3 flex items-center">
+          <span
+            aria-label={`${copy.t("labels.taskCount", {
+              count: subtaskProgress.total
+            })}, ${subtaskProgress.completed}/${subtaskProgress.total}`}
+            className="inline-flex h-8 items-center gap-2 rounded-full border border-[var(--border-1)] bg-[var(--background-fronted)] px-2.5 text-[13px] font-semibold leading-none text-[var(--text-primary)]"
+          >
             <span
-              aria-label={`${subtaskProgress.completed}/${subtaskProgress.total}`}
+              aria-hidden="true"
+              className="relative h-5 w-5 shrink-0 rounded-full bg-[conic-gradient(var(--status-running)_var(--issue-manager-subtask-progress),var(--transparency-block)_0)]"
+              style={
+                {
+                  "--issue-manager-subtask-progress": `${Math.max(
+                    subtaskProgress.percent,
+                    1.5
+                  )}%`
+                } as CSSProperties
+              }
             >
+              <span className="absolute inset-[3px] rounded-full bg-[var(--background-fronted)]" />
+            </span>
+            <span>
               {subtaskProgress.completed}/{subtaskProgress.total}
             </span>
-          </div>
-          <div
-            aria-hidden="true"
-            className="h-1 overflow-hidden rounded-full bg-[var(--transparency-block)]"
-          >
-            <div
-              className="h-full rounded-full bg-[var(--status-running)]"
-              style={{ width: `${subtaskProgress.percent}%` }}
-            />
-          </div>
+          </span>
         </div>
       ) : null}
     </button>
