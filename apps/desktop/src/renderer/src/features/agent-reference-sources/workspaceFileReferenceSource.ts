@@ -45,7 +45,14 @@ export function createWorkspaceFileReferenceSource(input: {
 
   return {
     metadata: { id: WORKSPACE_FILE_SOURCE_ID, label, order: input.order ?? 0 },
-    capabilities: { searchable: true, previewable: true, paginated: false },
+    // 本地文件:简版布局——无分组导航栏、无类型筛选。
+    capabilities: {
+      searchable: true,
+      previewable: true,
+      paginated: false,
+      navigable: false,
+      typeFilterable: false
+    },
 
     isAvailable: () => Boolean(adapter.listDirectory),
 

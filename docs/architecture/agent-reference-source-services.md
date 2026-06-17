@@ -20,15 +20,16 @@
 
 ### 已锁定的决策
 
-| 决策               | 结论                                                                                                                   |
-| ------------------ | ---------------------------------------------------------------------------------------------------------------------- |
-| 统一键             | **`NodeRef { sourceId, nodeId }`** 不透明句柄;picker 不解析 nodeId。本地源 `nodeId = path`                             |
-| 源边界             | **各源自治**(取数 / open / preview 各自负责)+ **共享 base 工具层**(形状处理,非文件系统调用)                            |
-| 范围               | 只做 `+` picker;不动 `@` palette 的 `AgentRichTextAtProvider`,但接口设计为将来可复用                                   |
-| 本地文件(回归防护) | 目标是**改造不引入 bug**:本地源 1:1 包装现有 adapter、行为逐项保持;唯一变化是 picker 树 key 从 path-keyed → node-keyed |
-| open / preview     | 应用产物**复用本地文件同一条 host 链路**(解析路径在 `~/.tutti` 内,过 homedir 校验),无新增 daemon 通道                  |
-| 插入产物           | **统一为文件路径**(与现有 picker 一致),不引入新 kind,composer / 序列化 / agent 零改动                                  |
-| UI 形态            | **顶部分源 tab**:每个可用源一个 tab,切 tab 切源;每个 tab 内是该源的 node-keyed 树。选中集跨 tab 累积,确认一并插入      |
+| 决策               | 结论                                                                                                                                                                                           |
+| ------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 统一键             | **`NodeRef { sourceId, nodeId }`** 不透明句柄;picker 不解析 nodeId。本地源 `nodeId = path`                                                                                                     |
+| 源边界             | **各源自治**(取数 / open / preview 各自负责)+ **共享 base 工具层**(形状处理,非文件系统调用)                                                                                                    |
+| 范围               | 只做 `+` picker;不动 `@` palette 的 `AgentRichTextAtProvider`,但接口设计为将来可复用                                                                                                           |
+| 本地文件(回归防护) | 目标是**改造不引入 bug**:本地源 1:1 包装现有 adapter、行为逐项保持;唯一变化是 picker 树 key 从 path-keyed → node-keyed                                                                         |
+| open / preview     | 应用产物**复用本地文件同一条 host 链路**(解析路径在 `~/.tutti` 内,过 homedir 校验),无新增 daemon 通道                                                                                          |
+| 插入产物           | **统一为文件路径**(与现有 picker 一致),不引入新 kind,composer / 序列化 / agent 零改动                                                                                                          |
+| UI 形态            | **顶部分源 tab**:每个可用源一个 tab,切 tab 切源;选中集跨 tab 累积,确认一并插入                                                                                                                 |
+| 条件布局           | 由 `capabilities` 驱动:`navigable`=是否显示左侧分组导航,`typeFilterable`=是否显示类型筛选。本地源 false/false(简版),应用源 true/true(全版)。扩展信息(产出来源/时间/大小/面包屑/下载)所有源都有 |
 
 ---
 

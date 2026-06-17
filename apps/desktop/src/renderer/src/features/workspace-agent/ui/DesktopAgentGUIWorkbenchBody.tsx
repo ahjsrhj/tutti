@@ -101,6 +101,7 @@ interface DesktopAgentGUIWorkbenchBodyProps {
     AgentGUIProps["workspaceFileReferenceAdapter"]
   >;
   onRequestGitBranches: NonNullable<AgentGUIProps["onRequestGitBranches"]>;
+  referenceSourceAggregator?: AgentGUIProps["referenceSourceAggregator"];
   workspaceId: string;
 }
 
@@ -423,6 +424,7 @@ export function DesktopAgentGUIWorkbenchBody({
   trackWorkspaceFileReferences,
   workspaceFileReferenceAdapter,
   onRequestGitBranches,
+  referenceSourceAggregator,
   workspaceId
 }: DesktopAgentGUIWorkbenchBodyProps): JSX.Element {
   const { i18n, locale } = useTranslation();
@@ -1063,6 +1065,7 @@ export function DesktopAgentGUIWorkbenchBody({
       width={frame.width}
       workspaceFileReferenceAdapter={workspaceFileReferenceAdapter}
       onRequestGitBranches={onRequestGitBranches}
+      referenceSourceAggregator={referenceSourceAggregator}
       workspaceAppIcons={workspaceAppIcons}
       workspaceId={workspaceId}
       workspacePath="/"

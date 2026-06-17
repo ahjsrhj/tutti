@@ -2,6 +2,7 @@ import type { WorkspaceFileReference } from "../contracts/index.ts";
 
 export * from "./referenceSourceUtils.ts";
 export * from "./referenceSourceAggregator.ts";
+export * from "./referenceListSource.ts";
 
 export function uniqueWorkspaceFileReferences(
   refs: readonly WorkspaceFileReference[]

@@ -7,6 +7,7 @@ import type {
   WorkspaceFileReference,
   WorkspaceFileReferenceCopy
 } from "@tutti-os/workspace-file-reference/contracts";
+import type { ReferenceSourceAggregator } from "@tutti-os/workspace-file-reference/core";
 import type {
   AgentHostManagedAgentsState,
   AgentUsageQuota
@@ -107,6 +108,7 @@ export interface AgentGUINodeProps {
   workspacePath: string;
   workspaceFileReferenceAdapter?: WorkspaceFileReferenceAdapter | null;
   onRequestGitBranches?: AgentComposerGitBranchLoader | null;
+  referenceSourceAggregator?: ReferenceSourceAggregator | null;
   agentSettings: Pick<AgentSettings, "avoidGroupingEdits">;
   title: string;
   state: AgentGUINodeData;
@@ -406,6 +408,7 @@ function areAgentGUINodePropsEqual(
     previous.workspacePath === next.workspacePath &&
     previous.workspaceFileReferenceAdapter ===
       next.workspaceFileReferenceAdapter &&
+    previous.referenceSourceAggregator === next.referenceSourceAggregator &&
     previous.onWorkspaceFileReferencesAdded ===
       next.onWorkspaceFileReferencesAdded &&
     previous.agentSettings.avoidGroupingEdits ===
@@ -456,6 +459,7 @@ export const AgentGUINode = memo(function AgentGUINode({
   workspacePath,
   workspaceFileReferenceAdapter = null,
   onRequestGitBranches = null,
+  referenceSourceAggregator = null,
   agentSettings,
   title,
   state,
@@ -1246,6 +1250,7 @@ export const AgentGUINode = memo(function AgentGUINode({
             workspaceUserProjectI18n={workspaceUserProjectI18n}
             workspaceFileReferenceAdapter={workspaceFileReferenceAdapter}
             onRequestGitBranches={onRequestGitBranches}
+            referenceSourceAggregator={referenceSourceAggregator}
             workspaceFileReferenceCopy={workspaceFileReferenceCopy}
             contextMentionProviders={contextMentionProviders}
             workspaceAppIcons={workspaceAppIcons}

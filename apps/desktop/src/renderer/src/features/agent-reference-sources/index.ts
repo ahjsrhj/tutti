@@ -7,9 +7,6 @@ export {
   createAppArtifactReferenceSource
 } from "./appArtifactReferenceSource.ts";
 export {
-  decodeAppArtifactNodeId,
-  encodeAppNode,
-  encodeFileNode,
-  encodeGroupNode,
-  type AppArtifactNode
-} from "./appArtifactReferenceNodeId.ts";
+  ISSUE_SOURCE_ID,
+  createIssueReferenceSource
+} from "./issueReferenceSource.ts";

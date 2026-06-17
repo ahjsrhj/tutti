@@ -14,7 +14,17 @@ import type {
 import type { IDesktopRichTextAtService } from "@renderer/features/rich-text-at";
 import type { IReporterService } from "@renderer/features/analytics";
 import type { WorkspaceFileReference } from "@tutti-os/workspace-file-reference/contracts";
+import {
+  createReferenceSourceAggregator,
+  createStaticReferenceSourceRegistry,
+  type ReferenceSourceAggregator
+} from "@tutti-os/workspace-file-reference/core";
 import { createDesktopWorkspaceFileReferenceAdapter } from "../../workspace-file-manager/services/createDesktopWorkspaceFileReferenceAdapter.ts";
+import {
+  createAppArtifactReferenceSource,
+  createIssueReferenceSource,
+  createWorkspaceFileReferenceSource
+} from "../../agent-reference-sources/index.ts";
 import { createDesktopAgentActivityRuntime } from "./createDesktopAgentActivityRuntime.ts";
 import { createDesktopAgentHostApi } from "./createDesktopAgentHostApi.ts";
 import { createAgentWorkspaceFileReferenceTracker } from "./internal/agentWorkspaceFileReferenceAnalytics.ts";
@@ -35,6 +45,7 @@ export interface DesktopAgentGUIWorkbenchHostInput {
     AgentGUIProps["workspaceFileReferenceAdapter"]
   >;
   onRequestGitBranches: NonNullable<AgentGUIProps["onRequestGitBranches"]>;
+  referenceSourceAggregator: ReferenceSourceAggregator;
 }
 
 export interface CreateDesktopAgentGUIWorkbenchHostInputInput {
@@ -108,6 +119,35 @@ export function createDesktopAgentGUIWorkbenchHostInput({
       reporterNow,
       reporterService
     });
+  const workspaceFileReferenceAdapter =
+    createDesktopWorkspaceFileReferenceAdapter({
+      hostFilesApi,
+      tuttidClient,
+      workspaceId
+    });
+  // 多源引用聚合:本地文件 + 应用产物(任务产物为将来一个新源)。
+  // 应用源的 open/preview 复用本地 adapter 同一条 host 链路。
+  const referenceSourceAggregator = createReferenceSourceAggregator(
+    createStaticReferenceSourceRegistry([
+      createWorkspaceFileReferenceSource({
+        adapter: workspaceFileReferenceAdapter,
+        label: "本地",
+        order: 0
+      }),
+      createAppArtifactReferenceSource({
+        tuttidClient,
+        adapter: workspaceFileReferenceAdapter,
+        label: "应用",
+        order: 1
+      }),
+      createIssueReferenceSource({
+        tuttidClient,
+        adapter: workspaceFileReferenceAdapter,
+        label: "议题",
+        order: 2
+      })
+    ])
+  );
   return {
     agentActivityRuntime,
     agentHostApi: resolvedAgentHostApi,
@@ -126,11 +166,7 @@ export function createDesktopAgentGUIWorkbenchHostInput({
       .map(richTextTriggerProviderToContextMentionProvider),
     trackWorkspaceFileReferences: (input) =>
       workspaceFileReferenceTracker.track(input),
-    workspaceFileReferenceAdapter: createDesktopWorkspaceFileReferenceAdapter({
-      hostFilesApi,
-      tuttidClient,
-      workspaceId
-    }),
+    workspaceFileReferenceAdapter,
     onRequestGitBranches: async ({ agentSessionId, workingDirectory }) => {
       const result = agentSessionId
         ? await tuttidClient.listWorkspaceAgentSessionGitBranches(
@@ -147,7 +183,8 @@ export function createDesktopAgentGUIWorkbenchHostInput({
         branches: result.branches,
         currentBranch: result.currentBranch ?? null
       };
-    }
+    },
+    referenceSourceAggregator
   };
 }
 

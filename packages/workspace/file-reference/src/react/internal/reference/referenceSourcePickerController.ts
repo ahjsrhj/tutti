@@ -65,6 +65,8 @@ export interface ReferenceSourcePickerController {
   close(): void;
   reset(): void;
   setActiveSource(sourceId: string): void;
+  /** 确保某节点(null=当前源根)的子节点已加载(抽屉式导航进入用,不切换展开态)。 */
+  ensureChildren(node: ReferenceNode | null): void;
   toggleNode(node: ReferenceNode): void;
   loadMore(node: ReferenceNode | null): void;
   setSearchQuery(query: string): void;
@@ -414,6 +416,17 @@ export function createReferenceSourcePickerController(
         scheduleSearch(sourceId, tab.searchQuery.trim());
       } else {
         ensureRootLoaded(sourceId);
+      }
+    },
+    ensureChildren(node) {
+      const sourceId = node ? node.ref.sourceId : snapshot.activeSourceId;
+      if (!sourceId) {
+        return;
+      }
+      const key = childrenKeyForNode(node);
+      const childState = snapshot.bySource[sourceId]?.childrenByKey[key];
+      if (!childState?.loaded && !childState?.loading) {
+        void loadChildren(sourceId, node, { append: false });
       }
     },
     toggleNode(node) {

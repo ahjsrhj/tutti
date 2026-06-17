@@ -752,6 +752,9 @@ importers:
       "@tutti-os/ui-system":
         specifier: workspace:*
         version: link:../../ui/system
+      "@tutti-os/workspace-file-manager":
+        specifier: workspace:*
+        version: link:../file-manager
       "@tutti-os/workspace-file-preview":
         specifier: workspace:*
         version: link:../file-preview

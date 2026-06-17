@@ -94,6 +94,10 @@ export interface ReferenceSourceCapabilities {
   searchable: boolean;
   previewable: boolean;
   paginated: boolean;
+  /** 是否展示左侧分组导航(master-detail)。本地源 false;应用/任务源 true。 */
+  navigable?: boolean;
+  /** 是否展示文件类型筛选(网页/文档/图片…)。本地源 false;应用源 true。 */
+  typeFilterable?: boolean;
 }
 
 /**

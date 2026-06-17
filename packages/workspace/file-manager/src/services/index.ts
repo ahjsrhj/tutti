@@ -68,3 +68,8 @@ export {
   type WorkspaceFileSearchResult,
   type WorkspaceFileImportConflict
 } from "./workspaceFileManagerTypes.ts";
+// 排序能力(纯逻辑,供 file-reference picker 复用)。
+export {
+  sortWorkspaceFileEntriesForArrangeMode,
+  type WorkspaceFileManagerArrangeMode
+} from "../ui/workspaceFileManagerArrangeMode.ts";
