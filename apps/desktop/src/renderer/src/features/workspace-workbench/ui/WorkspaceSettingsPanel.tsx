@@ -1442,6 +1442,136 @@ function SettingsRow({
   );
 }
 
+function ComputerUseSetupRow() {
+  const { t } = useTranslation();
+  const { service: settingsService } = useWorkspaceSettingsService();
+  const [status, setStatus] = useState<
+    "idle" | "checking" | "installed" | "not-installed"
+  >("idle");
+  const [installing, setInstalling] = useState(false);
+  const [granting, setGranting] = useState(false);
+  const [message, setMessage] = useState<string | null>(null);
+
+  const checkStatus = async () => {
+    setStatus("checking");
+    setMessage(null);
+    try {
+      const result = await settingsService.checkComputerUseStatus();
+      setStatus(result.installed ? "installed" : "not-installed");
+    } catch {
+      setStatus("not-installed");
+    }
+  };
+
+  useEffect(() => {
+    void checkStatus();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const handleInstall = async () => {
+    setInstalling(true);
+    setMessage(null);
+    try {
+      const result = await settingsService.installComputerUse();
+      if (result.success) {
+        setMessage(t("workspace.settings.general.computerUseInstallSuccess"));
+        await checkStatus();
+      } else {
+        setMessage(t("workspace.settings.general.computerUseInstallFailed"));
+      }
+    } catch {
+      setMessage(t("workspace.settings.general.computerUseInstallFailed"));
+    } finally {
+      setInstalling(false);
+    }
+  };
+
+  const handleGrant = async () => {
+    setGranting(true);
+    setMessage(null);
+    try {
+      const result = await settingsService.grantComputerUsePermissions();
+      if (result.success) {
+        setMessage(t("workspace.settings.general.computerUseGrantSuccess"));
+      } else {
+        setMessage(t("workspace.settings.general.computerUseGrantFailed"));
+      }
+    } catch {
+      setMessage(t("workspace.settings.general.computerUseGrantFailed"));
+    } finally {
+      setGranting(false);
+    }
+  };
+
+  return (
+    <div className="flex w-full items-start justify-between gap-4 max-[560px]:flex-col max-[560px]:items-stretch">
+      <div className="flex min-w-0 flex-1 flex-col gap-1 max-[560px]:w-full">
+        <strong className="text-[13px] font-semibold text-[var(--text-primary)]">
+          {t("workspace.settings.general.computerUseLabel")}
+        </strong>
+        <p className="m-0 text-[13px] leading-[1.3] text-[var(--text-secondary)]">
+          {t("workspace.settings.general.computerUseDescription")}
+        </p>
+        {message && (
+          <p className="m-0 mt-1 text-[13px] leading-[1.3] text-[var(--text-secondary)]">
+            {message}
+          </p>
+        )}
+      </div>
+      <div className="flex w-[220px] min-w-[220px] flex-col items-end gap-2 max-[560px]:w-full max-[560px]:min-w-0 max-[560px]:items-stretch">
+        <div className="flex items-center gap-2">
+          <span className="text-[13px] text-[var(--text-secondary)]">
+            {status === "checking"
+              ? t("common.loading")
+              : status === "installed"
+                ? t("workspace.settings.general.computerUseStatusInstalled")
+                : status === "not-installed"
+                  ? t(
+                      "workspace.settings.general.computerUseStatusNotInstalled"
+                    )
+                  : null}
+          </span>
+          {status !== "checking" && status !== "idle" && (
+            <button
+              type="button"
+              className="cursor-default text-[13px] text-[var(--text-tertiary)] underline outline-none hover:text-[var(--text-secondary)] focus-visible:text-[var(--text-secondary)]"
+              onClick={checkStatus}
+            >
+              {t("workspace.settings.general.computerUseStatusCheckAgain")}
+            </button>
+          )}
+        </div>
+        {status === "not-installed" && (
+          <Button
+            className="h-8 w-full rounded-[6px]"
+            disabled={installing}
+            size="sm"
+            variant="secondary"
+            onClick={handleInstall}
+          >
+            {installing
+              ? t("workspace.settings.general.computerUseInstalling")
+              : t("workspace.settings.general.computerUseInstallButton")}
+          </Button>
+        )}
+        {status === "installed" && (
+          <Button
+            className="h-8 w-full rounded-[6px]"
+            disabled={granting}
+            size="sm"
+            variant="secondary"
+            onClick={handleGrant}
+          >
+            {granting
+              ? t("workspace.settings.general.computerUseGranting")
+              : t("workspace.settings.general.computerUseGrantButton")}
+          </Button>
+        )}
+      </div>
+    </div>
+  );
+}
+
 function WorkspaceGeneralSettingsSection({
   browserUseConnectionMode,
   changingDefaultAgentProvider,
@@ -1590,6 +1720,8 @@ function WorkspaceGeneralSettingsSection({
           </Select>
         </div>
       </div>
+
+      <ComputerUseSetupRow />
 
       <div className="flex w-full items-center justify-between gap-4 max-[560px]:flex-col max-[560px]:items-stretch">
         <div className="flex min-w-0 flex-1 flex-col gap-1 max-[560px]:w-full">

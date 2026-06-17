@@ -1,5 +1,9 @@
 import { createDecorator } from "@tutti-os/infra/di";
-import type { DesktopDeveloperLogKind } from "@shared/contracts/ipc";
+import type {
+  DesktopComputerUseActionResult,
+  DesktopComputerUseStatus,
+  DesktopDeveloperLogKind
+} from "@shared/contracts/ipc";
 import type { DesktopLocale } from "@shared/i18n";
 import type {
   DesktopAgentProvider,
@@ -34,6 +38,9 @@ export interface IWorkspaceSettingsService {
   readonly _serviceBrand: undefined;
   readonly store: WorkspaceSettingsReadableStoreState;
 
+  checkComputerUseStatus(): Promise<DesktopComputerUseStatus>;
+  installComputerUse(): Promise<DesktopComputerUseActionResult>;
+  grantComputerUsePermissions(): Promise<DesktopComputerUseActionResult>;
   closePanel(): void;
   openPanel(
     workspace: WorkspaceSettingsWorkspaceInput,

@@ -265,6 +265,20 @@ export const en = {
         defaultAgentProviderLabel: "Default provider",
         defaultAgentProviderSaveFailed:
           "We couldn't update the default provider right now.",
+        computerUseLabel: "Computer use",
+        computerUseDescription:
+          "Allows the agent to control your Mac desktop — take screenshots, click, type, and more.",
+        computerUseInstallButton: "Install",
+        computerUseInstalling: "Installing…",
+        computerUseInstallSuccess: "cua-driver installed successfully.",
+        computerUseInstallFailed: "Installation failed.",
+        computerUseGrantButton: "Grant Permissions",
+        computerUseGranting: "Waiting for permissions…",
+        computerUseGrantSuccess: "Permissions granted.",
+        computerUseGrantFailed: "Could not grant permissions.",
+        computerUseStatusInstalled: "Installed",
+        computerUseStatusNotInstalled: "Not installed",
+        computerUseStatusCheckAgain: "Check again",
         browserUseConnectionModeDescription:
           "Choose which browser the agent controls when it runs web tasks — the Chrome on your computer, or a separate browser Tutti launches for it.",
         browserUseConnectionModeLabel: "Browser connection",

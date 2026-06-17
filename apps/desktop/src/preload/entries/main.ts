@@ -1,5 +1,6 @@
 import { contextBridge, ipcRenderer } from "electron";
 import { createBrowserDesktopApi } from "../api/browser";
+import { createComputerUseDesktopApi } from "../api/computerUse";
 import { createDeveloperDesktopApi } from "../api/developer";
 import { createDockPreviewCacheDesktopApi } from "../api/dockPreviewCache";
 import { createHostDesktopApi } from "../api/host";
@@ -14,6 +15,7 @@ import {
 } from "../../shared/contracts/ipc";
 
 const desktopApi: DesktopApi = {
+  computerUse: createComputerUseDesktopApi(),
   developer: createDeveloperDesktopApi(),
   dockPreviewCache: createDockPreviewCacheDesktopApi(),
   host: createHostDesktopApi(),

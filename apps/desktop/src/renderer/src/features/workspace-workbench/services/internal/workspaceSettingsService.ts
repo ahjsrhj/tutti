@@ -113,6 +113,18 @@ export class WorkspaceSettingsService implements IWorkspaceSettingsService {
     this.store.open = false;
   }
 
+  checkComputerUseStatus() {
+    return this.dependencies.client.checkComputerUseStatus();
+  }
+
+  installComputerUse() {
+    return this.dependencies.client.installComputerUse();
+  }
+
+  grantComputerUsePermissions() {
+    return this.dependencies.client.grantComputerUsePermissions();
+  }
+
   syncWorkspace(workspace: WorkspaceSettingsWorkspaceInput): void {
     if (workspace.id !== this.store.workspaceID) {
       this.store.workspaceID = workspace.id;

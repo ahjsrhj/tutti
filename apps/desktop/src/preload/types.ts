@@ -4,6 +4,8 @@ import type {
 } from "@tutti-os/agent-gui";
 import type {
   DesktopBackendConfig,
+  DesktopComputerUseActionResult,
+  DesktopComputerUseStatus,
   DesktopCreateUserDocumentsProjectDirectoryResult,
   DesktopCustomWallpaperImage,
   DesktopLocalFileTextResult,
@@ -198,8 +200,15 @@ export interface DesktopWallpaperApi {
   ): Promise<DesktopCustomWallpaperImage>;
 }
 
+export interface DesktopComputerUseApi {
+  checkStatus(): Promise<DesktopComputerUseStatus>;
+  install(): Promise<DesktopComputerUseActionResult>;
+  grantPermissions(): Promise<DesktopComputerUseActionResult>;
+}
+
 export interface DesktopApi {
   browser?: DesktopBrowserApi;
+  computerUse: DesktopComputerUseApi;
   developer: DesktopDeveloperApi;
   dockPreviewCache: DesktopDockPreviewCacheApi;
   platform: DesktopPlatformApi;

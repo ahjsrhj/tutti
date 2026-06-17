@@ -26,6 +26,11 @@ import type {
 } from "@tutti-os/browser-node";
 
 export const desktopIpcChannels = {
+  computerUse: {
+    checkStatus: "computerUse:checkStatus",
+    install: "computerUse:install",
+    grantPermissions: "computerUse:grantPermissions"
+  },
   appContext: {
     changed: "workspace-app-context:changed",
     diagnostic: "workspace-app-context:diagnostic",
@@ -471,7 +476,19 @@ export {
 };
 export type { BrowserNodeEvent };
 
+export interface DesktopComputerUseStatus {
+  installed: boolean;
+}
+
+export interface DesktopComputerUseActionResult {
+  success: boolean;
+  output: string;
+}
+
 export interface DesktopInvokePayloadByChannel {
+  [desktopIpcChannels.computerUse.checkStatus]: undefined;
+  [desktopIpcChannels.computerUse.install]: undefined;
+  [desktopIpcChannels.computerUse.grantPermissions]: undefined;
   [desktopIpcChannels.appContext.get]: undefined;
   [desktopIpcChannels.appContext
     .openSettings]: DesktopWorkspaceOpenSettingsRequest;
@@ -557,6 +574,10 @@ export interface DesktopInvokePayloadByChannel {
 }
 
 export interface DesktopInvokeResultByChannel {
+  [desktopIpcChannels.computerUse.checkStatus]: DesktopComputerUseStatus;
+  [desktopIpcChannels.computerUse.install]: DesktopComputerUseActionResult;
+  [desktopIpcChannels.computerUse
+    .grantPermissions]: DesktopComputerUseActionResult;
   [desktopIpcChannels.appContext.get]: DesktopWorkspaceAppContext;
   [desktopIpcChannels.appContext.openSettings]: void;
   [desktopIpcChannels.appContext

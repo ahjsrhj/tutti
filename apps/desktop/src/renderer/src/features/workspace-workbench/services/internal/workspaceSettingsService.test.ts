@@ -855,6 +855,9 @@ function createWorkspaceSettingsClient(
   overrides: Partial<DesktopWorkspaceSettingsClient>
 ): DesktopWorkspaceSettingsClient {
   return {
+    checkComputerUseStatus: async () => ({ installed: false }),
+    installComputerUse: async () => ({ success: false, output: "" }),
+    grantComputerUsePermissions: async () => ({ success: false, output: "" }),
     clearLogs: async () => ({
       clearedFiles: 0,
       clearedPaths: [],

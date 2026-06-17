@@ -1,5 +1,6 @@
 import type {
   DesktopApi,
+  DesktopComputerUseApi,
   DesktopDeveloperApi,
   DesktopDockPreviewCacheApi,
   DesktopHostApi,
@@ -37,6 +38,7 @@ export function createWebDesktopApi(): DesktopApi {
   const backendConfig = resolveWebBackendConfig();
 
   return {
+    computerUse: createWebComputerUseApi(),
     developer: createWebDeveloperApi(),
     dockPreviewCache: createWebDockPreviewCacheApi(),
     host: createWebHostApi(),
@@ -44,6 +46,22 @@ export function createWebDesktopApi(): DesktopApi {
     runtime: createWebRuntimeApi(backendConfig),
     update: createWebUpdateApi(),
     wallpaper: createWebWallpaperApi()
+  };
+}
+
+function createWebComputerUseApi(): DesktopComputerUseApi {
+  return {
+    checkStatus() {
+      return Promise.resolve({ installed: false });
+    },
+    install() {
+      return Promise.reject(electronDebugRequired("computerUse.install"));
+    },
+    grantPermissions() {
+      return Promise.reject(
+        electronDebugRequired("computerUse.grantPermissions")
+      );
+    }
   };
 }
 
