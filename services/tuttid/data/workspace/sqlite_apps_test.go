@@ -89,6 +89,57 @@ func TestSQLiteStoreWorkspaceAppsPersistPackagesAndInstallations(t *testing.T) {
 	}
 }
 
+func TestSQLiteStoreListAppPackagesSkipsInvalidActivePackage(t *testing.T) {
+	t.Parallel()
+
+	store := openTestSQLiteStore(t)
+	ctx := context.Background()
+	validManifest := workspacebiz.AppManifest{
+		SchemaVersion: workspacebiz.AppManifestSchemaVersionV1,
+		AppID:         "valid-app",
+		Version:       "1.0.0",
+		Name:          "Valid App",
+		Description:   "Valid app",
+		Runtime: workspacebiz.AppManifestRuntime{
+			Bootstrap:       "start.sh",
+			HealthcheckPath: "/ready",
+		},
+	}
+	if err := store.PutAppPackage(ctx, workspacebiz.AppPackage{
+		AppID:      validManifest.AppID,
+		Version:    validManifest.Version,
+		PackageDir: "/tmp/valid-app",
+		Manifest:   validManifest,
+		Source:     workspacebiz.AppPackageSourceBuiltin,
+	}); err != nil {
+		t.Fatalf("PutAppPackage() error = %v", err)
+	}
+
+	const invalidManifestJSON = `{"schemaVersion":"tutti.app.manifest.v1","appId":"invalid-app","version":"1.0.0","name":"Invalid App","description":"Invalid app","runtime":{"bootstrap":"start.sh","healthcheckPath":"/ready"},"references":{"searchEndpoint":"/references/search"}}`
+	if _, err := store.db.ExecContext(ctx, `
+INSERT INTO app_packages (
+  app_id, version, package_dir, manifest_json, source, factory_job_id, created_in_workspace_id, created_at_unix_ms, updated_at_unix_ms
+) VALUES (?, ?, ?, ?, ?, '', '', 1, 1)
+`, "invalid-app", "1.0.0", "/tmp/invalid-app", invalidManifestJSON, string(workspacebiz.AppPackageSourceBuiltin)); err != nil {
+		t.Fatalf("insert invalid app package error = %v", err)
+	}
+	if _, err := store.db.ExecContext(ctx, `
+INSERT INTO app_catalog_entries (
+  app_id, active_version, source, created_in_workspace_id, created_at_unix_ms, updated_at_unix_ms
+) VALUES (?, ?, ?, '', 1, 1)
+`, "invalid-app", "1.0.0", string(workspacebiz.AppPackageSourceBuiltin)); err != nil {
+		t.Fatalf("insert invalid app catalog entry error = %v", err)
+	}
+
+	packages, err := store.ListAppPackages(ctx)
+	if err != nil {
+		t.Fatalf("ListAppPackages() error = %v", err)
+	}
+	if len(packages) != 1 || packages[0].AppID != "valid-app" {
+		t.Fatalf("ListAppPackages() = %#v, want only valid-app", packages)
+	}
+}
+
 func TestSQLiteStoreDeleteAppPackageRemovesCatalogVersionsAndInstallations(t *testing.T) {
 	t.Parallel()
 

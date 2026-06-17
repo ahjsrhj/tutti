@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log/slog"
 	"sort"
 	"strings"
 	"time"
@@ -189,7 +190,17 @@ ORDER BY p.app_id ASC
 	for rows.Next() {
 		appPackage, err := scanAppPackage(rows)
 		if err != nil {
-			return nil, fmt.Errorf("scan workspace app package: %w", err)
+			if strings.TrimSpace(appPackage.AppID) == "" || strings.TrimSpace(appPackage.Version) == "" {
+				return nil, fmt.Errorf("scan workspace app package: %w", err)
+			}
+			slog.Warn(
+				"workspace app package skipped during list",
+				"appId", appPackage.AppID,
+				"version", appPackage.Version,
+				"packageDir", appPackage.PackageDir,
+				"error", err,
+			)
+			continue
 		}
 		result = append(result, appPackage)
 	}
@@ -476,7 +487,7 @@ func scanAppPackage(scanner appPackageScanner) (workspacebiz.AppPackage, error) 
 	}
 	manifest, normalizedManifestJSON, err := workspacebiz.ParseAppManifestJSON([]byte(manifestJSON))
 	if err != nil {
-		return workspacebiz.AppPackage{}, err
+		return appPackage, err
 	}
 	appPackage.Manifest = manifest
 	appPackage.ManifestJSON = normalizedManifestJSON
