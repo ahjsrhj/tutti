@@ -406,6 +406,22 @@ func RegisterRoutes(mux *http.ServeMux, routes Routes) {
 		}
 	})
 
+	mux.HandleFunc("/v1/workspaces/{workspaceID}/agent-sessions/external-imports/scan", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost {
+			tuttitypes.WriteMethodNotAllowed(w)
+			return
+		}
+		wrapper.ScanWorkspaceExternalAgentSessionImports(w, r)
+	})
+
+	mux.HandleFunc("/v1/workspaces/{workspaceID}/agent-sessions/external-imports/import", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost {
+			tuttitypes.WriteMethodNotAllowed(w)
+			return
+		}
+		wrapper.ImportWorkspaceExternalAgentSessions(w, r)
+	})
+
 	mux.HandleFunc("/v1/workspaces/{workspaceID}/agent-sessions/{agentSessionID}", func(w http.ResponseWriter, r *http.Request) {
 		switch r.Method {
 		case http.MethodGet:

@@ -66,9 +66,11 @@ type stubAgentSessionService struct {
 	composerOptionsFn        func(context.Context, agentservice.ComposerOptionsInput) (agentservice.ComposerOptions, error)
 	createFn                 func(context.Context, string, agentservice.CreateSessionInput) (agentservice.Session, error)
 	deleteFn                 func(context.Context, string, string) (bool, error)
+	importExternalFn         func(context.Context, string, agentservice.ExternalImportInput) (agentservice.ExternalImportResult, error)
 	listFn                   func(context.Context, string, agentservice.ListSessionsInput) ([]agentservice.Session, error)
 	listMessagesFn           func(context.Context, string, string, agentservice.ListMessagesInput) (agentservice.SessionMessagesPage, error)
 	readAttachmentFn         func(context.Context, string, string, string) (agentservice.PromptAttachment, error)
+	scanExternalFn           func(context.Context, agentservice.ExternalImportScanInput) (agentservice.ExternalImportScanResult, error)
 	listGitBranchesFn        func(context.Context, string, string) (agentservice.GitBranches, error)
 	listGitBranchesForPathFn func(context.Context, string, string) (agentservice.GitBranches, error)
 	updatePinFn              func(context.Context, string, string, bool) (agentservice.Session, error)
@@ -179,6 +181,20 @@ func (s stubAgentSessionService) ListMessages(ctx context.Context, workspaceID s
 		return agentservice.SessionMessagesPage{}, nil
 	}
 	return s.listMessagesFn(ctx, workspaceID, agentSessionID, input)
+}
+
+func (s stubAgentSessionService) ScanExternalImports(ctx context.Context, input agentservice.ExternalImportScanInput) (agentservice.ExternalImportScanResult, error) {
+	if s.scanExternalFn == nil {
+		return agentservice.ExternalImportScanResult{}, nil
+	}
+	return s.scanExternalFn(ctx, input)
+}
+
+func (s stubAgentSessionService) ImportExternalSessions(ctx context.Context, workspaceID string, input agentservice.ExternalImportInput) (agentservice.ExternalImportResult, error) {
+	if s.importExternalFn == nil {
+		return agentservice.ExternalImportResult{}, nil
+	}
+	return s.importExternalFn(ctx, workspaceID, input)
 }
 
 func (s stubAgentSessionService) Create(ctx context.Context, workspaceID string, input agentservice.CreateSessionInput) (agentservice.Session, error) {

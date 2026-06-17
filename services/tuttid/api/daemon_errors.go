@@ -177,6 +177,42 @@ func writeCreateWorkspaceAgentSessionError(err error) tuttigenerated.CreateWorks
 	}
 }
 
+func writeScanWorkspaceExternalAgentSessionImportsError(err error) tuttigenerated.ScanWorkspaceExternalAgentSessionImportsResponseObject {
+	protocolErr := apierrors.Classify(err)
+	switch protocolErr.Code {
+	case tuttigenerated.WorkspaceNotFound:
+		return tuttigenerated.ScanWorkspaceExternalAgentSessionImports404JSONResponse{
+			WorkspaceNotFoundErrorJSONResponse: workspaceNotFoundError(protocolErr),
+		}
+	case tuttigenerated.InvalidRequest:
+		return tuttigenerated.ScanWorkspaceExternalAgentSessionImports400JSONResponse{
+			InvalidRequestErrorJSONResponse: invalidRequestError(protocolErr),
+		}
+	default:
+		return tuttigenerated.ScanWorkspaceExternalAgentSessionImports502JSONResponse{
+			WorkspaceOperationErrorJSONResponse: workspaceOperationError(protocolErr),
+		}
+	}
+}
+
+func writeImportWorkspaceExternalAgentSessionsError(err error) tuttigenerated.ImportWorkspaceExternalAgentSessionsResponseObject {
+	protocolErr := apierrors.Classify(err)
+	switch protocolErr.Code {
+	case tuttigenerated.WorkspaceNotFound:
+		return tuttigenerated.ImportWorkspaceExternalAgentSessions404JSONResponse{
+			WorkspaceNotFoundErrorJSONResponse: workspaceNotFoundError(protocolErr),
+		}
+	case tuttigenerated.InvalidRequest:
+		return tuttigenerated.ImportWorkspaceExternalAgentSessions400JSONResponse{
+			InvalidRequestErrorJSONResponse: invalidRequestError(protocolErr),
+		}
+	default:
+		return tuttigenerated.ImportWorkspaceExternalAgentSessions502JSONResponse{
+			WorkspaceOperationErrorJSONResponse: workspaceOperationError(protocolErr),
+		}
+	}
+}
+
 func writeGetAgentProviderComposerOptionsError(err error) tuttigenerated.GetAgentProviderComposerOptionsResponseObject {
 	protocolErr := apierrors.Classify(err)
 	switch protocolErr.Code {

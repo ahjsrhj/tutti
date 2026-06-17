@@ -41,6 +41,18 @@ func runtimeResumeInputFromPersistedSession(session PersistedSession) RuntimeRes
 	}
 }
 
+const WorkspaceAgentSessionOriginImported = "WORKSPACE_AGENT_SESSION_ORIGIN_IMPORTED"
+
+func persistedSessionCanResume(controller RuntimeController, session PersistedSession) bool {
+	if strings.TrimSpace(session.Origin) == WorkspaceAgentSessionOriginImported {
+		return false
+	}
+	if controller == nil {
+		return false
+	}
+	return controller.CanResume(runtimeResumeInputFromPersistedSession(session))
+}
+
 func serviceSession(session RuntimeSession, resumable bool) Session {
 	createdAt := timeFromUnixMS(session.CreatedAtUnixMS)
 	updatedAt := timeFromUnixMSPointer(session.UpdatedAtUnixMS)

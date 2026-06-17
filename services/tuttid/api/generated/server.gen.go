@@ -88,6 +88,12 @@ type ServerInterface interface {
 	// Create an agent session for one workspace
 	// (POST /v1/workspaces/{workspaceID}/agent-sessions)
 	CreateWorkspaceAgentSession(w http.ResponseWriter, r *http.Request, workspaceID WorkspaceID)
+	// Import selected external local agent session history into one workspace
+	// (POST /v1/workspaces/{workspaceID}/agent-sessions/external-imports/import)
+	ImportWorkspaceExternalAgentSessions(w http.ResponseWriter, r *http.Request, workspaceID WorkspaceID)
+	// Scan external local agent session history that can be imported into one workspace
+	// (POST /v1/workspaces/{workspaceID}/agent-sessions/external-imports/scan)
+	ScanWorkspaceExternalAgentSessionImports(w http.ResponseWriter, r *http.Request, workspaceID WorkspaceID)
 	// Delete one workspace agent session
 	// (DELETE /v1/workspaces/{workspaceID}/agent-sessions/{agentSessionID})
 	DeleteWorkspaceAgentSession(w http.ResponseWriter, r *http.Request, workspaceID WorkspaceID, agentSessionID AgentSessionID)
@@ -999,6 +1005,70 @@ func (siw *ServerInterfaceWrapper) CreateWorkspaceAgentSession(w http.ResponseWr
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.CreateWorkspaceAgentSession(w, r, workspaceID)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ImportWorkspaceExternalAgentSessions operation middleware
+func (siw *ServerInterfaceWrapper) ImportWorkspaceExternalAgentSessions(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "workspaceID" -------------
+	var workspaceID WorkspaceID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "workspaceID", r.PathValue("workspaceID"), &workspaceID, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "workspaceID", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ImportWorkspaceExternalAgentSessions(w, r, workspaceID)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ScanWorkspaceExternalAgentSessionImports operation middleware
+func (siw *ServerInterfaceWrapper) ScanWorkspaceExternalAgentSessionImports(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "workspaceID" -------------
+	var workspaceID WorkspaceID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "workspaceID", r.PathValue("workspaceID"), &workspaceID, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "workspaceID", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ScanWorkspaceExternalAgentSessionImports(w, r, workspaceID)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -4843,6 +4913,8 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 	m.HandleFunc(http.MethodPatch+" "+options.BaseURL+"/v1/workspaces/{workspaceID}", wrapper.UpdateWorkspace)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/v1/workspaces/{workspaceID}/agent-sessions", wrapper.ListWorkspaceAgentSessions)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/v1/workspaces/{workspaceID}/agent-sessions", wrapper.CreateWorkspaceAgentSession)
+	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/v1/workspaces/{workspaceID}/agent-sessions/external-imports/import", wrapper.ImportWorkspaceExternalAgentSessions)
+	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/v1/workspaces/{workspaceID}/agent-sessions/external-imports/scan", wrapper.ScanWorkspaceExternalAgentSessionImports)
 	m.HandleFunc(http.MethodDelete+" "+options.BaseURL+"/v1/workspaces/{workspaceID}/agent-sessions/{agentSessionID}", wrapper.DeleteWorkspaceAgentSession)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/v1/workspaces/{workspaceID}/agent-sessions/{agentSessionID}", wrapper.GetWorkspaceAgentSession)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/v1/workspaces/{workspaceID}/agent-sessions/{agentSessionID}/attachments/{attachmentID}", wrapper.ReadWorkspaceAgentSessionAttachment)
@@ -7128,6 +7200,240 @@ type CreateWorkspaceAgentSession503JSONResponse struct {
 }
 
 func (response CreateWorkspaceAgentSession503JSONResponse) VisitCreateWorkspaceAgentSessionResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(503)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ImportWorkspaceExternalAgentSessionsRequestObject struct {
+	WorkspaceID WorkspaceID `json:"workspaceID"`
+	Body        *ImportWorkspaceExternalAgentSessionsJSONRequestBody
+}
+
+type ImportWorkspaceExternalAgentSessionsResponseObject interface {
+	VisitImportWorkspaceExternalAgentSessionsResponse(w http.ResponseWriter) error
+}
+
+type ImportWorkspaceExternalAgentSessions200JSONResponse ExternalAgentImportResultResponse
+
+func (response ImportWorkspaceExternalAgentSessions200JSONResponse) VisitImportWorkspaceExternalAgentSessionsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ImportWorkspaceExternalAgentSessions400JSONResponse struct {
+	InvalidRequestErrorJSONResponse
+}
+
+func (response ImportWorkspaceExternalAgentSessions400JSONResponse) VisitImportWorkspaceExternalAgentSessionsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ImportWorkspaceExternalAgentSessions401JSONResponse struct{ UnauthorizedErrorJSONResponse }
+
+func (response ImportWorkspaceExternalAgentSessions401JSONResponse) VisitImportWorkspaceExternalAgentSessionsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ImportWorkspaceExternalAgentSessions404JSONResponse struct {
+	WorkspaceNotFoundErrorJSONResponse
+}
+
+func (response ImportWorkspaceExternalAgentSessions404JSONResponse) VisitImportWorkspaceExternalAgentSessionsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ImportWorkspaceExternalAgentSessions405JSONResponse struct {
+	MethodNotAllowedErrorJSONResponse
+}
+
+func (response ImportWorkspaceExternalAgentSessions405JSONResponse) VisitImportWorkspaceExternalAgentSessionsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(405)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ImportWorkspaceExternalAgentSessions502JSONResponse struct {
+	WorkspaceOperationErrorJSONResponse
+}
+
+func (response ImportWorkspaceExternalAgentSessions502JSONResponse) VisitImportWorkspaceExternalAgentSessionsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(502)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ImportWorkspaceExternalAgentSessions503JSONResponse struct {
+	ServiceUnavailableErrorJSONResponse
+}
+
+func (response ImportWorkspaceExternalAgentSessions503JSONResponse) VisitImportWorkspaceExternalAgentSessionsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(503)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ScanWorkspaceExternalAgentSessionImportsRequestObject struct {
+	WorkspaceID WorkspaceID `json:"workspaceID"`
+	Body        *ScanWorkspaceExternalAgentSessionImportsJSONRequestBody
+}
+
+type ScanWorkspaceExternalAgentSessionImportsResponseObject interface {
+	VisitScanWorkspaceExternalAgentSessionImportsResponse(w http.ResponseWriter) error
+}
+
+type ScanWorkspaceExternalAgentSessionImports200JSONResponse ExternalAgentImportScanResponse
+
+func (response ScanWorkspaceExternalAgentSessionImports200JSONResponse) VisitScanWorkspaceExternalAgentSessionImportsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ScanWorkspaceExternalAgentSessionImports400JSONResponse struct {
+	InvalidRequestErrorJSONResponse
+}
+
+func (response ScanWorkspaceExternalAgentSessionImports400JSONResponse) VisitScanWorkspaceExternalAgentSessionImportsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ScanWorkspaceExternalAgentSessionImports401JSONResponse struct{ UnauthorizedErrorJSONResponse }
+
+func (response ScanWorkspaceExternalAgentSessionImports401JSONResponse) VisitScanWorkspaceExternalAgentSessionImportsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ScanWorkspaceExternalAgentSessionImports404JSONResponse struct {
+	WorkspaceNotFoundErrorJSONResponse
+}
+
+func (response ScanWorkspaceExternalAgentSessionImports404JSONResponse) VisitScanWorkspaceExternalAgentSessionImportsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ScanWorkspaceExternalAgentSessionImports405JSONResponse struct {
+	MethodNotAllowedErrorJSONResponse
+}
+
+func (response ScanWorkspaceExternalAgentSessionImports405JSONResponse) VisitScanWorkspaceExternalAgentSessionImportsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(405)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ScanWorkspaceExternalAgentSessionImports502JSONResponse struct {
+	WorkspaceOperationErrorJSONResponse
+}
+
+func (response ScanWorkspaceExternalAgentSessionImports502JSONResponse) VisitScanWorkspaceExternalAgentSessionImportsResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(502)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type ScanWorkspaceExternalAgentSessionImports503JSONResponse struct {
+	ServiceUnavailableErrorJSONResponse
+}
+
+func (response ScanWorkspaceExternalAgentSessionImports503JSONResponse) VisitScanWorkspaceExternalAgentSessionImportsResponse(w http.ResponseWriter) error {
 
 	var buf bytes.Buffer
 	if err := json.NewEncoder(&buf).Encode(response); err != nil {
@@ -17192,6 +17498,12 @@ type StrictServerInterface interface {
 	// Create an agent session for one workspace
 	// (POST /v1/workspaces/{workspaceID}/agent-sessions)
 	CreateWorkspaceAgentSession(ctx context.Context, request CreateWorkspaceAgentSessionRequestObject) (CreateWorkspaceAgentSessionResponseObject, error)
+	// Import selected external local agent session history into one workspace
+	// (POST /v1/workspaces/{workspaceID}/agent-sessions/external-imports/import)
+	ImportWorkspaceExternalAgentSessions(ctx context.Context, request ImportWorkspaceExternalAgentSessionsRequestObject) (ImportWorkspaceExternalAgentSessionsResponseObject, error)
+	// Scan external local agent session history that can be imported into one workspace
+	// (POST /v1/workspaces/{workspaceID}/agent-sessions/external-imports/scan)
+	ScanWorkspaceExternalAgentSessionImports(ctx context.Context, request ScanWorkspaceExternalAgentSessionImportsRequestObject) (ScanWorkspaceExternalAgentSessionImportsResponseObject, error)
 	// Delete one workspace agent session
 	// (DELETE /v1/workspaces/{workspaceID}/agent-sessions/{agentSessionID})
 	DeleteWorkspaceAgentSession(ctx context.Context, request DeleteWorkspaceAgentSessionRequestObject) (DeleteWorkspaceAgentSessionResponseObject, error)
@@ -18137,6 +18449,79 @@ func (sh *strictHandler) CreateWorkspaceAgentSession(w http.ResponseWriter, r *h
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(CreateWorkspaceAgentSessionResponseObject); ok {
 		if err := validResponse.VisitCreateWorkspaceAgentSessionResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// ImportWorkspaceExternalAgentSessions operation middleware
+func (sh *strictHandler) ImportWorkspaceExternalAgentSessions(w http.ResponseWriter, r *http.Request, workspaceID WorkspaceID) {
+	var request ImportWorkspaceExternalAgentSessionsRequestObject
+
+	request.WorkspaceID = workspaceID
+
+	var body ImportWorkspaceExternalAgentSessionsJSONRequestBody
+	decoder := json.NewDecoder(r.Body)
+	decoder.DisallowUnknownFields()
+	if err := decoder.Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ImportWorkspaceExternalAgentSessions(ctx, request.(ImportWorkspaceExternalAgentSessionsRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ImportWorkspaceExternalAgentSessions")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ImportWorkspaceExternalAgentSessionsResponseObject); ok {
+		if err := validResponse.VisitImportWorkspaceExternalAgentSessionsResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// ScanWorkspaceExternalAgentSessionImports operation middleware
+func (sh *strictHandler) ScanWorkspaceExternalAgentSessionImports(w http.ResponseWriter, r *http.Request, workspaceID WorkspaceID) {
+	var request ScanWorkspaceExternalAgentSessionImportsRequestObject
+
+	request.WorkspaceID = workspaceID
+
+	var body ScanWorkspaceExternalAgentSessionImportsJSONRequestBody
+	decoder := json.NewDecoder(r.Body)
+	decoder.DisallowUnknownFields()
+	if err := decoder.Decode(&body); err != nil {
+		if !errors.Is(err, io.EOF) {
+			sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+			return
+		}
+	} else {
+		request.Body = &body
+	}
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.ScanWorkspaceExternalAgentSessionImports(ctx, request.(ScanWorkspaceExternalAgentSessionImportsRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "ScanWorkspaceExternalAgentSessionImports")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(ScanWorkspaceExternalAgentSessionImportsResponseObject); ok {
+		if err := validResponse.VisitScanWorkspaceExternalAgentSessionImportsResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {

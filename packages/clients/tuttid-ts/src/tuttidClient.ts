@@ -37,6 +37,7 @@ import {
   getWorkspaceTerminal,
   getWorkspaceTerminalSnapshot,
   getWorkspaceWorkbench,
+  importWorkspaceExternalAgentSessions,
   listCliCapabilities,
   listUserProjects,
   listWorkspaceAgentSessionMessages,
@@ -64,6 +65,7 @@ import {
   removeWorkspaceIssueContextRef,
   removeWorkspaceIssueTaskContextRef,
   resizeWorkspaceTerminal,
+  scanWorkspaceExternalAgentSessionImports,
   searchWorkspaceFiles,
   sendWorkspaceAgentSessionInput,
   submitWorkspaceAgentInteractive,
@@ -503,6 +505,28 @@ export function createTuttidClient(
         query: request
       });
       return unwrapData(response, "Workspace agent sessions request failed.");
+    },
+    async scanWorkspaceExternalAgentSessionImports(workspaceID, request) {
+      const response = await scanWorkspaceExternalAgentSessionImports({
+        client,
+        body: request,
+        path: { workspaceID }
+      });
+      return unwrapData(
+        response,
+        "Workspace external agent import scan request failed."
+      );
+    },
+    async importWorkspaceExternalAgentSessions(workspaceID, request) {
+      const response = await importWorkspaceExternalAgentSessions({
+        client,
+        body: request,
+        path: { workspaceID }
+      });
+      return unwrapData(
+        response,
+        "Workspace external agent import request failed."
+      );
     },
     async listWorkspaceAgentSessionMessages(
       workspaceID,

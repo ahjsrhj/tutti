@@ -45,7 +45,7 @@ func (s *Service) ListFiltered(ctx context.Context, workspaceID string, input Li
 			for _, session := range persisted {
 				sessionByID[strings.TrimSpace(session.ID)] = sessionFromPersisted(
 					session,
-					s.controller().CanResume(runtimeResumeInputFromPersistedSession(session)),
+					persistedSessionCanResume(s.controller(), session),
 				)
 			}
 		}
@@ -330,7 +330,7 @@ func (s *Service) get(ctx context.Context, workspaceID string, agentSessionID st
 		if persisted, ok := s.SessionReader.GetSession(workspaceID, agentSessionID); ok {
 			return sessionFromPersisted(
 				persisted,
-				s.controller().CanResume(runtimeResumeInputFromPersistedSession(persisted)),
+				persistedSessionCanResume(s.controller(), persisted),
 			), nil
 		}
 	}
@@ -402,7 +402,7 @@ func (s *Service) UpdatePin(ctx context.Context, workspaceID string, agentSessio
 	}
 	return sessionFromPersisted(
 		persisted,
-		s.controller().CanResume(runtimeResumeInputFromPersistedSession(persisted)),
+		persistedSessionCanResume(s.controller(), persisted),
 	), nil
 }
 
@@ -687,6 +687,9 @@ func (s *Service) ensureRuntimeSessionResult(
 	if !ok || strings.TrimSpace(persisted.Provider) == "" {
 		return ensuredRuntimeSession{}, ErrSessionNotFound
 	}
+	if strings.TrimSpace(persisted.Origin) == WorkspaceAgentSessionOriginImported {
+		return ensuredRuntimeSession{}, ErrSessionNotFound
+	}
 	prepared, err := s.prepareRuntimeForResume(ctx, persisted)
 	if err != nil {
 		return ensuredRuntimeSession{}, err
@@ -745,6 +748,9 @@ func (s *Service) reconcileStaleTurnOnResume(ctx context.Context, session Persis
 }
 
 func (s *Service) shouldReconcileStaleTurn(session PersistedSession) (bool, error) {
+	if strings.TrimSpace(session.Origin) == WorkspaceAgentSessionOriginImported {
+		return false, nil
+	}
 	if isResumeStaleTurnStatus(session.Status) || isResumeStaleTurnStatus(session.CurrentPhase) {
 		return true, nil
 	}

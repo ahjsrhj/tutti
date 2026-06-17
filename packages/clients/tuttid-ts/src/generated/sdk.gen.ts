@@ -154,6 +154,9 @@ import type {
   ImportWorkspaceAppData,
   ImportWorkspaceAppErrors,
   ImportWorkspaceAppResponses,
+  ImportWorkspaceExternalAgentSessionsData,
+  ImportWorkspaceExternalAgentSessionsErrors,
+  ImportWorkspaceExternalAgentSessionsResponses,
   InstallWorkspaceAppData,
   InstallWorkspaceAppErrors,
   InstallWorkspaceAppResponses,
@@ -274,6 +277,9 @@ import type {
   RunAgentProviderActionData,
   RunAgentProviderActionErrors,
   RunAgentProviderActionResponses,
+  ScanWorkspaceExternalAgentSessionImportsData,
+  ScanWorkspaceExternalAgentSessionImportsErrors,
+  ScanWorkspaceExternalAgentSessionImportsResponses,
   SearchWorkspaceFilesData,
   SearchWorkspaceFilesErrors,
   SearchWorkspaceFilesResponses,
@@ -1145,6 +1151,50 @@ export const createWorkspaceAgentSession = <
   >({
     security: [{ scheme: "bearer", type: "http" }],
     url: "/v1/workspaces/{workspaceID}/agent-sessions",
+    ...options,
+    headers: {
+      "Content-Type": "application/json",
+      ...options.headers
+    }
+  });
+
+/**
+ * Scan external local agent session history that can be imported into one workspace
+ */
+export const scanWorkspaceExternalAgentSessionImports = <
+  ThrowOnError extends boolean = false
+>(
+  options: Options<ScanWorkspaceExternalAgentSessionImportsData, ThrowOnError>
+) =>
+  (options.client ?? client).post<
+    ScanWorkspaceExternalAgentSessionImportsResponses,
+    ScanWorkspaceExternalAgentSessionImportsErrors,
+    ThrowOnError
+  >({
+    security: [{ scheme: "bearer", type: "http" }],
+    url: "/v1/workspaces/{workspaceID}/agent-sessions/external-imports/scan",
+    ...options,
+    headers: {
+      "Content-Type": "application/json",
+      ...options.headers
+    }
+  });
+
+/**
+ * Import selected external local agent session history into one workspace
+ */
+export const importWorkspaceExternalAgentSessions = <
+  ThrowOnError extends boolean = false
+>(
+  options: Options<ImportWorkspaceExternalAgentSessionsData, ThrowOnError>
+) =>
+  (options.client ?? client).post<
+    ImportWorkspaceExternalAgentSessionsResponses,
+    ImportWorkspaceExternalAgentSessionsErrors,
+    ThrowOnError
+  >({
+    security: [{ scheme: "bearer", type: "http" }],
+    url: "/v1/workspaces/{workspaceID}/agent-sessions/external-imports/import",
     ...options,
     headers: {
       "Content-Type": "application/json",

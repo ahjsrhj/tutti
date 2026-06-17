@@ -17,6 +17,8 @@ type AgentSessionService interface {
 	ListFiltered(context.Context, string, agentservice.ListSessionsInput) ([]agentservice.Session, error)
 	GetComposerOptions(context.Context, agentservice.ComposerOptionsInput) (agentservice.ComposerOptions, error)
 	ListMessages(context.Context, string, string, agentservice.ListMessagesInput) (agentservice.SessionMessagesPage, error)
+	ScanExternalImports(context.Context, agentservice.ExternalImportScanInput) (agentservice.ExternalImportScanResult, error)
+	ImportExternalSessions(context.Context, string, agentservice.ExternalImportInput) (agentservice.ExternalImportResult, error)
 	Create(context.Context, string, agentservice.CreateSessionInput) (agentservice.Session, error)
 	Get(context.Context, string, string) (agentservice.Session, error)
 	ReadAttachment(context.Context, string, string, string) (agentservice.PromptAttachment, error)

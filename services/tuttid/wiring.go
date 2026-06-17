@@ -228,6 +228,7 @@ func buildDaemonAPI(ctx context.Context, store workspacedata.CatalogStore, analy
 	agentSessionService.ModelCatalog = agentservice.NewAgentModelCatalog()
 	agentSessionService.SessionReader = agentActivityProjection
 	agentSessionService.MessageReader = agentActivityProjection
+	agentSessionService.ExternalImportStore = agentActivityRepo
 	agentSessionService.SessionDirectoryAllocator = agentservice.LocalSessionDirectoryAllocator{
 		StateDir: tuttitypes.DefaultStateDir(),
 	}

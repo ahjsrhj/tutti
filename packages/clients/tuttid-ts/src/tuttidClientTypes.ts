@@ -32,9 +32,13 @@ import type {
   DesktopPreferencesStateResponse,
   ExportWorkspaceAppRequest,
   ExportWorkspaceAppResponse,
+  ExternalAgentImportResultResponse,
+  ExternalAgentImportScanRequest,
+  ExternalAgentImportScanResponse,
   FixWorkspaceAppFactoryJobRequest,
   HealthStatusResponse,
   InstallWorkspaceAppRequest,
+  ImportExternalAgentSessionsRequest,
   IssueManagerContextRefsResponse,
   IssueManagerIssue,
   IssueManagerIssueDetailResponse,
@@ -391,6 +395,14 @@ export interface TuttidClient {
       visibleOnly?: boolean;
     }
   ): Promise<WorkspaceAgentSessionListResponse>;
+  scanWorkspaceExternalAgentSessionImports(
+    workspaceID: string,
+    request?: ExternalAgentImportScanRequest
+  ): Promise<ExternalAgentImportScanResponse>;
+  importWorkspaceExternalAgentSessions(
+    workspaceID: string,
+    request: ImportExternalAgentSessionsRequest
+  ): Promise<ExternalAgentImportResultResponse>;
   listWorkspaceAgentSessionMessages(
     workspaceID: string,
     agentSessionID: string,

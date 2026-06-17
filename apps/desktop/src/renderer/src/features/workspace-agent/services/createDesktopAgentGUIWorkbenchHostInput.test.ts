@@ -1110,6 +1110,12 @@ function createWorkspaceAgentActivityService(
     async listSessionMessages() {
       return { messages: [], hasMore: false, latestVersion: 0 };
     },
+    async scanExternalSessionImports() {
+      throw new Error("not implemented");
+    },
+    async importExternalSessions() {
+      throw new Error("not implemented");
+    },
     async load(inputWorkspaceId) {
       return { ...snapshot, workspaceId: inputWorkspaceId };
     },

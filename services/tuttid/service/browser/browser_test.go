@@ -227,11 +227,34 @@ func TestCallToolRestartsAfterProcessExit(t *testing.T) {
 	if transport.startCnt != 1 {
 		t.Fatalf("start count = %d, want 1", transport.startCnt)
 	}
+	waitUntilBrowserSessionClosed(t, svc, "ws-1")
 	if _, err := svc.CallTool(ctx, "ws-1", "", "list_pages", nil); err != nil {
 		t.Fatalf("second CallTool after process exit: %v", err)
 	}
 	if transport.startCnt != 2 {
 		t.Fatalf("start count = %d, want restart after process exit", transport.startCnt)
+	}
+}
+
+func waitUntilBrowserSessionClosed(t *testing.T, svc *Service, workspaceID string) {
+	t.Helper()
+	timeout := time.After(2 * time.Second)
+	tick := time.NewTicker(time.Millisecond)
+	defer tick.Stop()
+
+	for {
+		svc.mu.Lock()
+		session := svc.sessions[workspaceID]
+		svc.mu.Unlock()
+		if session != nil && session.client != nil && session.client.isClosed() {
+			return
+		}
+
+		select {
+		case <-timeout:
+			t.Fatal("timed out waiting for browser MCP process exit")
+		case <-tick.C:
+		}
 	}
 }
 

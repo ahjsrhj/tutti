@@ -659,6 +659,7 @@ func persistedSessionFromActivity(session agentactivitybiz.Session) PersistedSes
 	return PersistedSession{
 		ID:                strings.TrimSpace(session.ID),
 		WorkspaceID:       strings.TrimSpace(session.WorkspaceID),
+		Origin:            strings.TrimSpace(session.Origin),
 		Provider:          strings.TrimSpace(session.Provider),
 		ProviderSessionID: strings.TrimSpace(session.ProviderSessionID),
 		Cwd:               strings.TrimSpace(session.Cwd),

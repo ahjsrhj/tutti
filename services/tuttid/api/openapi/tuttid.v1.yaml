@@ -1255,6 +1255,72 @@ paths:
           $ref: "#/components/responses/WorkspaceOperationError"
         "503":
           $ref: "#/components/responses/ServiceUnavailableError"
+  /v1/workspaces/{workspaceID}/agent-sessions/external-imports/scan:
+    parameters:
+      - $ref: "#/components/parameters/WorkspaceID"
+    post:
+      operationId: scanWorkspaceExternalAgentSessionImports
+      tags:
+        - agent-session
+      summary: Scan external local agent session history that can be imported into one workspace
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ExternalAgentImportScanRequest"
+      responses:
+        "200":
+          description: External agent session import scan result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ExternalAgentImportScanResponse"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "400":
+          $ref: "#/components/responses/InvalidRequestError"
+        "404":
+          $ref: "#/components/responses/WorkspaceNotFoundError"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowedError"
+        "502":
+          $ref: "#/components/responses/WorkspaceOperationError"
+        "503":
+          $ref: "#/components/responses/ServiceUnavailableError"
+  /v1/workspaces/{workspaceID}/agent-sessions/external-imports/import:
+    parameters:
+      - $ref: "#/components/parameters/WorkspaceID"
+    post:
+      operationId: importWorkspaceExternalAgentSessions
+      tags:
+        - agent-session
+      summary: Import selected external local agent session history into one workspace
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ImportExternalAgentSessionsRequest"
+      responses:
+        "200":
+          description: External agent session import result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ExternalAgentImportResultResponse"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "400":
+          $ref: "#/components/responses/InvalidRequestError"
+        "404":
+          $ref: "#/components/responses/WorkspaceNotFoundError"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowedError"
+        "502":
+          $ref: "#/components/responses/WorkspaceOperationError"
+        "503":
+          $ref: "#/components/responses/ServiceUnavailableError"
   /v1/agent-providers/{provider}/composer-options:
     parameters:
       - name: provider
@@ -4694,6 +4760,215 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/WorkspaceAgentSession"
+    ExternalAgentImportScanRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        providers:
+          type: array
+          items:
+            $ref: "#/components/schemas/WorkspaceAgentProvider"
+    ExternalAgentImportProvider:
+      type: object
+      additionalProperties: false
+      required:
+        - provider
+        - root
+        - available
+        - sessionCount
+        - messageCount
+      properties:
+        provider:
+          $ref: "#/components/schemas/WorkspaceAgentProvider"
+        root:
+          type: string
+        available:
+          type: boolean
+        sessionCount:
+          type: integer
+          minimum: 0
+        messageCount:
+          type: integer
+          minimum: 0
+        error:
+          type: string
+          nullable: true
+    ExternalAgentImportProject:
+      type: object
+      additionalProperties: false
+      required:
+        - path
+        - label
+        - providers
+        - sessionCount
+        - messageCount
+      properties:
+        path:
+          type: string
+          minLength: 1
+        label:
+          type: string
+          minLength: 1
+        providers:
+          type: array
+          items:
+            $ref: "#/components/schemas/WorkspaceAgentProvider"
+        sessionCount:
+          type: integer
+          minimum: 0
+        messageCount:
+          type: integer
+          minimum: 0
+        lastUpdatedAtUnixMs:
+          type: integer
+          format: int64
+          nullable: true
+          minimum: 0
+    ExternalAgentImportSession:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - projectPath
+        - provider
+        - sourcePath
+        - title
+        - messageCount
+      properties:
+        id:
+          type: string
+          minLength: 1
+        projectPath:
+          type: string
+          minLength: 1
+        provider:
+          $ref: "#/components/schemas/WorkspaceAgentProvider"
+        sourcePath:
+          type: string
+          minLength: 1
+        title:
+          type: string
+          minLength: 1
+        messageCount:
+          type: integer
+          minimum: 0
+        lastUpdatedAtUnixMs:
+          type: integer
+          format: int64
+          nullable: true
+          minimum: 0
+    ExternalAgentImportError:
+      type: object
+      additionalProperties: false
+      required:
+        - message
+      properties:
+        provider:
+          $ref: "#/components/schemas/WorkspaceAgentProvider"
+        sourcePath:
+          type: string
+          nullable: true
+        message:
+          type: string
+          minLength: 1
+    ExternalAgentImportScanResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - providers
+        - projects
+        - sessions
+        - scannedSessions
+        - scannedMessages
+        - skippedSessions
+        - errors
+      properties:
+        providers:
+          type: array
+          items:
+            $ref: "#/components/schemas/ExternalAgentImportProvider"
+        projects:
+          type: array
+          items:
+            $ref: "#/components/schemas/ExternalAgentImportProject"
+        sessions:
+          type: array
+          items:
+            $ref: "#/components/schemas/ExternalAgentImportSession"
+        scannedSessions:
+          type: integer
+          minimum: 0
+        scannedMessages:
+          type: integer
+          minimum: 0
+        skippedSessions:
+          type: integer
+          minimum: 0
+        errors:
+          type: array
+          items:
+            $ref: "#/components/schemas/ExternalAgentImportError"
+    ExternalAgentImportProjectSelection:
+      type: object
+      additionalProperties: false
+      required:
+        - path
+      properties:
+        path:
+          type: string
+          minLength: 1
+        providers:
+          type: array
+          items:
+            $ref: "#/components/schemas/WorkspaceAgentProvider"
+        sessionIds:
+          type: array
+          items:
+            type: string
+            minLength: 1
+    ImportExternalAgentSessionsRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - projects
+      properties:
+        projects:
+          type: array
+          minItems: 1
+          items:
+            $ref: "#/components/schemas/ExternalAgentImportProjectSelection"
+        registerUserProjects:
+          type: boolean
+          default: true
+        importSessions:
+          type: boolean
+          default: true
+    ExternalAgentImportResultResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - importedProjects
+        - importedSessions
+        - importedMessages
+        - skippedSessions
+        - errors
+      properties:
+        importedProjects:
+          type: integer
+          minimum: 0
+        importedSessions:
+          type: integer
+          minimum: 0
+        importedMessages:
+          type: integer
+          minimum: 0
+        skippedSessions:
+          type: integer
+          minimum: 0
+        errors:
+          type: array
+          items:
+            $ref: "#/components/schemas/ExternalAgentImportError"
     DeleteWorkspaceAgentSessionResponse:
       type: object
       additionalProperties: false
