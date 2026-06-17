@@ -62,15 +62,18 @@ export function IssueManagerSidebar({
         tasks: currentIssueDetail.tasks
       })
     : [];
+  const visibleSubtaskProgress = currentIssueDetail
+    ? resolveIssueManagerSubtaskProgressFromTasks(visibleTasks)
+    : null;
   const subtaskProgressByIssueId: Record<
     string,
     IssueManagerSubtaskProgressViewState | null
-  > = currentIssueDetail
-    ? {
-        [currentIssueDetail.issue.issueId]:
-          resolveIssueManagerSubtaskProgressFromTasks(visibleTasks)
-      }
-    : {};
+  > =
+    currentIssueDetail && visibleSubtaskProgress
+      ? {
+          [currentIssueDetail.issue.issueId]: visibleSubtaskProgress
+        }
+      : {};
 
   return (
     <aside
