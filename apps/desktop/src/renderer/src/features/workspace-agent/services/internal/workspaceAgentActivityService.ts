@@ -146,6 +146,37 @@ export class WorkspaceAgentActivityService implements IWorkspaceAgentActivitySer
     });
   }
 
+  async scanExternalSessionImports(
+    workspaceId: string,
+    request?: Parameters<
+      IWorkspaceAgentActivityService["scanExternalSessionImports"]
+    >[1]
+  ): ReturnType<IWorkspaceAgentActivityService["scanExternalSessionImports"]> {
+    return this.dependencies.tuttidClient.scanWorkspaceExternalAgentSessionImports(
+      normalizeWorkspaceId(workspaceId),
+      request
+    );
+  }
+
+  async importExternalSessions(
+    workspaceId: string,
+    request: Parameters<
+      IWorkspaceAgentActivityService["importExternalSessions"]
+    >[1]
+  ): ReturnType<IWorkspaceAgentActivityService["importExternalSessions"]> {
+    const normalizedWorkspaceId = normalizeWorkspaceId(workspaceId);
+    const result =
+      await this.dependencies.tuttidClient.importWorkspaceExternalAgentSessions(
+        normalizedWorkspaceId,
+        request
+      );
+    await Promise.all([
+      this.load(normalizedWorkspaceId),
+      this.dependencies.workspaceUserProjectService?.refresh()
+    ]);
+    return result;
+  }
+
   async setSessionPinned(input: {
     agentSessionId: string;
     pinned: boolean;

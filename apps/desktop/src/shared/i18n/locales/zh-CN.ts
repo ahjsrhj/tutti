@@ -146,6 +146,38 @@ export const zhCN = {
       runningCount: "{{count}} 个运行中",
       waitingCount: "{{count}} 个等待"
     },
+    externalImport: {
+      back: "返回",
+      description: "按项目导入本机 Codex 和 Claude Code 最近 30 天的会话历史。",
+      done: "完成",
+      empty: "未找到本机 Codex 或 Claude Code 的项目历史。",
+      errors: "跳过的项目",
+      import: "导入",
+      importFailed: "暂时无法导入外部 Agent 历史。",
+      importing: "导入中...",
+      chatOptionDescription: "最近 30 天 · {{messages}} 条消息",
+      chatOptionTitle: "聊天会话（{{count}}）",
+      optionDescription: "选择要从扫描结果中导入的内容。",
+      projectOptionDescription: "使用已有项目文件夹。",
+      projectOptionTitle: "项目（{{count}}）",
+      providerDescription: "选择要扫描的本机应用。",
+      promptDescription: "Tutti 可以导入最近的 {{provider}} 项目会话。",
+      promptImport: "导入",
+      promptLater: "稍后",
+      promptTitle: "导入已有 AI 聊天",
+      result:
+        "已从 {{projects}} 个项目导入 {{sessions}} 个会话和 {{messages}} 条消息。",
+      scan: "扫描",
+      scanFailed: "暂时无法扫描外部 Agent 历史。",
+      scanning: "正在扫描本机 Agent 历史...",
+      selectProvider: "选择 {{label}}",
+      selectImportOption: "选择 {{label}}",
+      settingsAction: "导入",
+      settingsDescription:
+        "将本机 Codex 和 Claude Code 最近的会话历史导入这个工作区。",
+      settingsLabel: "导入 AI 聊天",
+      title: "从 AI 应用导入"
+    },
     analyticsDebug: {
       clear: "清空",
       close: "关闭埋点事件",

@@ -19,6 +19,12 @@ import type {
   AgentHostUpdateAgentSessionSettingsResult,
   AgentHostAgentSessionState
 } from "@shared/contracts/dto";
+import type {
+  ExternalAgentImportResultResponse,
+  ExternalAgentImportScanRequest,
+  ExternalAgentImportScanResponse,
+  ImportExternalAgentSessionsRequest
+} from "@tutti-os/client-tuttid-ts";
 
 export interface WorkspaceAgentActivityListMessagesInput {
   afterVersion?: number;
@@ -84,6 +90,14 @@ export interface IWorkspaceAgentActivityService {
   listSessionMessages(
     input: WorkspaceAgentActivityListMessagesInput
   ): Promise<AgentActivityMessagePage>;
+  scanExternalSessionImports(
+    workspaceId: string,
+    request?: ExternalAgentImportScanRequest
+  ): Promise<ExternalAgentImportScanResponse>;
+  importExternalSessions(
+    workspaceId: string,
+    request: ImportExternalAgentSessionsRequest
+  ): Promise<ExternalAgentImportResultResponse>;
   load(
     workspaceId: string,
     signal?: AbortSignal

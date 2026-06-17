@@ -93,12 +93,14 @@ const developerPanelUnlockTaps = 7;
 const computerUseOperationSettleMs = 280;
 
 export function WorkspaceSettingsPanel({
+  onOpenExternalAgentImport,
   onSelectWallpaper,
   onSelectWallpaperDisplayMode,
   selectedWallpaperDisplayMode,
   selectedWallpaperID,
   workspace
 }: {
+  onOpenExternalAgentImport: () => void;
   onSelectWallpaper: (id: WorkspaceWallpaperId) => void;
   onSelectWallpaperDisplayMode: (
     displayMode: WorkspaceWallpaperDisplayMode
@@ -246,6 +248,7 @@ export function WorkspaceSettingsPanel({
                 focusedAnchor={settingsState.generalFocusAnchor}
                 focusRequestID={settingsState.generalFocusRequestID}
                 locale={desktopPreferencesState.locale}
+                onOpenExternalAgentImport={onOpenExternalAgentImport}
                 onBrowserUseConnectionModeChange={(mode) => {
                   void settingsService.changeBrowserUseConnectionMode(mode);
                 }}
@@ -1897,6 +1900,7 @@ function WorkspaceGeneralSettingsSection({
   onDefaultAgentProviderChange,
   onBrowserUseConnectionModeChange,
   onLocaleChange,
+  onOpenExternalAgentImport,
   onSleepPreventionModeChange,
   onVersionTap,
   sleepPreventionMode
@@ -1916,6 +1920,7 @@ function WorkspaceGeneralSettingsSection({
   ) => void;
   onDefaultAgentProviderChange: (provider: DesktopAgentProvider) => void;
   onLocaleChange: (locale: DesktopLocale) => void;
+  onOpenExternalAgentImport: () => void;
   onSleepPreventionModeChange: (mode: DesktopSleepPreventionMode) => void;
   onVersionTap: () => void;
   sleepPreventionMode: DesktopSleepPreventionMode;
@@ -1954,20 +1959,24 @@ function WorkspaceGeneralSettingsSection({
       <div className="flex w-full items-center justify-between gap-4 max-[560px]:flex-col max-[560px]:items-stretch">
         <div className="flex min-w-0 flex-1 flex-col gap-1 max-[560px]:w-full">
           <strong className="text-[13px] font-semibold text-[var(--text-primary)]">
-            {t("workspace.settings.general.languageLabel")}
+            {t("workspace.settings.general.defaultAgentProviderLabel")}
           </strong>
           <p className="m-0 text-[13px] leading-[1.3] text-[var(--text-secondary)]">
-            {t("workspace.settings.general.languageDescription")}
+            {t("workspace.settings.general.defaultAgentProviderDescription")}
           </p>
         </div>
         <div className="w-[220px] min-w-[220px] max-[560px]:w-full max-[560px]:min-w-0">
           <Select
-            disabled={isUpdatingLocale}
-            value={pendingLocale}
-            onValueChange={(value) => onLocaleChange(value as DesktopLocale)}
+            disabled={isUpdatingDefaultAgentProvider}
+            value={pendingDefaultAgentProvider}
+            onValueChange={(value) =>
+              onDefaultAgentProviderChange(value as DesktopAgentProvider)
+            }
           >
             <SelectTrigger
-              aria-label={t("workspace.settings.general.languageLabel")}
+              aria-label={t(
+                "workspace.settings.general.defaultAgentProviderLabel"
+              )}
               className={workspaceSettingsSelectTriggerClass}
             >
               <SelectValue />
@@ -1976,15 +1985,35 @@ function WorkspaceGeneralSettingsSection({
               className={workspaceSettingsSelectContentClass}
               style={{ zIndex: "var(--z-panel-popover)" }}
             >
-              {desktopLocales.map((optionLocale) => (
-                <SelectItem key={optionLocale} value={optionLocale}>
-                  {optionLocale === "en"
-                    ? t("workspace.settings.general.languageOptions.en")
-                    : t("workspace.settings.general.languageOptions.zhCN")}
+              {workspaceAgentGuiProviders.map((provider) => (
+                <SelectItem key={provider} value={provider}>
+                  {resolveWorkspaceAgentGuiLabel(provider)}
                 </SelectItem>
               ))}
             </SelectContent>
           </Select>
+        </div>
+      </div>
+
+      <div className="flex w-full items-center justify-between gap-4 max-[560px]:flex-col max-[560px]:items-stretch">
+        <div className="flex min-w-0 flex-1 flex-col gap-1 max-[560px]:w-full">
+          <strong className="text-[13px] font-semibold text-[var(--text-primary)]">
+            {t("workspace.externalImport.settingsLabel")}
+          </strong>
+          <p className="m-0 text-[13px] leading-[1.3] text-[var(--text-secondary)]">
+            {t("workspace.externalImport.settingsDescription")}
+          </p>
+        </div>
+        <div className="flex w-[220px] min-w-[220px] justify-end max-[560px]:w-full max-[560px]:min-w-0 max-[560px]:justify-start">
+          <Button
+            size="sm"
+            type="button"
+            variant="secondary"
+            onClick={onOpenExternalAgentImport}
+          >
+            <UploadIcon className="size-3.5" />
+            {t("workspace.externalImport.settingsAction")}
+          </Button>
         </div>
       </div>
 
@@ -2065,45 +2094,6 @@ function WorkspaceGeneralSettingsSection({
       <div className="flex w-full items-center justify-between gap-4 max-[560px]:flex-col max-[560px]:items-stretch">
         <div className="flex min-w-0 flex-1 flex-col gap-1 max-[560px]:w-full">
           <strong className="text-[13px] font-semibold text-[var(--text-primary)]">
-            {t("workspace.settings.general.defaultAgentProviderLabel")}
-          </strong>
-          <p className="m-0 text-[13px] leading-[1.3] text-[var(--text-secondary)]">
-            {t("workspace.settings.general.defaultAgentProviderDescription")}
-          </p>
-        </div>
-        <div className="w-[220px] min-w-[220px] max-[560px]:w-full max-[560px]:min-w-0">
-          <Select
-            disabled={isUpdatingDefaultAgentProvider}
-            value={pendingDefaultAgentProvider}
-            onValueChange={(value) =>
-              onDefaultAgentProviderChange(value as DesktopAgentProvider)
-            }
-          >
-            <SelectTrigger
-              aria-label={t(
-                "workspace.settings.general.defaultAgentProviderLabel"
-              )}
-              className={workspaceSettingsSelectTriggerClass}
-            >
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent
-              className={workspaceSettingsSelectContentClass}
-              style={{ zIndex: "var(--z-panel-popover)" }}
-            >
-              {workspaceAgentGuiProviders.map((provider) => (
-                <SelectItem key={provider} value={provider}>
-                  {resolveWorkspaceAgentGuiLabel(provider)}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-      </div>
-
-      <div className="flex w-full items-center justify-between gap-4 max-[560px]:flex-col max-[560px]:items-stretch">
-        <div className="flex min-w-0 flex-1 flex-col gap-1 max-[560px]:w-full">
-          <strong className="text-[13px] font-semibold text-[var(--text-primary)]">
             {t("workspace.settings.general.preventSleepLabel")}
           </strong>
           <p className="m-0 text-[13px] leading-[1.3] text-[var(--text-secondary)]">
@@ -2139,6 +2129,43 @@ function WorkspaceGeneralSettingsSection({
                       : t(
                           "workspace.settings.general.preventSleepOptions.always"
                         )}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+
+      <div className="flex w-full items-center justify-between gap-4 max-[560px]:flex-col max-[560px]:items-stretch">
+        <div className="flex min-w-0 flex-1 flex-col gap-1 max-[560px]:w-full">
+          <strong className="text-[13px] font-semibold text-[var(--text-primary)]">
+            {t("workspace.settings.general.languageLabel")}
+          </strong>
+          <p className="m-0 text-[13px] leading-[1.3] text-[var(--text-secondary)]">
+            {t("workspace.settings.general.languageDescription")}
+          </p>
+        </div>
+        <div className="w-[220px] min-w-[220px] max-[560px]:w-full max-[560px]:min-w-0">
+          <Select
+            disabled={isUpdatingLocale}
+            value={pendingLocale}
+            onValueChange={(value) => onLocaleChange(value as DesktopLocale)}
+          >
+            <SelectTrigger
+              aria-label={t("workspace.settings.general.languageLabel")}
+              className={workspaceSettingsSelectTriggerClass}
+            >
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent
+              className={workspaceSettingsSelectContentClass}
+              style={{ zIndex: "var(--z-panel-popover)" }}
+            >
+              {desktopLocales.map((optionLocale) => (
+                <SelectItem key={optionLocale} value={optionLocale}>
+                  {optionLocale === "en"
+                    ? t("workspace.settings.general.languageOptions.en")
+                    : t("workspace.settings.general.languageOptions.zhCN")}
                 </SelectItem>
               ))}
             </SelectContent>

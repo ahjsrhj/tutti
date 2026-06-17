@@ -16,7 +16,10 @@ import {
   type WorkspaceAgentMessageCenterItem
 } from "@tutti-os/agent-gui/agent-message-center";
 import type { AgentActivitySnapshot } from "@tutti-os/agent-activity-core";
-import type { WorkspaceSummary } from "@tutti-os/client-tuttid-ts";
+import type {
+  WorkspaceAgentProvider,
+  WorkspaceSummary
+} from "@tutti-os/client-tuttid-ts";
 import type {
   WorkbenchHostChromeRenderContext,
   WorkbenchController,
@@ -46,6 +49,8 @@ import { IWorkspaceAgentActivityService } from "@renderer/features/workspace-age
 import { runDesktopAgentGUILinkAction } from "@renderer/features/workspace-agent/services/desktopAgentGUILinkActions.ts";
 import { useTranslation } from "@renderer/i18n";
 import { cn } from "@renderer/lib/format";
+import { ExternalAgentSessionImportPrompt } from "./ExternalAgentSessionImportPrompt";
+import { ExternalAgentSessionImportWizard } from "./ExternalAgentSessionImportWizard";
 import { WorkspaceSettingsPanel } from "./WorkspaceSettingsPanel";
 import { useWorkspaceChromeState } from "./useWorkspaceChromeState";
 import { useWorkspaceWorkbenchHostService } from "./useWorkspaceWorkbenchHostService";
@@ -154,50 +159,74 @@ export function WorkspaceChrome({
           : "calc(12px + var(--cove-workspace-mac-traffic-light-gutter, 68px))"
       } as React.CSSProperties)
     : undefined;
+  const [externalImportWizardProviders, setExternalImportWizardProviders] =
+    useState<WorkspaceAgentProvider[] | undefined>(undefined);
+  const [externalImportWizardOpen, setExternalImportWizardOpen] =
+    useState(false);
+  const openExternalAgentImport = useCallback(
+    (providers?: WorkspaceAgentProvider[]) => {
+      setExternalImportWizardProviders(providers);
+      setExternalImportWizardOpen(true);
+    },
+    []
+  );
 
   return (
-    <header
-      className={cn(
-        "grid min-h-[52px] items-center gap-4 bg-transparent px-4 [-webkit-app-region:drag]",
-        "grid-cols-[max-content_minmax(0,1fr)_max-content]",
-        isDarwin && "pl-[var(--workspace-chrome-left-padding)]",
-        isWindows &&
-          "pr-[calc(100vw-env(titlebar-area-width,calc(100vw-138px))+10px)]"
-      )}
-      data-app-header="true"
-      style={headerStyle}
-    >
-      <div className="flex items-center gap-2 [-webkit-app-region:no-drag]">
-        {isDarwin && !chromeState.useCompactTitlebar ? (
-          <div
-            aria-hidden="true"
-            className="h-full w-[88px] shrink-0 [-webkit-app-region:no-drag]"
-          />
-        ) : null}
-      </div>
-      <div aria-hidden="true" className="min-w-0" />
-      <div
-        className="flex items-center justify-end gap-2 justify-self-end [-webkit-app-region:no-drag]"
-        data-workbench-wallpaper-appearance={wallpaperAppearance}
+    <>
+      <header
+        className={cn(
+          "grid min-h-[52px] items-center gap-4 bg-transparent px-4 [-webkit-app-region:drag]",
+          "grid-cols-[max-content_minmax(0,1fr)_max-content]",
+          isDarwin && "pl-[var(--workspace-chrome-left-padding)]",
+          isWindows &&
+            "pr-[calc(100vw-env(titlebar-area-width,calc(100vw-138px))+10px)]"
+        )}
+        data-app-header="true"
+        style={headerStyle}
       >
-        {headerSlot ? <div className="min-w-0">{headerSlot}</div> : null}
-        <WorkspaceAgentMessageCenterAction
-          launchNode={launchNode}
-          workspace={workspace}
-        />
-        <WorkspaceMissionControlActions
-          missionControl={missionControl}
-          platform={platform}
-        />
-        <WorkspaceSettingsTrigger
-          onSelectWallpaper={onSelectWallpaper}
-          onSelectWallpaperDisplayMode={onSelectWallpaperDisplayMode}
-          selectedWallpaperDisplayMode={selectedWallpaperDisplayMode}
-          selectedWallpaperID={selectedWallpaperID}
-          workspace={workspace}
-        />
-      </div>
-    </header>
+        <div className="flex items-center gap-2 [-webkit-app-region:no-drag]">
+          {isDarwin && !chromeState.useCompactTitlebar ? (
+            <div
+              aria-hidden="true"
+              className="h-full w-[88px] shrink-0 [-webkit-app-region:no-drag]"
+            />
+          ) : null}
+        </div>
+        <div aria-hidden="true" className="min-w-0" />
+        <div
+          className="flex items-center justify-end gap-2 justify-self-end [-webkit-app-region:no-drag]"
+          data-workbench-wallpaper-appearance={wallpaperAppearance}
+        >
+          {headerSlot ? <div className="min-w-0">{headerSlot}</div> : null}
+          <WorkspaceAgentMessageCenterAction
+            launchNode={launchNode}
+            workspace={workspace}
+          />
+          <WorkspaceMissionControlActions
+            missionControl={missionControl}
+            platform={platform}
+          />
+          <WorkspaceSettingsTrigger
+            onOpenExternalAgentImport={() => openExternalAgentImport()}
+            onSelectWallpaper={onSelectWallpaper}
+            onSelectWallpaperDisplayMode={onSelectWallpaperDisplayMode}
+            selectedWallpaperDisplayMode={selectedWallpaperDisplayMode}
+            selectedWallpaperID={selectedWallpaperID}
+            workspace={workspace}
+          />
+        </div>
+      </header>
+      <ExternalAgentSessionImportPrompt
+        workspaceId={workspace.id}
+        onOpenImport={openExternalAgentImport}
+      />
+      <ExternalAgentSessionImportWizard
+        initialProviders={externalImportWizardProviders}
+        open={externalImportWizardOpen}
+        workspace={workspace}
+        onOpenChange={setExternalImportWizardOpen}
+      />
+    </>
   );
 }
 
@@ -976,12 +1005,14 @@ function WorkspaceMissionControlAction({
 }
 
 function WorkspaceSettingsTrigger({
+  onOpenExternalAgentImport,
   onSelectWallpaper,
   onSelectWallpaperDisplayMode,
   selectedWallpaperDisplayMode,
   selectedWallpaperID,
   workspace
 }: {
+  onOpenExternalAgentImport: () => void;
   onSelectWallpaper: (id: WorkspaceWallpaperId) => void;
   onSelectWallpaperDisplayMode: (
     displayMode: WorkspaceWallpaperDisplayMode
@@ -1022,6 +1053,7 @@ function WorkspaceSettingsTrigger({
         <TooltipContent>{t("workspace.settings.trigger")}</TooltipContent>
       </Tooltip>
       <WorkspaceSettingsPanel
+        onOpenExternalAgentImport={onOpenExternalAgentImport}
         onSelectWallpaper={onSelectWallpaper}
         onSelectWallpaperDisplayMode={onSelectWallpaperDisplayMode}
         selectedWallpaperDisplayMode={selectedWallpaperDisplayMode}

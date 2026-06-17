@@ -2,6 +2,7 @@ package agent
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"os"
 	"path/filepath"
@@ -12,6 +13,8 @@ import (
 
 	agentsessionstore "github.com/tutti-os/tutti/packages/agentactivity/daemon/activity"
 	agentactivitybiz "github.com/tutti-os/tutti/services/tuttid/biz/agentactivity"
+	workspacebiz "github.com/tutti-os/tutti/services/tuttid/biz/workspace"
+	workspacedata "github.com/tutti-os/tutti/services/tuttid/data/workspace"
 	agentsidecarservice "github.com/tutti-os/tutti/services/tuttid/service/agentsidecar"
 )
 
@@ -55,6 +58,157 @@ func TestServiceCreatesAndListsSessions(t *testing.T) {
 	}
 	if got.ID != session.ID {
 		t.Fatalf("got session ID = %q, want %q", got.ID, session.ID)
+	}
+}
+
+func TestServiceImportsExternalAgentSessionsByProject(t *testing.T) {
+	ctx := context.Background()
+	store := openAgentServiceSQLiteStore(t)
+	if err := store.Create(ctx, workspacebiz.Summary{ID: "ws-1", Name: "Workspace One"}); err != nil {
+		t.Fatalf("Create workspace error = %v", err)
+	}
+	root := t.TempDir()
+	projectA := filepath.Join(root, "project-a")
+	projectB := filepath.Join(root, "project-b")
+	if err := os.MkdirAll(projectA, 0o755); err != nil {
+		t.Fatalf("create project A error = %v", err)
+	}
+	if err := os.MkdirAll(projectB, 0o755); err != nil {
+		t.Fatalf("create project B error = %v", err)
+	}
+	if canonical, ok := canonicalExistingDir(projectA); ok {
+		projectA = canonical
+	}
+	if canonical, ok := canonicalExistingDir(projectB); ok {
+		projectB = canonical
+	}
+	codexHome := filepath.Join(root, "codex-home")
+	claudeHome := filepath.Join(root, "claude-home")
+	t.Setenv("CODEX_HOME", codexHome)
+	t.Setenv("CLAUDE_CONFIG_DIR", claudeHome)
+	recent := time.Now().Add(-24 * time.Hour)
+	timestamp := func(offset time.Duration) string {
+		return recent.Add(offset).UTC().Format(time.RFC3339Nano)
+	}
+	oldTimestamp := time.Now().Add(-45 * 24 * time.Hour).UTC().Format(time.RFC3339Nano)
+
+	writeAgentServiceJSONL(t, filepath.Join(codexHome, "sessions", "2026", "codex-a.jsonl"),
+		map[string]any{
+			"timestamp": timestamp(0),
+			"type":      "session_meta",
+			"payload":   map[string]any{"id": "codex-a", "cwd": projectA},
+		},
+		map[string]any{"timestamp": timestamp(time.Second), "type": "response_item", "payload": map[string]any{
+			"type": "message", "id": "codex-a-1", "role": "user",
+			"content": []any{map[string]any{"type": "input_text", "text": "Plan the import"}},
+		}},
+		map[string]any{"timestamp": timestamp(2 * time.Second), "type": "response_item", "payload": map[string]any{
+			"type": "message", "id": "codex-a-2", "role": "assistant",
+			"content": []any{map[string]any{"type": "output_text", "text": "Import planned"}},
+		}},
+	)
+	writeAgentServiceJSONL(t, filepath.Join(codexHome, "archived_sessions", "codex-b.jsonl"),
+		map[string]any{
+			"timestamp": timestamp(time.Hour),
+			"type":      "session_meta",
+			"payload":   map[string]any{"id": "codex-b", "cwd": projectB},
+		},
+		map[string]any{"timestamp": timestamp(time.Hour + time.Second), "type": "response_item", "payload": map[string]any{
+			"type": "message", "id": "codex-b-1", "role": "user",
+			"content": []any{map[string]any{"type": "input_text", "text": "Other project"}},
+		}},
+	)
+	writeAgentServiceJSONL(t, filepath.Join(codexHome, "sessions", "old", "codex-old.jsonl"),
+		map[string]any{
+			"timestamp": oldTimestamp,
+			"type":      "session_meta",
+			"payload":   map[string]any{"id": "codex-old", "cwd": projectA},
+		},
+		map[string]any{"timestamp": oldTimestamp, "type": "response_item", "payload": map[string]any{
+			"type": "message", "id": "codex-old-1", "role": "user",
+			"content": []any{map[string]any{"type": "input_text", "text": "Old project"}},
+		}},
+	)
+	writeAgentServiceJSONL(t, filepath.Join(claudeHome, "projects", "project-a", "claude-a.jsonl"),
+		map[string]any{
+			"timestamp": timestamp(2 * time.Hour), "sessionId": "claude-a", "cwd": projectA, "uuid": "claude-a-1",
+			"message": map[string]any{"role": "user", "content": []any{map[string]any{"type": "text", "text": "Claude question"}}},
+		},
+		map[string]any{
+			"timestamp": timestamp(2*time.Hour + time.Second), "sessionId": "claude-a", "cwd": projectA, "uuid": "claude-a-2",
+			"message": map[string]any{"role": "assistant", "content": []any{map[string]any{"type": "text", "text": "Claude answer"}}},
+		},
+	)
+
+	runtime := newFakeRuntime()
+	service := NewService(runtime)
+	projection := NewActivityProjection(store)
+	service.SessionReader = projection
+	service.MessageReader = projection
+	service.ExternalImportStore = store
+
+	scan, err := service.ScanExternalImports(ctx, ExternalImportScanInput{})
+	if err != nil {
+		t.Fatalf("ScanExternalImports error = %v", err)
+	}
+	if scan.ScannedSessions != 3 || scan.ScannedMessages != 5 || len(scan.Projects) != 2 {
+		t.Fatalf("scan = %#v, want 3 sessions, 5 messages, 2 projects", scan)
+	}
+	codexAID := externalImportedSessionID("codex", "codex-a")
+	if !slices.ContainsFunc(scan.Sessions, func(session ExternalImportSession) bool {
+		return session.ID == codexAID && session.ProjectPath == projectA && session.Provider == "codex"
+	}) {
+		t.Fatalf("scan sessions = %#v, want codex-a summary", scan.Sessions)
+	}
+
+	result, err := service.ImportExternalSessions(ctx, "ws-1", ExternalImportInput{
+		Projects: []ExternalImportProjectSelection{{Path: projectA, SessionIDs: []string{codexAID}}},
+	})
+	if err != nil {
+		t.Fatalf("ImportExternalSessions error = %v", err)
+	}
+	if result.ImportedProjects != 1 || result.ImportedSessions != 1 || result.ImportedMessages != 2 {
+		t.Fatalf("import result = %#v, want one project, one session, two messages", result)
+	}
+	sessions, err := service.List(ctx, "ws-1")
+	if err != nil {
+		t.Fatalf("List error = %v", err)
+	}
+	if len(sessions) != 1 {
+		t.Fatalf("len(sessions) = %d, want 1", len(sessions))
+	}
+	for _, session := range sessions {
+		if session.Cwd != projectA {
+			t.Fatalf("session cwd = %q, want %q", session.Cwd, projectA)
+		}
+		if session.Resumable {
+			t.Fatalf("imported session %s resumable = true", session.ID)
+		}
+	}
+	if _, err := service.SendInput(ctx, "ws-1", sessions[0].ID, SendInput{Content: TextPromptContent("resume")}); !errors.Is(err, ErrSessionNotFound) {
+		t.Fatalf("SendInput imported error = %v, want ErrSessionNotFound", err)
+	}
+	if len(runtime.resumeCalls) != 0 {
+		t.Fatalf("runtime resume calls = %d, want 0", len(runtime.resumeCalls))
+	}
+
+	rerun, err := service.ImportExternalSessions(ctx, "ws-1", ExternalImportInput{
+		Projects: []ExternalImportProjectSelection{{Path: projectA}},
+	})
+	if err != nil {
+		t.Fatalf("ImportExternalSessions rerun error = %v", err)
+	}
+	if rerun.ImportedSessions != 1 || rerun.ImportedMessages != 2 {
+		t.Fatalf("second import = %#v, want remaining project session and messages", rerun)
+	}
+	finalRerun, err := service.ImportExternalSessions(ctx, "ws-1", ExternalImportInput{
+		Projects: []ExternalImportProjectSelection{{Path: projectA}},
+	})
+	if err != nil {
+		t.Fatalf("ImportExternalSessions final rerun error = %v", err)
+	}
+	if finalRerun.ImportedSessions != 0 || finalRerun.ImportedMessages != 0 {
+		t.Fatalf("final rerun import = %#v, want no new sessions or messages", finalRerun)
 	}
 }
 
@@ -1951,6 +2105,37 @@ type fakeModelCatalog struct {
 
 func (f fakeModelCatalog) ListModels(context.Context, string) (AgentModelCatalogResult, error) {
 	return f.result, f.err
+}
+
+func openAgentServiceSQLiteStore(t *testing.T) *workspacedata.SQLiteStore {
+	t.Helper()
+	store, err := workspacedata.OpenSQLiteStore(filepath.Join(t.TempDir(), "tutti.sqlite"))
+	if err != nil {
+		t.Fatalf("OpenSQLiteStore() error = %v", err)
+	}
+	t.Cleanup(func() { _ = store.Close() })
+	if err := store.Migrate(context.Background()); err != nil {
+		t.Fatalf("Migrate() error = %v", err)
+	}
+	return store
+}
+
+func writeAgentServiceJSONL(t *testing.T, path string, items ...map[string]any) {
+	t.Helper()
+	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+		t.Fatalf("create jsonl dir error = %v", err)
+	}
+	lines := make([]string, 0, len(items))
+	for _, item := range items {
+		encoded, err := json.Marshal(item)
+		if err != nil {
+			t.Fatalf("marshal jsonl item error = %v", err)
+		}
+		lines = append(lines, string(encoded))
+	}
+	if err := os.WriteFile(path, []byte(strings.Join(lines, "\n")+"\n"), 0o644); err != nil {
+		t.Fatalf("write jsonl error = %v", err)
+	}
 }
 
 type fakeMessageReader struct {

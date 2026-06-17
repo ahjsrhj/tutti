@@ -502,6 +502,8 @@ function createDependenciesStub(): {
       getWorkspaceFileTreeSnapshot: fail,
       listWorkspaceFileDirectory: fail,
       listWorkspaceAgentSessionMessages: fail,
+      scanWorkspaceExternalAgentSessionImports: fail,
+      importWorkspaceExternalAgentSessions: fail,
       listUserProjects: fail,
       deleteUserProject: fail,
       checkUserProjectPath: fail,

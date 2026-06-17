@@ -41,6 +41,54 @@ test("WorkspaceAgentActivityService.sendInput keeps activity snapshot working wh
   assert.equal(snapshotSession?.currentPhase, "working");
 });
 
+test("WorkspaceAgentActivityService.importExternalSessions refreshes sessions and projects", async () => {
+  const importCalls: unknown[] = [];
+  let listCalls = 0;
+  let projectRefreshCalls = 0;
+  const service = new WorkspaceAgentActivityService({
+    tuttidClient: {
+      importWorkspaceExternalAgentSessions: async (
+        workspaceId: string,
+        request: Parameters<
+          TuttidClient["importWorkspaceExternalAgentSessions"]
+        >[1]
+      ) => {
+        importCalls.push({ workspaceId, request });
+        return {
+          errors: [],
+          importedMessages: 2,
+          importedProjects: 1,
+          importedSessions: 1,
+          skippedSessions: 0
+        };
+      },
+      listWorkspaceAgentSessions: async () => {
+        listCalls += 1;
+        return { sessions: [], workspaceId: "ws-1" };
+      }
+    } as unknown as TuttidClient,
+    runtimeApi: {
+      logTerminalDiagnostic: async () => {}
+    },
+    workspaceUserProjectService: {
+      refresh: async () => {
+        projectRefreshCalls += 1;
+      }
+    } as never
+  });
+
+  const result = await service.importExternalSessions("ws-1", {
+    projects: [{ path: "/repo" }]
+  });
+
+  assert.deepEqual(importCalls, [
+    { workspaceId: "ws-1", request: { projects: [{ path: "/repo" }] } }
+  ]);
+  assert.equal(result.importedMessages, 2);
+  assert.equal(listCalls, 1);
+  assert.equal(projectRefreshCalls, 1);
+});
+
 test("WorkspaceAgentActivityService.submitPlanDecision runs planMode-off then sendInput for a codex implement decision", async () => {
   const service = createService();
 

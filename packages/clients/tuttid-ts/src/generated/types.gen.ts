@@ -856,6 +856,74 @@ export type WorkspaceAgentSessionListResponse = {
   sessions: Array<WorkspaceAgentSession>;
 };
 
+export type ExternalAgentImportScanRequest = {
+  providers?: Array<WorkspaceAgentProvider>;
+};
+
+export type ExternalAgentImportProvider = {
+  provider: WorkspaceAgentProvider;
+  root: string;
+  available: boolean;
+  sessionCount: number;
+  messageCount: number;
+  error?: string | null;
+};
+
+export type ExternalAgentImportProject = {
+  path: string;
+  label: string;
+  providers: Array<WorkspaceAgentProvider>;
+  sessionCount: number;
+  messageCount: number;
+  lastUpdatedAtUnixMs?: number | null;
+};
+
+export type ExternalAgentImportSession = {
+  id: string;
+  projectPath: string;
+  provider: WorkspaceAgentProvider;
+  sourcePath: string;
+  title: string;
+  messageCount: number;
+  lastUpdatedAtUnixMs?: number | null;
+};
+
+export type ExternalAgentImportError = {
+  provider?: WorkspaceAgentProvider;
+  sourcePath?: string | null;
+  message: string;
+};
+
+export type ExternalAgentImportScanResponse = {
+  providers: Array<ExternalAgentImportProvider>;
+  projects: Array<ExternalAgentImportProject>;
+  sessions: Array<ExternalAgentImportSession>;
+  scannedSessions: number;
+  scannedMessages: number;
+  skippedSessions: number;
+  errors: Array<ExternalAgentImportError>;
+};
+
+export type ExternalAgentImportProjectSelection = {
+  path: string;
+  providers?: Array<WorkspaceAgentProvider>;
+  sessionIds?: Array<string>;
+};
+
+export type ImportExternalAgentSessionsRequest = {
+  projects: Array<ExternalAgentImportProjectSelection>;
+  registerUserProjects?: boolean;
+  importSessions?: boolean;
+};
+
+export type ExternalAgentImportResultResponse = {
+  importedProjects: number;
+  importedSessions: number;
+  importedMessages: number;
+  skippedSessions: number;
+  errors: Array<ExternalAgentImportError>;
+};
+
 export type DeleteWorkspaceAgentSessionResponse = {
   removed: boolean;
 };
@@ -3589,6 +3657,104 @@ export type CreateWorkspaceAgentSessionResponses = {
 
 export type CreateWorkspaceAgentSessionResponse =
   CreateWorkspaceAgentSessionResponses[keyof CreateWorkspaceAgentSessionResponses];
+
+export type ScanWorkspaceExternalAgentSessionImportsData = {
+  body?: ExternalAgentImportScanRequest;
+  path: {
+    workspaceID: string;
+  };
+  query?: never;
+  url: "/v1/workspaces/{workspaceID}/agent-sessions/external-imports/scan";
+};
+
+export type ScanWorkspaceExternalAgentSessionImportsErrors = {
+  /**
+   * Request payload or parameters are invalid
+   */
+  400: ApiErrorResponse;
+  /**
+   * Bearer token is missing or invalid
+   */
+  401: ApiErrorResponse;
+  /**
+   * Workspace id was not found
+   */
+  404: ApiErrorResponse;
+  /**
+   * HTTP method is not supported on this route
+   */
+  405: ApiErrorResponse;
+  /**
+   * Workspace operation failed in an upstream adapter or command
+   */
+  502: ApiErrorResponse;
+  /**
+   * Required daemon service dependency is unavailable
+   */
+  503: ApiErrorResponse;
+};
+
+export type ScanWorkspaceExternalAgentSessionImportsError =
+  ScanWorkspaceExternalAgentSessionImportsErrors[keyof ScanWorkspaceExternalAgentSessionImportsErrors];
+
+export type ScanWorkspaceExternalAgentSessionImportsResponses = {
+  /**
+   * External agent session import scan result
+   */
+  200: ExternalAgentImportScanResponse;
+};
+
+export type ScanWorkspaceExternalAgentSessionImportsResponse =
+  ScanWorkspaceExternalAgentSessionImportsResponses[keyof ScanWorkspaceExternalAgentSessionImportsResponses];
+
+export type ImportWorkspaceExternalAgentSessionsData = {
+  body: ImportExternalAgentSessionsRequest;
+  path: {
+    workspaceID: string;
+  };
+  query?: never;
+  url: "/v1/workspaces/{workspaceID}/agent-sessions/external-imports/import";
+};
+
+export type ImportWorkspaceExternalAgentSessionsErrors = {
+  /**
+   * Request payload or parameters are invalid
+   */
+  400: ApiErrorResponse;
+  /**
+   * Bearer token is missing or invalid
+   */
+  401: ApiErrorResponse;
+  /**
+   * Workspace id was not found
+   */
+  404: ApiErrorResponse;
+  /**
+   * HTTP method is not supported on this route
+   */
+  405: ApiErrorResponse;
+  /**
+   * Workspace operation failed in an upstream adapter or command
+   */
+  502: ApiErrorResponse;
+  /**
+   * Required daemon service dependency is unavailable
+   */
+  503: ApiErrorResponse;
+};
+
+export type ImportWorkspaceExternalAgentSessionsError =
+  ImportWorkspaceExternalAgentSessionsErrors[keyof ImportWorkspaceExternalAgentSessionsErrors];
+
+export type ImportWorkspaceExternalAgentSessionsResponses = {
+  /**
+   * External agent session import result
+   */
+  200: ExternalAgentImportResultResponse;
+};
+
+export type ImportWorkspaceExternalAgentSessionsResponse =
+  ImportWorkspaceExternalAgentSessionsResponses[keyof ImportWorkspaceExternalAgentSessionsResponses];
 
 export type GetAgentProviderComposerOptionsData = {
   body?: GetAgentProviderComposerOptionsRequest;
