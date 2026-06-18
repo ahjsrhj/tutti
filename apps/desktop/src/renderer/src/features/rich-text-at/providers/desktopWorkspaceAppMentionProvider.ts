@@ -17,6 +17,7 @@ export interface DesktopWorkspaceAppMentionItem {
   readonly description: string;
   readonly displayName: string;
   readonly iconUrl: string | null;
+  readonly referencesListSupported: boolean;
   readonly scopes: string;
   readonly workspaceId: string;
 }
@@ -112,7 +113,8 @@ export function createDesktopWorkspaceAppMentionProvider({
         presentation: compactMentionPresentation({
           description: item.description,
           iconUrl: item.iconUrl ?? "",
-          subtitle: item.description
+          subtitle: item.description,
+          referencesListSupported: item.referencesListSupported ? "true" : ""
         })
       }
     })
@@ -159,6 +161,7 @@ function workspaceAppCenterAppToMentionItem(
     description,
     displayName,
     iconUrl,
+    referencesListSupported: app.references?.listSupported ?? false,
     scopes: "",
     workspaceId
   };
@@ -226,6 +229,7 @@ function workspaceAppToMentionItem(input: {
       normalizeText(input.app?.availableIconUrl) ??
       normalizeText(baseInsertResult.mention.presentation?.iconUrl) ??
       null,
+    referencesListSupported: input.app?.references?.listSupported ?? false,
     scopes: readBaseItemStringList(baseObject, "scopes"),
     workspaceId: input.workspaceId
   };
@@ -336,6 +340,7 @@ function compactMentionPresentation(presentation: {
   description?: string;
   iconUrl?: string;
   subtitle?: string;
+  referencesListSupported?: string;
 }):
   | NonNullable<
       Extract<

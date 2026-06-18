@@ -495,6 +495,7 @@ function createDependenciesStub(): {
       probeAgentProvider: fail,
       runAgentProviderAction: fail,
       getWorkspaceIssueDetail: fail,
+      searchWorkspaceIssueReferences: fail,
       getWorkspaceIssueTaskDetail: fail,
       getWorkspaceIssueTaskRun: fail,
       getWorkspaceIssueRun: fail,
