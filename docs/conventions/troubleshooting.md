@@ -43,6 +43,39 @@ Use this shape for new entries:
 
 ## Current Entries
 
+### External PR review approvals do not refresh gate status
+
+- Symptom:
+  An external contributor's PR has an internal approval, but GitHub still shows
+  a red `external-pr-review-gate / external-pr-review-gate` check, often next
+  to a green `external-pr-review-gate` commit status.
+- Quick checks:
+  Inspect the failing run event with `gh run view <run-id> --json event`. If
+  the event is `pull_request_review`, check the log for missing
+  `TUTTI_RD_MEMBERS` or `Resource not accessible by integration` when creating
+  a commit status.
+- Root cause:
+  `pull_request_review` workflows for external PRs can run with reduced token,
+  variable, and secret access. They are not a reliable place to write the
+  branch-protection status. A direct review-event gate can also create a second
+  check run with the same job name as the trusted `pull_request_target` gate.
+- Fix:
+  Keep the status-writing gate on trusted `pull_request_target` or
+  `workflow_run` execution. If approvals must refresh the gate automatically,
+  use a low-privilege `pull_request_review` signal workflow and a trusted
+  `workflow_run` refresh workflow that resolves the PR and calls the reusable
+  gate.
+- Validation:
+  Confirm the old caller workflow no longer directly invokes the gate from
+  `pull_request_review`. After an internal approval, expect a signal run and a
+  refresh run; the refresh run should update the `external-pr-review-gate`
+  commit status to match the latest approved, requested-changes, or dismissed
+  review state.
+- References:
+  [.github/workflows/external-pr-review-gate.yml](../../.github/workflows/external-pr-review-gate.yml)
+  [.github/workflows/external-pr-review-gate-review-signal.yml](../../.github/workflows/external-pr-review-gate-review-signal.yml)
+  [.github/workflows/external-pr-review-gate-review-refresh.yml](../../.github/workflows/external-pr-review-gate-review-refresh.yml)
+
 ### Browser CLI cold start timeout looks like an unreachable daemon
 
 - Symptom:
