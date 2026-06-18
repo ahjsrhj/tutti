@@ -58,7 +58,8 @@ The runtime must:
 - Treat `$TUTTI_APP_PACKAGE_DIR` as read-only after startup.
 - Write durable app data only under `$TUTTI_APP_DATA_DIR`.
 - Write scratch/runtime files only under `$TUTTI_APP_RUNTIME_DIR`.
-- Write logs only under `$TUTTI_APP_LOG_DIR` when file logs are needed.
+- Write logs only under `$TUTTI_APP_LOG_DIR` when backend/server-side file logs are needed.
+- Prefer `window.tuttiExternal?.logs?.write?.()` for browser-side diagnostics in Tutti Desktop; reserve `$TUTTI_APP_LOG_DIR` for backend process logs.
 - Read `$TUTTI_WORKSPACE_ROOT` only when the app needs workspace context.
 - Launch Python with `$TUTTI_APP_PYTHON` and Node with `$TUTTI_APP_NODE`; use `$TUTTI_APP_NPM` for npm install/build work.
 - When the generated app calls another local Tutti capability at runtime, use `$TUTTI_CLI` and follow `references/tutti-cli-commands.md`.

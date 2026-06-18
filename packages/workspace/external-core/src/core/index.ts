@@ -5,6 +5,8 @@ import {
   type TuttiExternalAtQueryInput,
   type TuttiExternalFileOpenInput,
   type TuttiExternalFileSelectInput,
+  type TuttiExternalLogInput,
+  type TuttiExternalLogLevel,
   type TuttiExternalManagedAiModelProviderId,
   type TuttiExternalPermissionRequestInput,
   type TuttiExternalSettingsOpenInput
@@ -17,6 +19,44 @@ export {
 
 export const tuttiExternalAtMaxResultsLimit = 50;
 export const tuttiExternalAtDefaultMaxResults = 20;
+export const tuttiExternalLogDiagnosticTextLimit = 8_000;
+
+export function limitDiagnosticText(
+  value: string | undefined
+): string | undefined {
+  const trimmed = value?.trim();
+  if (!trimmed) {
+    return undefined;
+  }
+  return trimmed.length > tuttiExternalLogDiagnosticTextLimit
+    ? `${trimmed.slice(0, tuttiExternalLogDiagnosticTextLimit)}...`
+    : trimmed;
+}
+
+export function normalizeTuttiExternalLogInput(
+  input: unknown
+): TuttiExternalLogInput {
+  if (!isRecord(input)) {
+    throw new Error("logs.write input must be an object.");
+  }
+
+  const event = limitDiagnosticText(
+    normalizeRequiredString(input.event, "logs.write event")
+  );
+  if (!event) {
+    throw new Error("logs.write event is required.");
+  }
+
+  return {
+    event,
+    ...(input.level !== undefined && input.level !== null
+      ? { level: normalizeTuttiExternalLogLevel(input.level) }
+      : {}),
+    ...(input.details !== undefined && input.details !== null
+      ? { details: normalizeTuttiExternalLogDetails(input.details) }
+      : {})
+  };
+}
 
 export function normalizeTuttiExternalAtQueryInput(
   input: unknown
@@ -153,6 +193,52 @@ export function isTuttiExternalManagedAiModelProviderId(
       value as TuttiExternalManagedAiModelProviderId
     )
   );
+}
+
+function normalizeTuttiExternalLogLevel(value: unknown): TuttiExternalLogLevel {
+  if (
+    value === "debug" ||
+    value === "info" ||
+    value === "warn" ||
+    value === "error"
+  ) {
+    return value;
+  }
+  throw new Error("logs.write level is unsupported.");
+}
+
+function normalizeTuttiExternalLogDetails(
+  value: unknown
+): Record<string, unknown> {
+  if (!isRecord(value)) {
+    throw new Error("logs.write details must be an object.");
+  }
+
+  const details: Record<string, unknown> = {};
+  for (const [key, entry] of Object.entries(value)) {
+    details[key] = normalizeTuttiExternalLogDetailValue(entry);
+  }
+  return details;
+}
+
+function normalizeTuttiExternalLogDetailValue(value: unknown): unknown {
+  if (typeof value === "string") {
+    return limitDiagnosticText(value) ?? "";
+  }
+  if (value instanceof Error) {
+    return {
+      message: limitDiagnosticText(value.message) ?? "",
+      name: value.name,
+      stack: limitDiagnosticText(value.stack)
+    };
+  }
+  if (Array.isArray(value)) {
+    return value.map((entry) => normalizeTuttiExternalLogDetailValue(entry));
+  }
+  if (isRecord(value)) {
+    return normalizeTuttiExternalLogDetails(value);
+  }
+  return value;
 }
 
 function normalizeMaxResults(value: unknown): number {

@@ -14,10 +14,10 @@ import {
   type DesktopWorkspaceAppContext
 } from "../../shared/contracts/ipc";
 import {
-  isTuttiExternalManagedAiModelProviderId,
   normalizeTuttiExternalAtQueryInput,
   normalizeTuttiExternalFileOpenInput,
   normalizeTuttiExternalFileSelectInput,
+  normalizeTuttiExternalLogInput,
   normalizeTuttiExternalPermissionRequestInput,
   normalizeTuttiExternalSettingsOpenInput
 } from "@tutti-os/workspace-external-core/core";
@@ -29,6 +29,7 @@ import type {
   TuttiExternalPermissionRequestInput,
   TuttiExternalPermissionRequestResult
 } from "@tutti-os/workspace-external-core/contracts";
+import { isTuttiExternalManagedAiModelProviderId } from "@tutti-os/workspace-external-core/core";
 import type { DesktopLocale } from "../../shared/i18n";
 import type { DesktopHostPreferencesState } from "../desktopHostPreferences";
 import type { DesktopLogger } from "../logging";
@@ -41,9 +42,17 @@ import {
   dispatchWorkspaceAppOpenUrl,
   installWorkspaceAppWindowOpenHandler
 } from "./workspaceAppWindowOpen.ts";
+import {
+  normalizeWorkspaceAppDiagnosticLogRecord,
+  WorkspaceAppFrontendLogWriter,
+  WorkspaceAppGuestLogRateLimiter
+} from "./workspaceAppFrontendLogging.ts";
 
 const workspaceAppGuestWebContents = new Set<WebContents>();
 const workspaceAppGuestContexts = new Map<number, WorkspaceAppGuestContext>();
+let workspaceAppFrontendLogWriter: WorkspaceAppFrontendLogWriter | null = null;
+let workspaceAppGuestLogRateLimiter: WorkspaceAppGuestLogRateLimiter | null =
+  null;
 
 interface WorkspaceAppGuestContext {
   appID: string;
@@ -78,14 +87,26 @@ export function registerWorkspaceAppGuestWebContents(
   contents.once("destroyed", () => {
     workspaceAppGuestWebContents.delete(contents);
     workspaceAppGuestContexts.delete(contents.id);
+    workspaceAppGuestLogRateLimiter?.forget(contents.id);
   });
 }
 
 export function registerWorkspaceAppContextIpc(
   endpoint: DesktopDaemonEndpoint,
   preferences: DesktopHostPreferencesState,
-  logger?: DesktopLogger
+  options: {
+    logger?: DesktopLogger;
+    sessionID: string;
+    stateRootDir: string;
+  }
 ): void {
+  const { logger, sessionID, stateRootDir } = options;
+  workspaceAppGuestLogRateLimiter ??= new WorkspaceAppGuestLogRateLimiter();
+  workspaceAppFrontendLogWriter ??= new WorkspaceAppFrontendLogWriter(
+    stateRootDir,
+    sessionID,
+    workspaceAppGuestLogRateLimiter
+  );
   registerDesktopIpcHandler(desktopIpcChannels.appContext.get, (event) =>
     createWorkspaceAppContext(
       endpoint,
@@ -165,25 +186,46 @@ export function registerWorkspaceAppContextIpc(
   );
   ipcMain.on(
     desktopIpcChannels.appContext.diagnostic,
-    (_event, payload: unknown) => {
+    (event, payload: unknown) => {
       const normalizedPayload = isWorkspaceAppDiagnosticPayload(payload)
         ? payload
         : null;
-      const event =
+      writeWorkspaceAppDiagnosticLog(event.sender.id, normalizedPayload);
+      const diagnosticEvent =
         typeof normalizedPayload?.event === "string"
           ? normalizedPayload.event
           : "";
-      if (event === "workspace-app-link-interception") {
+      if (diagnosticEvent === "workspace-app-link-interception") {
         logger?.info("workspace app link interception diagnostic", {
           payload: normalizedPayload,
-          webContentsId: _event.sender.id
+          webContentsId: event.sender.id
         });
         return;
       }
-      if (event.includes("failed")) {
+      if (diagnosticEvent.includes("failed")) {
         logger?.warn("workspace app context preload diagnostic", {
           payload: normalizedPayload
         });
+      }
+    }
+  );
+  ipcMain.on(
+    desktopIpcChannels.appExternal.logsWrite,
+    (event, payload: unknown) => {
+      const context = workspaceAppGuestContexts.get(event.sender.id);
+      if (
+        !context ||
+        !workspaceAppGuestWebContents.has(event.sender) ||
+        event.sender.isDestroyed()
+      ) {
+        return;
+      }
+
+      try {
+        const input = normalizeTuttiExternalLogInput(payload);
+        workspaceAppFrontendLogWriter?.write(event.sender.id, context, input);
+      } catch {
+        // Fire-and-forget: invalid app payloads are silently ignored.
       }
     }
   );
@@ -214,6 +256,23 @@ export function registerWorkspaceAppContextIpc(
       locale: preferences.getLocale()
     });
   });
+}
+
+function writeWorkspaceAppDiagnosticLog(
+  guestWebContentsId: number,
+  payload: Record<string, unknown> | null
+): void {
+  if (!payload) {
+    return;
+  }
+
+  const context = workspaceAppGuestContexts.get(guestWebContentsId);
+  const record = normalizeWorkspaceAppDiagnosticLogRecord(payload);
+  if (!context || !record) {
+    return;
+  }
+
+  workspaceAppFrontendLogWriter?.write(guestWebContentsId, context, record);
 }
 
 function requireWorkspaceAppGuestContext(

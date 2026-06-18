@@ -30,6 +30,7 @@ import type {
   TuttiExternalFileOpenInput,
   TuttiExternalFileSelectInput,
   TuttiExternalFileSelectResult,
+  TuttiExternalLogInput,
   TuttiExternalPermissionRequestInput,
   TuttiExternalPermissionRequestResult,
   TuttiExternalRendererRequest,
@@ -53,6 +54,7 @@ export const desktopIpcChannels = {
     atQuery: "workspace-app-at:query",
     filesOpen: "workspace-app-files:open",
     filesSelect: "workspace-app-files:select",
+    logsWrite: "workspace-app-logs:write",
     permissionsRequest: "workspace-app-permissions:request",
     rendererRequest: "workspace-app-external:renderer-request",
     rendererResponse: "workspace-app-external:renderer-response",
@@ -276,6 +278,8 @@ export interface DesktopWorkspaceAppContext {
   locale: DesktopLocale;
   workspaceId?: string;
 }
+
+export type DesktopWorkspaceAppFrontendLogPayload = TuttiExternalLogInput;
 
 export interface DesktopBackendConfig {
   accessToken: string;

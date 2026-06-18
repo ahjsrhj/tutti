@@ -10,3 +10,4 @@ Contracts and host-agnostic helpers for the workspace app external bridge.
 - `files.open()` for user-activated host opening/revealing of a known workspace file path.
 - `permissions.request()` for user-activated host permission grants such as managed AI model access.
 - `settings.open()` for user-activated host settings navigation, including the managed models tab.
+- `logs.write()` for fire-and-forget frontend diagnostics that append to the workspace app `web.log`.

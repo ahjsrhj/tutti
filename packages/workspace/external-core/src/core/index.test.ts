@@ -4,6 +4,7 @@ import {
   normalizeTuttiExternalAtQueryInput,
   normalizeTuttiExternalFileOpenInput,
   normalizeTuttiExternalFileSelectInput,
+  normalizeTuttiExternalLogInput,
   normalizeTuttiExternalPermissionRequestInput,
   normalizeTuttiExternalSettingsOpenInput,
   tuttiExternalAtDefaultMaxResults,
@@ -180,4 +181,70 @@ test("keeps the managed AI model provider set explicit", () => {
     "openai",
     "anthropic"
   ]);
+});
+
+test("normalizes external log input defaults", () => {
+  assert.deepEqual(normalizeTuttiExternalLogInput({ event: "page.loaded" }), {
+    event: "page.loaded"
+  });
+});
+
+test("normalizes external log input with level and details", () => {
+  assert.deepEqual(
+    normalizeTuttiExternalLogInput({
+      event: " request.failed ",
+      level: "warn",
+      details: {
+        route: "/home",
+        retryCount: 2
+      }
+    }),
+    {
+      event: "request.failed",
+      level: "warn",
+      details: {
+        route: "/home",
+        retryCount: 2
+      }
+    }
+  );
+});
+
+test("truncates long external log detail strings", () => {
+  const longValue = "x".repeat(8_500);
+  const normalized = normalizeTuttiExternalLogInput({
+    event: "payload.large",
+    details: {
+      message: longValue
+    }
+  });
+
+  assert.equal(normalized.details?.message, `${"x".repeat(8_000)}...`);
+});
+
+test("rejects invalid external log input", () => {
+  assert.throws(
+    () => normalizeTuttiExternalLogInput(null),
+    /input must be an object/
+  );
+  assert.throws(
+    () => normalizeTuttiExternalLogInput({ event: "" }),
+    /event is required/
+  );
+  assert.throws(
+    () =>
+      normalizeTuttiExternalLogInput({
+        event: "page.loaded",
+        level: "trace"
+      }),
+    /level is unsupported/
+  );
+  assert.throws(
+    () =>
+      normalizeTuttiExternalLogInput({
+        event: "page.loaded",
+        details: "invalid"
+      }),
+    /details must be an object/
+  );
 });
