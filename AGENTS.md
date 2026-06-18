@@ -10,7 +10,7 @@
 - `packages/configs/*`: shared TypeScript and formatting config
 - `config`: sources used to generate runtime defaults
 
-Keep business logic in `services/tuttid`. Do not let `apps/desktop` become a second business core. Move code into `packages/` only for a real shared boundary; do not create vague packages such as `shared`, `common`, `utils`, or `client-sdk`.
+Keep business logic in `services/tuttid`. Do not let `apps/desktop` become a second business core. Do not create vague packages such as `shared`, `common`, `utils`, or `client-sdk`.
 
 ## Routing
 
