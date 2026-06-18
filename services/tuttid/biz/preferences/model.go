@@ -15,17 +15,18 @@ const (
 )
 
 type DesktopPreferences struct {
-	AgentComposerDefaultsByProvider map[string]AgentComposerDefaults
-	BrowserUseConnectionMode        string
-	DefaultAgentProvider            string
-	DockIconStyle                   string
-	DockPlacement                   string
-	Initialized                     bool
-	Locale                          string
-	SleepPreventionMode             string
-	ThemeSource                     string
-	UpdateChannel                   string
-	UpdatePolicy                    string
+	AgentComposerDefaultsByProvider             map[string]AgentComposerDefaults
+	AgentGUIConversationRailCollapsedByProvider map[string]bool
+	BrowserUseConnectionMode                    string
+	DefaultAgentProvider                        string
+	DockIconStyle                               string
+	DockPlacement                               string
+	Initialized                                 bool
+	Locale                                      string
+	SleepPreventionMode                         string
+	ThemeSource                                 string
+	UpdateChannel                               string
+	UpdatePolicy                                string
 }
 
 type AgentComposerDefaults struct {
@@ -36,17 +37,18 @@ type AgentComposerDefaults struct {
 
 func DefaultDesktopPreferences() DesktopPreferences {
 	return DesktopPreferences{
-		AgentComposerDefaultsByProvider: map[string]AgentComposerDefaults{},
-		BrowserUseConnectionMode:        DefaultDesktopBrowserUseConnectionMode,
-		DefaultAgentProvider:            DefaultDesktopDefaultAgentProvider,
-		DockIconStyle:                   DefaultDesktopDockIconStyle,
-		DockPlacement:                   DefaultDesktopDockPlacement,
-		Initialized:                     false,
-		Locale:                          DefaultDesktopLocale,
-		SleepPreventionMode:             DefaultDesktopSleepPreventionMode,
-		ThemeSource:                     DefaultDesktopThemeSource,
-		UpdateChannel:                   DefaultDesktopUpdateChannel,
-		UpdatePolicy:                    DefaultDesktopUpdatePolicy,
+		AgentComposerDefaultsByProvider:             map[string]AgentComposerDefaults{},
+		AgentGUIConversationRailCollapsedByProvider: map[string]bool{},
+		BrowserUseConnectionMode:                    DefaultDesktopBrowserUseConnectionMode,
+		DefaultAgentProvider:                        DefaultDesktopDefaultAgentProvider,
+		DockIconStyle:                               DefaultDesktopDockIconStyle,
+		DockPlacement:                               DefaultDesktopDockPlacement,
+		Initialized:                                 false,
+		Locale:                                      DefaultDesktopLocale,
+		SleepPreventionMode:                         DefaultDesktopSleepPreventionMode,
+		ThemeSource:                                 DefaultDesktopThemeSource,
+		UpdateChannel:                               DefaultDesktopUpdateChannel,
+		UpdatePolicy:                                DefaultDesktopUpdatePolicy,
 	}
 }
 

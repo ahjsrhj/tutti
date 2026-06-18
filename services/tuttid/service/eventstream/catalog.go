@@ -258,16 +258,17 @@ func (e *ValidationError) Error() string {
 
 type desktopPreferencesMutationPayload struct {
 	Preferences struct {
-		AgentComposerDefaultsByProvider desktopAgentComposerDefaultsByProviderPayload `json:"agentComposerDefaultsByProvider"`
-		BrowserUseConnectionMode        string                                        `json:"browserUseConnectionMode,omitempty"`
-		DefaultAgentProvider            string                                        `json:"defaultAgentProvider"`
-		DockIconStyle                   string                                        `json:"dockIconStyle"`
-		DockPlacement                   string                                        `json:"dockPlacement"`
-		Locale                          string                                        `json:"locale"`
-		SleepPreventionMode             string                                        `json:"sleepPreventionMode"`
-		ThemeSource                     string                                        `json:"themeSource"`
-		UpdateChannel                   string                                        `json:"updateChannel"`
-		UpdatePolicy                    string                                        `json:"updatePolicy"`
+		AgentComposerDefaultsByProvider             desktopAgentComposerDefaultsByProviderPayload             `json:"agentComposerDefaultsByProvider"`
+		AgentGUIConversationRailCollapsedByProvider desktopAgentGUIConversationRailCollapsedByProviderPayload `json:"agentGuiConversationRailCollapsedByProvider"`
+		BrowserUseConnectionMode                    string                                                    `json:"browserUseConnectionMode,omitempty"`
+		DefaultAgentProvider                        string                                                    `json:"defaultAgentProvider"`
+		DockIconStyle                               string                                                    `json:"dockIconStyle"`
+		DockPlacement                               string                                                    `json:"dockPlacement"`
+		Locale                                      string                                                    `json:"locale"`
+		SleepPreventionMode                         string                                                    `json:"sleepPreventionMode"`
+		ThemeSource                                 string                                                    `json:"themeSource"`
+		UpdateChannel                               string                                                    `json:"updateChannel"`
+		UpdatePolicy                                string                                                    `json:"updatePolicy"`
 	} `json:"preferences"`
 }
 
@@ -377,19 +378,22 @@ type workspaceIssueUpdatedPayload struct {
 }
 
 type desktopPreferencesSettingsPayload struct {
-	AgentComposerDefaultsByProvider desktopAgentComposerDefaultsByProviderPayload `json:"agentComposerDefaultsByProvider"`
-	BrowserUseConnectionMode        string                                        `json:"browserUseConnectionMode,omitempty"`
-	DefaultAgentProvider            string                                        `json:"defaultAgentProvider"`
-	DockIconStyle                   string                                        `json:"dockIconStyle"`
-	DockPlacement                   string                                        `json:"dockPlacement"`
-	Locale                          string                                        `json:"locale"`
-	SleepPreventionMode             string                                        `json:"sleepPreventionMode"`
-	ThemeSource                     string                                        `json:"themeSource"`
-	UpdateChannel                   string                                        `json:"updateChannel"`
-	UpdatePolicy                    string                                        `json:"updatePolicy"`
+	AgentComposerDefaultsByProvider             desktopAgentComposerDefaultsByProviderPayload             `json:"agentComposerDefaultsByProvider"`
+	AgentGUIConversationRailCollapsedByProvider desktopAgentGUIConversationRailCollapsedByProviderPayload `json:"agentGuiConversationRailCollapsedByProvider"`
+	BrowserUseConnectionMode                    string                                                    `json:"browserUseConnectionMode,omitempty"`
+	DefaultAgentProvider                        string                                                    `json:"defaultAgentProvider"`
+	DockIconStyle                               string                                                    `json:"dockIconStyle"`
+	DockPlacement                               string                                                    `json:"dockPlacement"`
+	Locale                                      string                                                    `json:"locale"`
+	SleepPreventionMode                         string                                                    `json:"sleepPreventionMode"`
+	ThemeSource                                 string                                                    `json:"themeSource"`
+	UpdateChannel                               string                                                    `json:"updateChannel"`
+	UpdatePolicy                                string                                                    `json:"updatePolicy"`
 }
 
 type desktopAgentComposerDefaultsByProviderPayload map[string]desktopAgentComposerDefaultsPayload
+
+type desktopAgentGUIConversationRailCollapsedByProviderPayload map[string]bool
 
 type desktopAgentComposerDefaultsPayload struct {
 	Model            string `json:"model,omitempty"`

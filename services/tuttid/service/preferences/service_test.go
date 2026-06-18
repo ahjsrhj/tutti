@@ -105,6 +105,11 @@ func TestServicePutTrimsDesktopPreferences(t *testing.T) {
 			},
 			"codex": {},
 		},
+		AgentGUIConversationRailCollapsedByProvider: map[string]bool{
+			" codex ": true,
+			"claude":  false,
+			"unknown": true,
+		},
 		DefaultAgentProvider: " claude ",
 
 		BrowserUseConnectionMode: " autoConnect ",
@@ -154,6 +159,15 @@ func TestServicePutTrimsDesktopPreferences(t *testing.T) {
 	}
 	if _, ok := store.putInput.AgentComposerDefaultsByProvider["codex"]; ok {
 		t.Fatal("stored codex empty defaults, want omitted")
+	}
+	if !store.putInput.AgentGUIConversationRailCollapsedByProvider["codex"] {
+		t.Fatal("stored codex rail collapsed = false, want true")
+	}
+	if collapsed, ok := store.putInput.AgentGUIConversationRailCollapsedByProvider["claude-code"]; !ok || collapsed {
+		t.Fatalf("stored claude rail collapsed = %v/%v, want present false", collapsed, ok)
+	}
+	if _, ok := store.putInput.AgentGUIConversationRailCollapsedByProvider["unknown"]; ok {
+		t.Fatal("stored unknown rail collapsed provider")
 	}
 	if len(publisher.published) != 1 {
 		t.Fatalf("published len = %d, want 1", len(publisher.published))

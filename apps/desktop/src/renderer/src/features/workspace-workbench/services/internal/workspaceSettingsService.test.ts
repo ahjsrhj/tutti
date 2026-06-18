@@ -944,6 +944,7 @@ function createDesktopPreferencesService(input: {
     _serviceBrand: undefined,
     store: input.state,
     rememberAgentComposerDefaults: async () => {},
+    rememberAgentGuiConversationRailCollapsed: async () => {},
     setBrowserUseConnectionMode:
       input.onSetBrowserUseConnectionMode ?? (async (mode) => mode),
     setDefaultAgentProvider:
@@ -966,6 +967,7 @@ function createPreferencesState(
 ): DesktopPreferencesReadableStoreState {
   return {
     agentComposerDefaultsByProvider: {},
+    agentGuiConversationRailCollapsedByProvider: {},
     browserUseConnectionMode: "isolated",
     changingBrowserUseConnectionMode: null,
     changingDefaultAgentProvider: null,

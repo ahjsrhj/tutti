@@ -23,6 +23,7 @@ CREATE TABLE IF NOT EXISTS desktop_preferences (
   dock_placement TEXT NOT NULL DEFAULT 'bottom',
   default_agent_provider TEXT NOT NULL DEFAULT 'codex',
   agent_composer_defaults_by_provider_json TEXT NOT NULL DEFAULT '{}',
+  agent_gui_conversation_rail_collapsed_by_provider_json TEXT NOT NULL DEFAULT '{}',
   locale TEXT NOT NULL,
   theme_source TEXT NOT NULL,
   sleep_prevention_mode TEXT NOT NULL DEFAULT 'never',
@@ -36,6 +37,38 @@ INSERT INTO tuttid_schema_migrations (id, applied_at_unix_ms)
 `, schemaMigrationDesktopPreferencesV1, now)
 	if err != nil {
 		return fmt.Errorf("migrate workspace database for desktop preferences: %w", err)
+	}
+
+	return nil
+}
+
+func (s *SQLiteStore) applyDesktopPreferencesAgentGUIConversationRailV1(ctx context.Context) error {
+	applied, err := s.hasMigration(ctx, schemaMigrationDesktopPreferencesAgentGUIConversationRailV1)
+	if err != nil {
+		return err
+	}
+	if applied {
+		return nil
+	}
+
+	now := unixMs(time.Now().UTC())
+	hasAgentGUIConversationRail, err := s.hasColumn(ctx, "desktop_preferences", "agent_gui_conversation_rail_collapsed_by_provider_json")
+	if err != nil {
+		return err
+	}
+	if !hasAgentGUIConversationRail {
+		if _, err := s.db.ExecContext(ctx, `
+ALTER TABLE desktop_preferences
+  ADD COLUMN agent_gui_conversation_rail_collapsed_by_provider_json TEXT NOT NULL DEFAULT '{}';`); err != nil {
+			return fmt.Errorf("migrate workspace database for desktop agent gui conversation rail: %w", err)
+		}
+	}
+	_, err = s.db.ExecContext(ctx, `
+INSERT INTO tuttid_schema_migrations (id, applied_at_unix_ms)
+  VALUES (?, ?);
+`, schemaMigrationDesktopPreferencesAgentGUIConversationRailV1, now)
+	if err != nil {
+		return fmt.Errorf("migrate workspace database for desktop agent gui conversation rail: %w", err)
 	}
 
 	return nil

@@ -6,9 +6,13 @@ import type {
 } from "@tutti-os/client-tuttid-ts";
 import {
   defaultDesktopBrowserUseConnectionMode,
+  desktopAgentComposerDefaultsByProviderEqual,
+  desktopAgentGuiConversationRailCollapsedByProviderEqual,
   isDesktopBrowserUseConnectionMode,
   normalizeDesktopAgentComposerDefaultsByProvider,
+  normalizeDesktopAgentGuiConversationRailCollapsedByProvider,
   type DesktopAgentComposerDefaultsByProvider,
+  type DesktopAgentGuiConversationRailCollapsedByProvider,
   defaultDesktopAgentProvider,
   defaultDesktopDockIconStyle,
   defaultDesktopDockPlacement,
@@ -35,6 +39,7 @@ const updateChannelDefaultMigrationID = "desktop-update-channel-default-rc-v1";
 
 export interface DesktopHostPreferencesState {
   getAgentComposerDefaultsByProvider(): DesktopAgentComposerDefaultsByProvider;
+  getAgentGUIConversationRailCollapsedByProvider(): DesktopAgentGuiConversationRailCollapsedByProvider;
   getBrowserUseConnectionMode(): DesktopBrowserUseConnectionMode;
   getDefaultAgentProvider(): DesktopAgentProvider;
   getDockIconStyle(): DesktopDockIconStyle;
@@ -47,6 +52,7 @@ export interface DesktopHostPreferencesState {
   subscribe(listener: () => void): () => void;
   sync(input: {
     agentComposerDefaultsByProvider?: DesktopAgentComposerDefaultsByProvider;
+    agentGuiConversationRailCollapsedByProvider?: DesktopAgentGuiConversationRailCollapsedByProvider;
     browserUseConnectionMode?: DesktopBrowserUseConnectionMode;
     defaultAgentProvider?: DesktopAgentProvider;
     dockIconStyle?: DesktopDockIconStyle;
@@ -77,6 +83,10 @@ export async function createDesktopHostPreferencesState(
     normalizeDesktopAgentComposerDefaultsByProvider(
       initialPreferences.agentComposerDefaultsByProvider
     );
+  let agentGUIConversationRailCollapsedByProvider =
+    normalizeDesktopAgentGuiConversationRailCollapsedByProvider(
+      initialPreferences.agentGuiConversationRailCollapsedByProvider
+    );
   let browserUseConnectionMode = isDesktopBrowserUseConnectionMode(
     initialPreferences.browserUseConnectionMode
   )
@@ -95,6 +105,9 @@ export async function createDesktopHostPreferencesState(
   return {
     getAgentComposerDefaultsByProvider() {
       return agentComposerDefaultsByProvider;
+    },
+    getAgentGUIConversationRailCollapsedByProvider() {
+      return agentGUIConversationRailCollapsedByProvider;
     },
     getBrowserUseConnectionMode() {
       return browserUseConnectionMode;
@@ -132,6 +145,8 @@ export async function createDesktopHostPreferencesState(
     sync(input) {
       const previousAgentComposerDefaultsByProvider =
         agentComposerDefaultsByProvider;
+      const previousAgentGUIConversationRailCollapsedByProvider =
+        agentGUIConversationRailCollapsedByProvider;
       const previousBrowserUseConnectionMode = browserUseConnectionMode;
       const previousDefaultAgentProvider = defaultAgentProvider;
       const previousDockIconStyle = dockIconStyle;
@@ -142,10 +157,33 @@ export async function createDesktopHostPreferencesState(
       const previousUpdateChannel = updateChannel;
       const previousUpdatePolicy = updatePolicy;
       if (input.agentComposerDefaultsByProvider) {
-        agentComposerDefaultsByProvider =
+        const nextAgentComposerDefaultsByProvider =
           normalizeDesktopAgentComposerDefaultsByProvider(
             input.agentComposerDefaultsByProvider
           );
+        if (
+          !desktopAgentComposerDefaultsByProviderEqual(
+            agentComposerDefaultsByProvider,
+            nextAgentComposerDefaultsByProvider
+          )
+        ) {
+          agentComposerDefaultsByProvider = nextAgentComposerDefaultsByProvider;
+        }
+      }
+      if (input.agentGuiConversationRailCollapsedByProvider) {
+        const nextAgentGUIConversationRailCollapsedByProvider =
+          normalizeDesktopAgentGuiConversationRailCollapsedByProvider(
+            input.agentGuiConversationRailCollapsedByProvider
+          );
+        if (
+          !desktopAgentGuiConversationRailCollapsedByProviderEqual(
+            agentGUIConversationRailCollapsedByProvider,
+            nextAgentGUIConversationRailCollapsedByProvider
+          )
+        ) {
+          agentGUIConversationRailCollapsedByProvider =
+            nextAgentGUIConversationRailCollapsedByProvider;
+        }
       }
       if (input.browserUseConnectionMode) {
         browserUseConnectionMode = input.browserUseConnectionMode;
@@ -177,6 +215,8 @@ export async function createDesktopHostPreferencesState(
       if (
         agentComposerDefaultsByProvider !==
           previousAgentComposerDefaultsByProvider ||
+        agentGUIConversationRailCollapsedByProvider !==
+          previousAgentGUIConversationRailCollapsedByProvider ||
         browserUseConnectionMode !== previousBrowserUseConnectionMode ||
         defaultAgentProvider !== previousDefaultAgentProvider ||
         dockIconStyle !== previousDockIconStyle ||
@@ -211,6 +251,7 @@ async function resolveInitialDesktopPreferences(
       await options.tuttidClient.putDesktopPreferences({
         preferences: {
           agentComposerDefaultsByProvider: {},
+          agentGuiConversationRailCollapsedByProvider: {},
           browserUseConnectionMode: defaultDesktopBrowserUseConnectionMode,
           defaultAgentProvider: defaultDesktopAgentProvider,
           dockIconStyle: defaultDesktopDockIconStyle,
@@ -229,6 +270,7 @@ async function resolveInitialDesktopPreferences(
     });
     return {
       agentComposerDefaultsByProvider: {},
+      agentGuiConversationRailCollapsedByProvider: {},
       browserUseConnectionMode: defaultDesktopBrowserUseConnectionMode,
       defaultAgentProvider: defaultDesktopAgentProvider,
       dockIconStyle: defaultDesktopDockIconStyle,

@@ -86,6 +86,10 @@ export type DesktopAgentComposerDefaultsByProvider = Partial<
   Record<DesktopAgentProvider, DesktopAgentComposerDefaults>
 >;
 
+export type DesktopAgentGuiConversationRailCollapsedByProvider = Partial<
+  Record<DesktopAgentProvider, boolean>
+>;
+
 export const desktopSleepPreventionModes = [
   "never",
   "whileAgentRunning",
@@ -184,6 +188,52 @@ export function normalizeDesktopAgentComposerDefaultsByProvider(
     }
   }
   return defaultsByProvider;
+}
+
+export function normalizeDesktopAgentGuiConversationRailCollapsedByProvider(
+  value: unknown
+): DesktopAgentGuiConversationRailCollapsedByProvider {
+  if (!isRecord(value)) {
+    return {};
+  }
+
+  const collapsedByProvider: DesktopAgentGuiConversationRailCollapsedByProvider =
+    {};
+  for (const provider of desktopAgentProviders) {
+    if (typeof value[provider] === "boolean") {
+      collapsedByProvider[provider] = value[provider];
+    }
+  }
+  return collapsedByProvider;
+}
+
+export function mergeDesktopAgentGuiConversationRailCollapsedByProvider(
+  current:
+    | DesktopAgentGuiConversationRailCollapsedByProvider
+    | null
+    | undefined,
+  provider: DesktopAgentProvider,
+  collapsed: boolean
+): DesktopAgentGuiConversationRailCollapsedByProvider {
+  return {
+    ...normalizeDesktopAgentGuiConversationRailCollapsedByProvider(current),
+    [provider]: collapsed
+  };
+}
+
+export function desktopAgentGuiConversationRailCollapsedByProviderEqual(
+  left: DesktopAgentGuiConversationRailCollapsedByProvider | null | undefined,
+  right: DesktopAgentGuiConversationRailCollapsedByProvider | null | undefined
+): boolean {
+  const normalizedLeft =
+    normalizeDesktopAgentGuiConversationRailCollapsedByProvider(left);
+  const normalizedRight =
+    normalizeDesktopAgentGuiConversationRailCollapsedByProvider(right);
+  return desktopAgentProviders.every(
+    (provider) =>
+      (normalizedLeft[provider] ?? false) ===
+      (normalizedRight[provider] ?? false)
+  );
 }
 
 export function mergeDesktopAgentComposerDefaultsByProvider(

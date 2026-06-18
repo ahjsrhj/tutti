@@ -6,6 +6,7 @@ import {
 } from "../theme/index.ts";
 import type {
   DesktopAgentComposerDefaultsByProvider,
+  DesktopAgentGuiConversationRailCollapsedByProvider,
   DesktopAgentProvider,
   DesktopSleepPreventionMode
 } from "../preferences/index.ts";
@@ -268,6 +269,7 @@ export interface DesktopSelectAppArchiveExportPathInput {
 
 export interface DesktopHostPreferencesSyncPayload {
   agentComposerDefaultsByProvider?: DesktopAgentComposerDefaultsByProvider;
+  agentGuiConversationRailCollapsedByProvider?: DesktopAgentGuiConversationRailCollapsedByProvider;
   defaultAgentProvider?: DesktopAgentProvider;
   locale?: DesktopLocale;
   sleepPreventionMode?: DesktopSleepPreventionMode;

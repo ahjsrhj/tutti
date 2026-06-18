@@ -25,6 +25,7 @@ test("DesktopPreferencesService bootstraps persisted preferences before connecti
         initialized: true,
         preferences: {
           agentComposerDefaultsByProvider: {},
+          agentGuiConversationRailCollapsedByProvider: {},
           browserUseConnectionMode: "isolated",
           defaultAgentProvider: "codex",
 
@@ -82,6 +83,7 @@ test("DesktopPreferencesService keeps in-memory defaults when preferences are no
       initialized: false,
       preferences: {
         agentComposerDefaultsByProvider: {},
+        agentGuiConversationRailCollapsedByProvider: {},
         browserUseConnectionMode: "isolated",
         defaultAgentProvider: "codex",
 
@@ -148,6 +150,7 @@ test("DesktopPreferencesService publishes locale writes and converges on the aut
   assert.deepEqual(client.updatedRequests, [
     {
       agentComposerDefaultsByProvider: {},
+      agentGuiConversationRailCollapsedByProvider: {},
       browserUseConnectionMode: "isolated",
       defaultAgentProvider: "codex",
 
@@ -165,6 +168,7 @@ test("DesktopPreferencesService publishes locale writes and converges on the aut
 
   client.emitDesktopPreferencesUpdated({
     agentComposerDefaultsByProvider: {},
+    agentGuiConversationRailCollapsedByProvider: {},
     browserUseConnectionMode: "isolated",
     defaultAgentProvider: "codex",
 
@@ -237,6 +241,7 @@ test("DesktopPreferencesService applies authoritative theme updates from the eve
   assert.deepEqual(client.updatedRequests, [
     {
       agentComposerDefaultsByProvider: {},
+      agentGuiConversationRailCollapsedByProvider: {},
       browserUseConnectionMode: "isolated",
       defaultAgentProvider: "codex",
 
@@ -262,6 +267,7 @@ test("DesktopPreferencesService applies authoritative theme updates from the eve
 
   client.emitDesktopPreferencesUpdated({
     agentComposerDefaultsByProvider: {},
+    agentGuiConversationRailCollapsedByProvider: {},
     browserUseConnectionMode: "isolated",
     defaultAgentProvider: "codex",
 
@@ -351,6 +357,7 @@ test("DesktopPreferencesService publishes prevent sleep preference writes", asyn
   assert.deepEqual(client.updatedRequests, [
     {
       agentComposerDefaultsByProvider: {},
+      agentGuiConversationRailCollapsedByProvider: {},
       browserUseConnectionMode: "isolated",
       defaultAgentProvider: "codex",
 
@@ -367,6 +374,7 @@ test("DesktopPreferencesService publishes prevent sleep preference writes", asyn
 
   client.emitDesktopPreferencesUpdated({
     agentComposerDefaultsByProvider: {},
+    agentGuiConversationRailCollapsedByProvider: {},
     browserUseConnectionMode: "isolated",
     defaultAgentProvider: "codex",
 
@@ -406,6 +414,7 @@ test("DesktopPreferencesService publishes update preference writes", async () =>
   assert.deepEqual(client.updatedRequests, [
     {
       agentComposerDefaultsByProvider: {},
+      agentGuiConversationRailCollapsedByProvider: {},
       browserUseConnectionMode: "isolated",
       defaultAgentProvider: "codex",
 
@@ -422,6 +431,7 @@ test("DesktopPreferencesService publishes update preference writes", async () =>
 
   client.emitDesktopPreferencesUpdated({
     agentComposerDefaultsByProvider: {},
+    agentGuiConversationRailCollapsedByProvider: {},
     browserUseConnectionMode: "isolated",
     defaultAgentProvider: "codex",
 
@@ -468,6 +478,7 @@ test("DesktopPreferencesService publishes dock placement preference writes", asy
   assert.deepEqual(client.updatedRequests, [
     {
       agentComposerDefaultsByProvider: {},
+      agentGuiConversationRailCollapsedByProvider: {},
       browserUseConnectionMode: "isolated",
       defaultAgentProvider: "codex",
 
@@ -484,6 +495,7 @@ test("DesktopPreferencesService publishes dock placement preference writes", asy
 
   client.emitDesktopPreferencesUpdated({
     agentComposerDefaultsByProvider: {},
+    agentGuiConversationRailCollapsedByProvider: {},
     browserUseConnectionMode: "isolated",
     defaultAgentProvider: "codex",
 
@@ -508,6 +520,7 @@ test("DesktopPreferencesService applies HTTP-confirmed authoritative preferences
       initialized: true,
       preferences: {
         agentComposerDefaultsByProvider: {},
+        agentGuiConversationRailCollapsedByProvider: {},
         browserUseConnectionMode: "isolated",
         defaultAgentProvider: "codex",
 
@@ -524,6 +537,7 @@ test("DesktopPreferencesService applies HTTP-confirmed authoritative preferences
       initialized: true,
       preferences: {
         agentComposerDefaultsByProvider: {},
+        agentGuiConversationRailCollapsedByProvider: {},
         browserUseConnectionMode: "isolated",
         defaultAgentProvider: "codex",
 
@@ -608,6 +622,7 @@ test("DesktopPreferencesService remembers agent composer defaults per provider",
         reasoningEffort: "high"
       }
     },
+    agentGuiConversationRailCollapsedByProvider: {},
     browserUseConnectionMode: "isolated",
     defaultAgentProvider: "codex",
 
@@ -628,6 +643,52 @@ test("DesktopPreferencesService remembers agent composer defaults per provider",
       permissionModeId: "full-access",
       reasoningEffort: "high"
     }
+  });
+
+  service.dispose();
+});
+
+test("DesktopPreferencesService remembers agent GUI conversation rail collapsed state per provider", async () => {
+  const client = createDesktopPreferencesClient({});
+  const service = new DesktopPreferencesService({
+    applyLocale() {},
+    applyTheme() {},
+    client,
+    initialLocale: "en",
+    initialTheme: {
+      appearance: "light",
+      source: "system"
+    },
+    resolveTheme
+  });
+  await settle();
+
+  const rememberPromise = service.rememberAgentGuiConversationRailCollapsed(
+    "codex",
+    true
+  );
+
+  assert.deepEqual(client.updatedRequests.at(-1), {
+    agentComposerDefaultsByProvider: {},
+    agentGuiConversationRailCollapsedByProvider: {
+      codex: true
+    },
+    browserUseConnectionMode: "isolated",
+    defaultAgentProvider: "codex",
+
+    dockIconStyle: "default",
+    dockPlacement: "bottom",
+    locale: "en",
+    sleepPreventionMode: "never",
+    themeSource: "system",
+    updateChannel: "stable",
+    updatePolicy: "prompt"
+  });
+  client.emitDesktopPreferencesUpdated(client.updatedRequests.at(-1)!);
+
+  await rememberPromise;
+  assert.deepEqual(service.store.agentGuiConversationRailCollapsedByProvider, {
+    codex: true
   });
 
   service.dispose();
@@ -676,6 +737,14 @@ function createDesktopPreferencesClient(
           JSON.stringify(
             pendingUpdate.request.agentComposerDefaultsByProvider
           ) !== JSON.stringify(preferences.agentComposerDefaultsByProvider) ||
+          JSON.stringify(
+            pendingUpdate.request.agentGuiConversationRailCollapsedByProvider
+          ) !==
+            JSON.stringify(
+              preferences.agentGuiConversationRailCollapsedByProvider
+            ) ||
+          pendingUpdate.request.browserUseConnectionMode !==
+            preferences.browserUseConnectionMode ||
           pendingUpdate.request.locale !== preferences.locale ||
           pendingUpdate.request.defaultAgentProvider !==
             preferences.defaultAgentProvider ||
@@ -698,6 +767,7 @@ function createDesktopPreferencesClient(
       initialized: true,
       preferences: {
         agentComposerDefaultsByProvider: {},
+        agentGuiConversationRailCollapsedByProvider: {},
         browserUseConnectionMode: "isolated",
         defaultAgentProvider: "codex",
 

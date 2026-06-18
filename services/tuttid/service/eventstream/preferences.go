@@ -28,6 +28,9 @@ func (p DesktopPreferencesPublisher) PublishDesktopPreferencesUpdated(ctx contex
 			AgentComposerDefaultsByProvider: desktopAgentComposerDefaultsByProviderPayloadFromBiz(
 				preferences.AgentComposerDefaultsByProvider,
 			),
+			AgentGUIConversationRailCollapsedByProvider: agentGUIConversationRailCollapsedByProviderPayloadFromBiz(
+				preferences.AgentGUIConversationRailCollapsedByProvider,
+			),
 			BrowserUseConnectionMode: preferences.BrowserUseConnectionMode,
 			DefaultAgentProvider:     preferences.DefaultAgentProvider,
 			DockIconStyle:            preferences.DockIconStyle,
@@ -57,16 +60,17 @@ func NewPreferencesDesktopUpdateRequestedHandler(mutator PreferencesMutator) Int
 		}
 
 		_, err = mutator.Put(ctx, preferencesservice.PutInput{
-			AgentComposerDefaultsByProvider: decoded.AgentComposerDefaultsByProvider,
-			BrowserUseConnectionMode:        decoded.BrowserUseConnectionMode,
-			DefaultAgentProvider:            decoded.DefaultAgentProvider,
-			DockIconStyle:                   decoded.DockIconStyle,
-			DockPlacement:                   decoded.DockPlacement,
-			Locale:                          decoded.Locale,
-			SleepPreventionMode:             decoded.SleepPreventionMode,
-			ThemeSource:                     decoded.ThemeSource,
-			UpdateChannel:                   decoded.UpdateChannel,
-			UpdatePolicy:                    decoded.UpdatePolicy,
+			AgentComposerDefaultsByProvider:             decoded.AgentComposerDefaultsByProvider,
+			AgentGUIConversationRailCollapsedByProvider: decoded.AgentGUIConversationRailCollapsedByProvider,
+			BrowserUseConnectionMode:                    decoded.BrowserUseConnectionMode,
+			DefaultAgentProvider:                        decoded.DefaultAgentProvider,
+			DockIconStyle:                               decoded.DockIconStyle,
+			DockPlacement:                               decoded.DockPlacement,
+			Locale:                                      decoded.Locale,
+			SleepPreventionMode:                         decoded.SleepPreventionMode,
+			ThemeSource:                                 decoded.ThemeSource,
+			UpdateChannel:                               decoded.UpdateChannel,
+			UpdatePolicy:                                decoded.UpdatePolicy,
 		})
 		if err != nil {
 			return fmt.Errorf("put desktop preferences: %w", err)
@@ -76,16 +80,17 @@ func NewPreferencesDesktopUpdateRequestedHandler(mutator PreferencesMutator) Int
 }
 
 type decodedDesktopPreferencesMutationPayload struct {
-	AgentComposerDefaultsByProvider map[string]preferencesbiz.AgentComposerDefaults
-	BrowserUseConnectionMode        string
-	DefaultAgentProvider            string
-	DockIconStyle                   string
-	DockPlacement                   string
-	Locale                          string
-	SleepPreventionMode             string
-	ThemeSource                     string
-	UpdateChannel                   string
-	UpdatePolicy                    string
+	AgentComposerDefaultsByProvider             map[string]preferencesbiz.AgentComposerDefaults
+	AgentGUIConversationRailCollapsedByProvider map[string]bool
+	BrowserUseConnectionMode                    string
+	DefaultAgentProvider                        string
+	DockIconStyle                               string
+	DockPlacement                               string
+	Locale                                      string
+	SleepPreventionMode                         string
+	ThemeSource                                 string
+	UpdateChannel                               string
+	UpdatePolicy                                string
 }
 
 func decodeDesktopPreferencesMutationPayload(payload []byte) (decodedDesktopPreferencesMutationPayload, error) {
@@ -97,6 +102,9 @@ func decodeDesktopPreferencesMutationPayload(payload []byte) (decodedDesktopPref
 		AgentComposerDefaultsByProvider: agentComposerDefaultsByProviderFromPayload(
 			decoded.Preferences.AgentComposerDefaultsByProvider,
 		),
+		AgentGUIConversationRailCollapsedByProvider: agentGUIConversationRailCollapsedByProviderFromPayload(
+			decoded.Preferences.AgentGUIConversationRailCollapsedByProvider,
+		),
 		BrowserUseConnectionMode: decoded.Preferences.BrowserUseConnectionMode,
 		DefaultAgentProvider:     decoded.Preferences.DefaultAgentProvider,
 		DockIconStyle:            decoded.Preferences.DockIconStyle,
@@ -107,6 +115,34 @@ func decodeDesktopPreferencesMutationPayload(payload []byte) (decodedDesktopPref
 		UpdateChannel:            decoded.Preferences.UpdateChannel,
 		UpdatePolicy:             decoded.Preferences.UpdatePolicy,
 	}, nil
+}
+
+func agentGUIConversationRailCollapsedByProviderPayloadFromBiz(
+	collapsedByProvider map[string]bool,
+) desktopAgentGUIConversationRailCollapsedByProviderPayload {
+	payload := desktopAgentGUIConversationRailCollapsedByProviderPayload{}
+	for provider, collapsed := range collapsedByProvider {
+		normalizedProvider := agentproviderbiz.Normalize(provider)
+		if normalizedProvider == "" {
+			continue
+		}
+		payload[normalizedProvider] = collapsed
+	}
+	return payload
+}
+
+func agentGUIConversationRailCollapsedByProviderFromPayload(
+	payload desktopAgentGUIConversationRailCollapsedByProviderPayload,
+) map[string]bool {
+	collapsedByProvider := map[string]bool{}
+	for provider, collapsed := range payload {
+		normalizedProvider := agentproviderbiz.Normalize(provider)
+		if normalizedProvider == "" {
+			continue
+		}
+		collapsedByProvider[normalizedProvider] = collapsed
+	}
+	return collapsedByProvider
 }
 
 func desktopAgentComposerDefaultsByProviderPayloadFromBiz(

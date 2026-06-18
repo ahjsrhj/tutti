@@ -40,6 +40,10 @@ export interface IDesktopPreferencesService {
     provider: DesktopAgentProvider,
     defaults: DesktopAgentComposerDefaults | null
   ): Promise<void>;
+  rememberAgentGuiConversationRailCollapsed(
+    provider: DesktopAgentProvider,
+    collapsed: boolean
+  ): Promise<void>;
 }
 
 export const IDesktopPreferencesService =

@@ -268,6 +268,9 @@ func (api DaemonAPI) PutDesktopPreferences(ctx context.Context, request tuttigen
 		AgentComposerDefaultsByProvider: agentComposerDefaultsByProviderFromGenerated(
 			request.Body.Preferences.AgentComposerDefaultsByProvider,
 		),
+		AgentGUIConversationRailCollapsedByProvider: agentGUIConversationRailCollapsedByProviderFromGenerated(
+			request.Body.Preferences.AgentGuiConversationRailCollapsedByProvider,
+		),
 		BrowserUseConnectionMode: browserUseConnectionMode,
 		DefaultAgentProvider:     defaultAgentProvider,
 		DockIconStyle:            dockIconStyle,
@@ -289,6 +292,30 @@ func (api DaemonAPI) PutDesktopPreferences(ctx context.Context, request tuttigen
 	return tuttigenerated.PutDesktopPreferences200JSONResponse(
 		preferencesapi.GeneratedDesktopPreferencesStateResponseFromBiz(preferences),
 	), nil
+}
+
+func agentGUIConversationRailCollapsedByProviderFromGenerated(
+	value tuttigenerated.DesktopAgentGuiConversationRailCollapsedByProvider,
+) map[string]bool {
+	result := map[string]bool{}
+	setAgentGUIConversationRailCollapsedFromGenerated(result, "claude-code", value.ClaudeCode)
+	setAgentGUIConversationRailCollapsedFromGenerated(result, "codex", value.Codex)
+	setAgentGUIConversationRailCollapsedFromGenerated(result, "gemini", value.Gemini)
+	setAgentGUIConversationRailCollapsedFromGenerated(result, "hermes", value.Hermes)
+	setAgentGUIConversationRailCollapsedFromGenerated(result, "nexight", value.Nexight)
+	setAgentGUIConversationRailCollapsedFromGenerated(result, "openclaw", value.Openclaw)
+	return result
+}
+
+func setAgentGUIConversationRailCollapsedFromGenerated(
+	result map[string]bool,
+	provider string,
+	value *bool,
+) {
+	if value == nil {
+		return
+	}
+	result[provider] = *value
 }
 
 func agentComposerDefaultsByProviderFromGenerated(

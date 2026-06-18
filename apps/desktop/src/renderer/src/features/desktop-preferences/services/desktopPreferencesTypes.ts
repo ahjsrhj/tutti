@@ -1,6 +1,7 @@
 import type { DesktopLocale } from "@shared/i18n";
 import type {
   DesktopAgentComposerDefaultsByProvider,
+  DesktopAgentGuiConversationRailCollapsedByProvider,
   DesktopAgentProvider,
   DesktopBrowserUseConnectionMode,
   DesktopDockIconStyle,
@@ -22,6 +23,7 @@ export interface DesktopPreferencesStoreState {
   changingUpdateChannel: DesktopUpdateChannel | null;
   changingUpdatePolicy: DesktopUpdatePolicy | null;
   agentComposerDefaultsByProvider: DesktopAgentComposerDefaultsByProvider;
+  agentGuiConversationRailCollapsedByProvider: DesktopAgentGuiConversationRailCollapsedByProvider;
   browserUseConnectionMode: DesktopBrowserUseConnectionMode;
   defaultAgentProvider: DesktopAgentProvider;
   dockIconStyle: DesktopDockIconStyle;
@@ -44,6 +46,7 @@ export interface DesktopPreferencesReadableStoreState {
   readonly changingUpdateChannel: DesktopUpdateChannel | null;
   readonly changingUpdatePolicy: DesktopUpdatePolicy | null;
   readonly agentComposerDefaultsByProvider: DesktopAgentComposerDefaultsByProvider;
+  readonly agentGuiConversationRailCollapsedByProvider: DesktopAgentGuiConversationRailCollapsedByProvider;
   readonly browserUseConnectionMode: DesktopBrowserUseConnectionMode;
   readonly defaultAgentProvider: DesktopAgentProvider;
   readonly dockIconStyle: DesktopDockIconStyle;

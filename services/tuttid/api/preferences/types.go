@@ -7,16 +7,28 @@ import (
 
 func GeneratedDesktopPreferencesFromBiz(value preferencesbiz.DesktopPreferences) tuttigenerated.DesktopPreferences {
 	return tuttigenerated.DesktopPreferences{
-		AgentComposerDefaultsByProvider: generatedAgentComposerDefaultsByProvider(value.AgentComposerDefaultsByProvider),
-		BrowserUseConnectionMode:        generatedBrowserUseConnectionModePointer(value.BrowserUseConnectionMode),
-		DefaultAgentProvider:            tuttigenerated.WorkspaceAgentProvider(value.DefaultAgentProvider),
-		DockIconStyle:                   tuttigenerated.DesktopDockIconStyle(value.DockIconStyle),
-		DockPlacement:                   tuttigenerated.DesktopDockPlacement(value.DockPlacement),
-		Locale:                          tuttigenerated.DesktopLocale(value.Locale),
-		SleepPreventionMode:             tuttigenerated.DesktopSleepPreventionMode(value.SleepPreventionMode),
-		ThemeSource:                     tuttigenerated.DesktopThemeSource(value.ThemeSource),
-		UpdateChannel:                   tuttigenerated.DesktopUpdateChannel(value.UpdateChannel),
-		UpdatePolicy:                    tuttigenerated.DesktopUpdatePolicy(value.UpdatePolicy),
+		AgentComposerDefaultsByProvider:             generatedAgentComposerDefaultsByProvider(value.AgentComposerDefaultsByProvider),
+		AgentGuiConversationRailCollapsedByProvider: generatedAgentGUIConversationRailCollapsedByProvider(value.AgentGUIConversationRailCollapsedByProvider),
+		BrowserUseConnectionMode:                    generatedBrowserUseConnectionModePointer(value.BrowserUseConnectionMode),
+		DefaultAgentProvider:                        tuttigenerated.WorkspaceAgentProvider(value.DefaultAgentProvider),
+		DockIconStyle:                               tuttigenerated.DesktopDockIconStyle(value.DockIconStyle),
+		DockPlacement:                               tuttigenerated.DesktopDockPlacement(value.DockPlacement),
+		Locale:                                      tuttigenerated.DesktopLocale(value.Locale),
+		SleepPreventionMode:                         tuttigenerated.DesktopSleepPreventionMode(value.SleepPreventionMode),
+		ThemeSource:                                 tuttigenerated.DesktopThemeSource(value.ThemeSource),
+		UpdateChannel:                               tuttigenerated.DesktopUpdateChannel(value.UpdateChannel),
+		UpdatePolicy:                                tuttigenerated.DesktopUpdatePolicy(value.UpdatePolicy),
+	}
+}
+
+func generatedAgentGUIConversationRailCollapsedByProvider(value map[string]bool) tuttigenerated.DesktopAgentGuiConversationRailCollapsedByProvider {
+	return tuttigenerated.DesktopAgentGuiConversationRailCollapsedByProvider{
+		ClaudeCode: optionalBoolPointerFromMap(value, "claude-code"),
+		Codex:      optionalBoolPointerFromMap(value, "codex"),
+		Gemini:     optionalBoolPointerFromMap(value, "gemini"),
+		Hermes:     optionalBoolPointerFromMap(value, "hermes"),
+		Nexight:    optionalBoolPointerFromMap(value, "nexight"),
+		Openclaw:   optionalBoolPointerFromMap(value, "openclaw"),
 	}
 }
 
@@ -63,4 +75,12 @@ func optionalStringPointer(value string) *string {
 		return nil
 	}
 	return &value
+}
+
+func optionalBoolPointerFromMap(value map[string]bool, key string) *bool {
+	collapsed, ok := value[key]
+	if !ok {
+		return nil
+	}
+	return &collapsed
 }

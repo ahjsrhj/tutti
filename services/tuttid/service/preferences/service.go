@@ -20,16 +20,17 @@ type Service struct {
 }
 
 type PutInput struct {
-	AgentComposerDefaultsByProvider map[string]preferencesbiz.AgentComposerDefaults
-	BrowserUseConnectionMode        string
-	DefaultAgentProvider            string
-	DockIconStyle                   string
-	DockPlacement                   string
-	Locale                          string
-	SleepPreventionMode             string
-	ThemeSource                     string
-	UpdateChannel                   string
-	UpdatePolicy                    string
+	AgentComposerDefaultsByProvider             map[string]preferencesbiz.AgentComposerDefaults
+	AgentGUIConversationRailCollapsedByProvider map[string]bool
+	BrowserUseConnectionMode                    string
+	DefaultAgentProvider                        string
+	DockIconStyle                               string
+	DockPlacement                               string
+	Locale                                      string
+	SleepPreventionMode                         string
+	ThemeSource                                 string
+	UpdateChannel                               string
+	UpdatePolicy                                string
 }
 
 func (s Service) Get(ctx context.Context) (preferencesbiz.DesktopPreferences, error) {
@@ -46,17 +47,18 @@ func (s Service) Put(ctx context.Context, input PutInput) (preferencesbiz.Deskto
 	}
 
 	preferences, err := s.Store.PutDesktopPreferences(ctx, preferencesbiz.DesktopPreferences{
-		AgentComposerDefaultsByProvider: normalizeAgentComposerDefaultsByProvider(input.AgentComposerDefaultsByProvider),
-		BrowserUseConnectionMode:        normalizeBrowserUseConnectionMode(input.BrowserUseConnectionMode),
-		DefaultAgentProvider:            agentproviderbiz.Normalize(input.DefaultAgentProvider),
-		DockIconStyle:                   strings.TrimSpace(input.DockIconStyle),
-		DockPlacement:                   strings.TrimSpace(input.DockPlacement),
-		Initialized:                     true,
-		Locale:                          strings.TrimSpace(input.Locale),
-		SleepPreventionMode:             strings.TrimSpace(input.SleepPreventionMode),
-		ThemeSource:                     strings.TrimSpace(input.ThemeSource),
-		UpdateChannel:                   strings.TrimSpace(input.UpdateChannel),
-		UpdatePolicy:                    strings.TrimSpace(input.UpdatePolicy),
+		AgentComposerDefaultsByProvider:             normalizeAgentComposerDefaultsByProvider(input.AgentComposerDefaultsByProvider),
+		AgentGUIConversationRailCollapsedByProvider: normalizeAgentGUIConversationRailCollapsedByProvider(input.AgentGUIConversationRailCollapsedByProvider),
+		BrowserUseConnectionMode:                    normalizeBrowserUseConnectionMode(input.BrowserUseConnectionMode),
+		DefaultAgentProvider:                        agentproviderbiz.Normalize(input.DefaultAgentProvider),
+		DockIconStyle:                               strings.TrimSpace(input.DockIconStyle),
+		DockPlacement:                               strings.TrimSpace(input.DockPlacement),
+		Initialized:                                 true,
+		Locale:                                      strings.TrimSpace(input.Locale),
+		SleepPreventionMode:                         strings.TrimSpace(input.SleepPreventionMode),
+		ThemeSource:                                 strings.TrimSpace(input.ThemeSource),
+		UpdateChannel:                               strings.TrimSpace(input.UpdateChannel),
+		UpdatePolicy:                                strings.TrimSpace(input.UpdatePolicy),
 	})
 	if err != nil {
 		return preferencesbiz.DesktopPreferences{}, err
@@ -73,6 +75,18 @@ func normalizeBrowserUseConnectionMode(value string) string {
 		return normalized
 	}
 	return preferencesbiz.DefaultDesktopBrowserUseConnectionMode
+}
+
+func normalizeAgentGUIConversationRailCollapsedByProvider(input map[string]bool) map[string]bool {
+	result := map[string]bool{}
+	for provider, collapsed := range input {
+		normalizedProvider := agentproviderbiz.Normalize(provider)
+		if normalizedProvider == "" {
+			continue
+		}
+		result[normalizedProvider] = collapsed
+	}
+	return result
 }
 
 func normalizeAgentComposerDefaultsByProvider(input map[string]preferencesbiz.AgentComposerDefaults) map[string]preferencesbiz.AgentComposerDefaults {

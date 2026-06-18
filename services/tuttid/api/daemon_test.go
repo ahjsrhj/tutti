@@ -1201,6 +1201,67 @@ func TestDaemonAPIGeneratedRoutesGetDesktopPreferences(t *testing.T) {
 	}
 }
 
+func TestDaemonAPIGeneratedRoutesPutDesktopPreferencesPersistsAgentGUIConversationRailPreference(t *testing.T) {
+	mux := http.NewServeMux()
+	var captured preferencesservice.PutInput
+	RegisterRoutes(mux, NewRoutes(DaemonAPI{
+		PreferencesService: stubPreferencesService{
+			putFn: func(_ context.Context, input preferencesservice.PutInput) (preferencesbiz.DesktopPreferences, error) {
+				captured = input
+				return preferencesbiz.DesktopPreferences{
+					AgentGUIConversationRailCollapsedByProvider: input.AgentGUIConversationRailCollapsedByProvider,
+					DefaultAgentProvider:                        input.DefaultAgentProvider,
+					DockIconStyle:                               input.DockIconStyle,
+					DockPlacement:                               input.DockPlacement,
+					Initialized:                                 true,
+					Locale:                                      input.Locale,
+					SleepPreventionMode:                         input.SleepPreventionMode,
+					ThemeSource:                                 input.ThemeSource,
+					UpdateChannel:                               input.UpdateChannel,
+					UpdatePolicy:                                input.UpdatePolicy,
+				}, nil
+			},
+		},
+	}))
+
+	recorder := performGeneratedRouteRequest(t, mux, http.MethodPut, "/v1/preferences/desktop", map[string]any{
+		"preferences": map[string]any{
+			"agentComposerDefaultsByProvider": map[string]any{},
+			"agentGuiConversationRailCollapsedByProvider": map[string]any{
+				"claude-code": false,
+				"codex":       true,
+			},
+			"defaultAgentProvider": "codex",
+			"dockIconStyle":        "default",
+			"dockPlacement":        "bottom",
+			"locale":               "zh-CN",
+			"sleepPreventionMode":  "never",
+			"themeSource":          "dark",
+			"updateChannel":        "stable",
+			"updatePolicy":         "prompt",
+		},
+	})
+	if recorder.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d; body: %s", recorder.Code, http.StatusOK, recorder.Body.String())
+	}
+	if !captured.AgentGUIConversationRailCollapsedByProvider["codex"] {
+		t.Fatalf("captured rail preference = %#v, want codex true", captured.AgentGUIConversationRailCollapsedByProvider)
+	}
+	if collapsed, ok := captured.AgentGUIConversationRailCollapsedByProvider["claude-code"]; !ok || collapsed {
+		t.Fatalf("captured rail preference = %#v, want claude-code false", captured.AgentGUIConversationRailCollapsedByProvider)
+	}
+	var response tuttigenerated.DesktopPreferencesStateResponse
+	decodeGeneratedRouteResponse(t, recorder, &response)
+	if response.Preferences.AgentGuiConversationRailCollapsedByProvider.Codex == nil ||
+		!*response.Preferences.AgentGuiConversationRailCollapsedByProvider.Codex {
+		t.Fatalf("response rail codex = %#v, want true", response.Preferences.AgentGuiConversationRailCollapsedByProvider.Codex)
+	}
+	if response.Preferences.AgentGuiConversationRailCollapsedByProvider.ClaudeCode == nil ||
+		*response.Preferences.AgentGuiConversationRailCollapsedByProvider.ClaudeCode {
+		t.Fatalf("response rail claude-code = %#v, want false", response.Preferences.AgentGuiConversationRailCollapsedByProvider.ClaudeCode)
+	}
+}
+
 func TestDaemonAPIGeneratedRoutesPutDesktopPreferencesValidatesLocale(t *testing.T) {
 	mux := http.NewServeMux()
 	RegisterRoutes(mux, NewRoutes(DaemonAPI{

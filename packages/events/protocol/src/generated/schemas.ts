@@ -8,6 +8,7 @@ export const preferencesDesktopPreferencesSchema = {
   additionalProperties: false,
   required: [
     "agentComposerDefaultsByProvider",
+    "agentGuiConversationRailCollapsedByProvider",
     "defaultAgentProvider",
     "dockIconStyle",
     "dockPlacement",
@@ -111,6 +112,30 @@ export const preferencesDesktopPreferencesSchema = {
               type: "string"
             }
           }
+        }
+      }
+    },
+    agentGuiConversationRailCollapsedByProvider: {
+      type: "object",
+      additionalProperties: false,
+      properties: {
+        "claude-code": {
+          type: "boolean"
+        },
+        codex: {
+          type: "boolean"
+        },
+        nexight: {
+          type: "boolean"
+        },
+        gemini: {
+          type: "boolean"
+        },
+        hermes: {
+          type: "boolean"
+        },
+        openclaw: {
+          type: "boolean"
         }
       }
     },
@@ -875,6 +900,7 @@ export const preferencesDesktopUpdateRequestedPayloadSchema = {
       additionalProperties: false,
       required: [
         "agentComposerDefaultsByProvider",
+        "agentGuiConversationRailCollapsedByProvider",
         "defaultAgentProvider",
         "dockIconStyle",
         "dockPlacement",
@@ -978,6 +1004,30 @@ export const preferencesDesktopUpdateRequestedPayloadSchema = {
                   type: "string"
                 }
               }
+            }
+          }
+        },
+        agentGuiConversationRailCollapsedByProvider: {
+          type: "object",
+          additionalProperties: false,
+          properties: {
+            "claude-code": {
+              type: "boolean"
+            },
+            codex: {
+              type: "boolean"
+            },
+            nexight: {
+              type: "boolean"
+            },
+            gemini: {
+              type: "boolean"
+            },
+            hermes: {
+              type: "boolean"
+            },
+            openclaw: {
+              type: "boolean"
             }
           }
         },
@@ -1062,6 +1112,7 @@ export const preferencesDesktopUpdatedPayloadSchema = {
       additionalProperties: false,
       required: [
         "agentComposerDefaultsByProvider",
+        "agentGuiConversationRailCollapsedByProvider",
         "defaultAgentProvider",
         "dockIconStyle",
         "dockPlacement",
@@ -1165,6 +1216,30 @@ export const preferencesDesktopUpdatedPayloadSchema = {
                   type: "string"
                 }
               }
+            }
+          }
+        },
+        agentGuiConversationRailCollapsedByProvider: {
+          type: "object",
+          additionalProperties: false,
+          properties: {
+            "claude-code": {
+              type: "boolean"
+            },
+            codex: {
+              type: "boolean"
+            },
+            nexight: {
+              type: "boolean"
+            },
+            gemini: {
+              type: "boolean"
+            },
+            hermes: {
+              type: "boolean"
+            },
+            openclaw: {
+              type: "boolean"
             }
           }
         },

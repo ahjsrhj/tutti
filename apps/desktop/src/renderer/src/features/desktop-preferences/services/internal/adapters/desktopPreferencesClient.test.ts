@@ -18,6 +18,7 @@ test("desktop preferences client resolves writes from the authoritative event", 
   const completion = client.updateDesktopPreferences({
     preferences: {
       agentComposerDefaultsByProvider: {},
+      agentGuiConversationRailCollapsedByProvider: {},
       browserUseConnectionMode: "isolated",
       defaultAgentProvider: "codex",
 
@@ -36,6 +37,7 @@ test("desktop preferences client resolves writes from the authoritative event", 
       payload: {
         preferences: {
           agentComposerDefaultsByProvider: {},
+          agentGuiConversationRailCollapsedByProvider: {},
           browserUseConnectionMode: "isolated",
           defaultAgentProvider: "codex",
 
@@ -56,6 +58,7 @@ test("desktop preferences client resolves writes from the authoritative event", 
     initialized: true,
     preferences: {
       agentComposerDefaultsByProvider: {},
+      agentGuiConversationRailCollapsedByProvider: {},
       browserUseConnectionMode: "isolated",
       defaultAgentProvider: "codex",
 
@@ -71,6 +74,99 @@ test("desktop preferences client resolves writes from the authoritative event", 
 
   assert.deepEqual(await completion, {
     agentComposerDefaultsByProvider: {},
+    agentGuiConversationRailCollapsedByProvider: {},
+    browserUseConnectionMode: "isolated",
+    defaultAgentProvider: "codex",
+
+    dockIconStyle: "default",
+    dockPlacement: "bottom",
+    locale: "zh-CN",
+    sleepPreventionMode: "never",
+    themeSource: "dark",
+    updateChannel: "stable",
+    updatePolicy: "prompt"
+  });
+
+  client.dispose();
+});
+
+test("desktop preferences client distinguishes agent GUI conversation rail preference writes", async () => {
+  const eventStreamClient = createFakeEventStreamClient();
+  const client = createDesktopPreferencesClient(
+    createFakeTuttidClient(),
+    eventStreamClient
+  );
+
+  const completion = client.updateDesktopPreferences({
+    preferences: {
+      agentComposerDefaultsByProvider: {},
+      agentGuiConversationRailCollapsedByProvider: {
+        codex: true
+      },
+      browserUseConnectionMode: "isolated",
+      defaultAgentProvider: "codex",
+
+      dockIconStyle: "default",
+      dockPlacement: "bottom",
+      locale: "zh-CN",
+      sleepPreventionMode: "never",
+      themeSource: "dark",
+      updateChannel: "stable",
+      updatePolicy: "prompt"
+    }
+  });
+  let settled = false;
+  void completion.then(() => {
+    settled = true;
+  });
+
+  eventStreamClient.emitDesktopPreferencesUpdated({
+    initialized: true,
+    preferences: {
+      agentComposerDefaultsByProvider: {},
+      agentGuiConversationRailCollapsedByProvider: {
+        codex: false
+      },
+      browserUseConnectionMode: "isolated",
+      defaultAgentProvider: "codex",
+
+      dockIconStyle: "default",
+      dockPlacement: "bottom",
+      locale: "zh-CN",
+      sleepPreventionMode: "never",
+      themeSource: "dark",
+      updateChannel: "stable",
+      updatePolicy: "prompt"
+    }
+  });
+  await Promise.resolve();
+  assert.equal(settled, false);
+
+  eventStreamClient.emitDesktopPreferencesUpdated({
+    initialized: true,
+    preferences: {
+      agentComposerDefaultsByProvider: {},
+      agentGuiConversationRailCollapsedByProvider: {
+        codex: true
+      },
+      browserUseConnectionMode: "isolated",
+      defaultAgentProvider: "codex",
+
+      dockIconStyle: "default",
+      dockPlacement: "bottom",
+      locale: "zh-CN",
+      sleepPreventionMode: "never",
+      themeSource: "dark",
+      updateChannel: "stable",
+      updatePolicy: "prompt"
+    }
+  });
+
+  assert.deepEqual(await completion, {
+    agentComposerDefaultsByProvider: {},
+    agentGuiConversationRailCollapsedByProvider: {
+      codex: true
+    },
     browserUseConnectionMode: "isolated",
     defaultAgentProvider: "codex",
 
@@ -104,6 +200,7 @@ test("desktop preferences client fans out authoritative preference updates", asy
     initialized: true,
     preferences: {
       agentComposerDefaultsByProvider: {},
+      agentGuiConversationRailCollapsedByProvider: {},
       browserUseConnectionMode: "isolated",
       defaultAgentProvider: "codex",
 
@@ -120,6 +217,7 @@ test("desktop preferences client fans out authoritative preference updates", asy
   assert.deepEqual(receivedUpdates, [
     {
       agentComposerDefaultsByProvider: {},
+      agentGuiConversationRailCollapsedByProvider: {},
       browserUseConnectionMode: "isolated",
       defaultAgentProvider: "codex",
 
@@ -147,6 +245,7 @@ test("desktop preferences client rejects pending writes when disposed", async ()
   const completion = client.updateDesktopPreferences({
     preferences: {
       agentComposerDefaultsByProvider: {},
+      agentGuiConversationRailCollapsedByProvider: {},
       browserUseConnectionMode: "isolated",
       defaultAgentProvider: "codex",
 
@@ -171,6 +270,7 @@ test("desktop preferences client confirms writes from HTTP when the event does n
     initialized: true,
     preferences: {
       agentComposerDefaultsByProvider: {},
+      agentGuiConversationRailCollapsedByProvider: {},
       browserUseConnectionMode: "isolated",
       defaultAgentProvider: "codex",
 
@@ -195,6 +295,7 @@ test("desktop preferences client confirms writes from HTTP when the event does n
   const completion = client.updateDesktopPreferences({
     preferences: {
       agentComposerDefaultsByProvider: {},
+      agentGuiConversationRailCollapsedByProvider: {},
       browserUseConnectionMode: "isolated",
       defaultAgentProvider: "codex",
 
@@ -210,6 +311,7 @@ test("desktop preferences client confirms writes from HTTP when the event does n
 
   assert.deepEqual(await completion, {
     agentComposerDefaultsByProvider: {},
+    agentGuiConversationRailCollapsedByProvider: {},
     browserUseConnectionMode: "isolated",
     defaultAgentProvider: "codex",
 
@@ -231,6 +333,7 @@ test("desktop preferences client notifies subscribers when HTTP confirmation suc
     initialized: true,
     preferences: {
       agentComposerDefaultsByProvider: {},
+      agentGuiConversationRailCollapsedByProvider: {},
       browserUseConnectionMode: "isolated",
       defaultAgentProvider: "codex",
 
@@ -260,6 +363,7 @@ test("desktop preferences client notifies subscribers when HTTP confirmation suc
   await client.updateDesktopPreferences({
     preferences: {
       agentComposerDefaultsByProvider: {},
+      agentGuiConversationRailCollapsedByProvider: {},
       browserUseConnectionMode: "isolated",
       defaultAgentProvider: "codex",
 
@@ -276,6 +380,7 @@ test("desktop preferences client notifies subscribers when HTTP confirmation suc
   assert.deepEqual(receivedUpdates, [
     {
       agentComposerDefaultsByProvider: {},
+      agentGuiConversationRailCollapsedByProvider: {},
       browserUseConnectionMode: "isolated",
       defaultAgentProvider: "codex",
 
@@ -297,6 +402,7 @@ test("desktop preferences client rejects writes when the authoritative state can
     initialized: true,
     preferences: {
       agentComposerDefaultsByProvider: {},
+      agentGuiConversationRailCollapsedByProvider: {},
       browserUseConnectionMode: "isolated",
       defaultAgentProvider: "codex",
 
@@ -321,6 +427,7 @@ test("desktop preferences client rejects writes when the authoritative state can
   const completion = client.updateDesktopPreferences({
     preferences: {
       agentComposerDefaultsByProvider: {},
+      agentGuiConversationRailCollapsedByProvider: {},
       browserUseConnectionMode: "isolated",
       defaultAgentProvider: "codex",
 
@@ -354,6 +461,7 @@ test("desktop preferences client coalesces concurrent identical writes", async (
   const firstCompletion = client.updateDesktopPreferences({
     preferences: {
       agentComposerDefaultsByProvider: {},
+      agentGuiConversationRailCollapsedByProvider: {},
       browserUseConnectionMode: "isolated",
       defaultAgentProvider: "codex",
 
@@ -369,6 +477,7 @@ test("desktop preferences client coalesces concurrent identical writes", async (
   const secondCompletion = client.updateDesktopPreferences({
     preferences: {
       agentComposerDefaultsByProvider: {},
+      agentGuiConversationRailCollapsedByProvider: {},
       browserUseConnectionMode: "isolated",
       defaultAgentProvider: "codex",
 
@@ -388,6 +497,7 @@ test("desktop preferences client coalesces concurrent identical writes", async (
     initialized: true,
     preferences: {
       agentComposerDefaultsByProvider: {},
+      agentGuiConversationRailCollapsedByProvider: {},
       browserUseConnectionMode: "isolated",
       defaultAgentProvider: "codex",
 
@@ -415,6 +525,7 @@ function createFakeTuttidClient(
     initialized: true,
     preferences: {
       agentComposerDefaultsByProvider: {},
+      agentGuiConversationRailCollapsedByProvider: {},
       browserUseConnectionMode: "isolated",
       defaultAgentProvider: "codex",
 

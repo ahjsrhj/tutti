@@ -5,6 +5,7 @@ import type { DesktopPreferencesClient } from "./adapters/desktopPreferencesClie
 import { createDesktopPreferencesStore } from "./desktopPreferencesStore.ts";
 import {
   desktopAgentComposerDefaultsByProviderEqual,
+  desktopAgentGuiConversationRailCollapsedByProviderEqual,
   defaultDesktopAgentProvider,
   defaultDesktopBrowserUseConnectionMode,
   defaultDesktopDockIconStyle,
@@ -13,10 +14,13 @@ import {
   defaultDesktopUpdateChannel,
   defaultDesktopUpdatePolicy,
   mergeDesktopAgentComposerDefaultsByProvider,
+  mergeDesktopAgentGuiConversationRailCollapsedByProvider,
   normalizeDesktopAgentComposerDefaults,
   normalizeDesktopAgentComposerDefaultsByProvider,
+  normalizeDesktopAgentGuiConversationRailCollapsedByProvider,
   type DesktopAgentComposerDefaults,
   type DesktopAgentComposerDefaultsByProvider,
+  type DesktopAgentGuiConversationRailCollapsedByProvider,
   type DesktopAgentProvider,
   type DesktopBrowserUseConnectionMode,
   type DesktopDockIconStyle,
@@ -48,6 +52,7 @@ export class DesktopPreferencesService implements IDesktopPreferencesService {
     this.dependencies = dependencies;
     this.store = createDesktopPreferencesStore({
       agentComposerDefaultsByProvider: {},
+      agentGuiConversationRailCollapsedByProvider: {},
       browserUseConnectionMode: defaultDesktopBrowserUseConnectionMode,
       defaultAgentProvider: defaultDesktopAgentProvider,
       dockIconStyle: defaultDesktopDockIconStyle,
@@ -357,6 +362,42 @@ export class DesktopPreferencesService implements IDesktopPreferencesService {
     }
   }
 
+  async rememberAgentGuiConversationRailCollapsed(
+    provider: DesktopAgentProvider,
+    collapsed: boolean
+  ): Promise<void> {
+    const previousCollapsedByProvider =
+      this.store.agentGuiConversationRailCollapsedByProvider;
+    const nextCollapsedByProvider =
+      mergeDesktopAgentGuiConversationRailCollapsedByProvider(
+        previousCollapsedByProvider,
+        provider,
+        collapsed
+      );
+    if (
+      desktopAgentGuiConversationRailCollapsedByProviderEqual(
+        previousCollapsedByProvider,
+        nextCollapsedByProvider
+      )
+    ) {
+      return;
+    }
+
+    this.store.agentGuiConversationRailCollapsedByProvider =
+      nextCollapsedByProvider;
+    try {
+      await this.dependencies.client.updateDesktopPreferences({
+        preferences: this.currentPreferences({
+          agentGuiConversationRailCollapsedByProvider: nextCollapsedByProvider
+        })
+      });
+    } catch (error) {
+      this.store.agentGuiConversationRailCollapsedByProvider =
+        previousCollapsedByProvider;
+      throw error;
+    }
+  }
+
   private async initialize(): Promise<void> {
     try {
       const preferences =
@@ -401,6 +442,7 @@ export class DesktopPreferencesService implements IDesktopPreferencesService {
 
   private applyPreferences(preferences: {
     agentComposerDefaultsByProvider?: DesktopAgentComposerDefaultsByProvider;
+    agentGuiConversationRailCollapsedByProvider?: DesktopAgentGuiConversationRailCollapsedByProvider;
     browserUseConnectionMode?: DesktopBrowserUseConnectionMode;
     defaultAgentProvider: DesktopAgentProvider;
     dockIconStyle: DesktopDockIconStyle;
@@ -414,6 +456,10 @@ export class DesktopPreferencesService implements IDesktopPreferencesService {
     this.store.agentComposerDefaultsByProvider =
       normalizeDesktopAgentComposerDefaultsByProvider(
         preferences.agentComposerDefaultsByProvider
+      );
+    this.store.agentGuiConversationRailCollapsedByProvider =
+      normalizeDesktopAgentGuiConversationRailCollapsedByProvider(
+        preferences.agentGuiConversationRailCollapsedByProvider
       );
     this.store.browserUseConnectionMode =
       preferences.browserUseConnectionMode ??
@@ -431,6 +477,7 @@ export class DesktopPreferencesService implements IDesktopPreferencesService {
   private currentPreferences(
     overrides: Partial<{
       agentComposerDefaultsByProvider: DesktopAgentComposerDefaultsByProvider;
+      agentGuiConversationRailCollapsedByProvider: DesktopAgentGuiConversationRailCollapsedByProvider;
       browserUseConnectionMode: DesktopBrowserUseConnectionMode;
       defaultAgentProvider: DesktopAgentProvider;
       dockIconStyle: DesktopDockIconStyle;
@@ -443,6 +490,7 @@ export class DesktopPreferencesService implements IDesktopPreferencesService {
     }> = {}
   ): {
     agentComposerDefaultsByProvider: DesktopAgentComposerDefaultsByProvider;
+    agentGuiConversationRailCollapsedByProvider: DesktopAgentGuiConversationRailCollapsedByProvider;
     browserUseConnectionMode: DesktopBrowserUseConnectionMode;
     defaultAgentProvider: DesktopAgentProvider;
     dockIconStyle: DesktopDockIconStyle;
@@ -458,6 +506,11 @@ export class DesktopPreferencesService implements IDesktopPreferencesService {
         normalizeDesktopAgentComposerDefaultsByProvider(
           overrides.agentComposerDefaultsByProvider ??
             this.store.agentComposerDefaultsByProvider
+        ),
+      agentGuiConversationRailCollapsedByProvider:
+        normalizeDesktopAgentGuiConversationRailCollapsedByProvider(
+          overrides.agentGuiConversationRailCollapsedByProvider ??
+            this.store.agentGuiConversationRailCollapsedByProvider
         ),
       browserUseConnectionMode:
         overrides.browserUseConnectionMode ??

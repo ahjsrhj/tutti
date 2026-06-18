@@ -50,7 +50,7 @@ func TestServicePublishRejectsInvalidPayload(t *testing.T) {
 
 	err := service.PublishFromClient(context.Background(), ClientEvent{
 		Topic:   TopicPreferencesDesktopUpdateRequested,
-		Payload: []byte(`{"preferences":{"defaultAgentProvider":"codex","dockIconStyle":"default","dockPlacement":"bottom","locale":"fr","sleepPreventionMode":"never","themeSource":"dark","updateChannel":"stable","updatePolicy":"prompt"}}`),
+		Payload: []byte(`{"preferences":{"agentComposerDefaultsByProvider":{},"agentGuiConversationRailCollapsedByProvider":{},"defaultAgentProvider":"codex","dockIconStyle":"default","dockPlacement":"bottom","locale":"fr","sleepPreventionMode":"never","themeSource":"dark","updateChannel":"stable","updatePolicy":"prompt"}}`),
 	})
 	if err == nil {
 		t.Fatal("PublishFromClient() error = nil, want invalid payload")
@@ -165,7 +165,8 @@ func TestPreferencesIntentHandlerUsesAuthoritativeMutationPath(t *testing.T) {
 	service := NewService(DefaultCatalog(), nil)
 	mutator := &preferencesMutatorStub{
 		result: preferencesbiz.DesktopPreferences{
-			DefaultAgentProvider: "codex",
+			AgentGUIConversationRailCollapsedByProvider: map[string]bool{"codex": true},
+			DefaultAgentProvider:                        "codex",
 
 			DockIconStyle:       "flat",
 			DockPlacement:       "bottom",
@@ -193,7 +194,7 @@ func TestPreferencesIntentHandlerUsesAuthoritativeMutationPath(t *testing.T) {
 
 	if err := service.PublishFromClient(context.Background(), ClientEvent{
 		Topic:   TopicPreferencesDesktopUpdateRequested,
-		Payload: []byte(`{"preferences":{"agentComposerDefaultsByProvider":{},"defaultAgentProvider":"codex","dockIconStyle":"flat","dockPlacement":"left","locale":"zh-CN","sleepPreventionMode":"never","themeSource":"dark","updateChannel":"rc","updatePolicy":"auto"}}`),
+		Payload: []byte(`{"preferences":{"agentComposerDefaultsByProvider":{},"agentGuiConversationRailCollapsedByProvider":{"codex":true},"defaultAgentProvider":"codex","dockIconStyle":"flat","dockPlacement":"left","locale":"zh-CN","sleepPreventionMode":"never","themeSource":"dark","updateChannel":"rc","updatePolicy":"auto"}}`),
 	}); err != nil {
 		t.Fatalf("PublishFromClient() error = %v", err)
 	}
@@ -208,6 +209,9 @@ func TestPreferencesIntentHandlerUsesAuthoritativeMutationPath(t *testing.T) {
 		mutator.inputs[0].UpdateChannel != "rc" ||
 		mutator.inputs[0].UpdatePolicy != "auto" {
 		t.Fatalf("mutator input = %#v, want flat/left/zh-CN/dark/rc/auto", mutator.inputs[0])
+	}
+	if !mutator.inputs[0].AgentGUIConversationRailCollapsedByProvider["codex"] {
+		t.Fatalf("mutator rail preference = %#v, want codex true", mutator.inputs[0].AgentGUIConversationRailCollapsedByProvider)
 	}
 }
 
@@ -225,15 +229,16 @@ func TestDesktopPreferencesPublisherIncludesDockIconStyle(t *testing.T) {
 
 	publisher := DesktopPreferencesPublisher{Service: service}
 	if err := publisher.PublishDesktopPreferencesUpdated(context.Background(), preferencesbiz.DesktopPreferences{
-		DefaultAgentProvider: "codex",
-		DockIconStyle:        "flat",
-		DockPlacement:        "bottom",
-		Initialized:          true,
-		Locale:               "zh-CN",
-		SleepPreventionMode:  "never",
-		ThemeSource:          "dark",
-		UpdateChannel:        "stable",
-		UpdatePolicy:         "prompt",
+		AgentGUIConversationRailCollapsedByProvider: map[string]bool{"codex": true},
+		DefaultAgentProvider:                        "codex",
+		DockIconStyle:                               "flat",
+		DockPlacement:                               "bottom",
+		Initialized:                                 true,
+		Locale:                                      "zh-CN",
+		SleepPreventionMode:                         "never",
+		ThemeSource:                                 "dark",
+		UpdateChannel:                               "stable",
+		UpdatePolicy:                                "prompt",
 	}); err != nil {
 		t.Fatalf("PublishDesktopPreferencesUpdated() error = %v", err)
 	}
@@ -245,6 +250,9 @@ func TestDesktopPreferencesPublisherIncludesDockIconStyle(t *testing.T) {
 	}
 	if payload.Preferences.DockIconStyle != "flat" {
 		t.Fatalf("published dock icon style = %q, want flat", payload.Preferences.DockIconStyle)
+	}
+	if !payload.Preferences.AgentGUIConversationRailCollapsedByProvider["codex"] {
+		t.Fatalf("published rail preference = %#v, want codex true", payload.Preferences.AgentGUIConversationRailCollapsedByProvider)
 	}
 }
 
@@ -286,7 +294,7 @@ func TestServiceFiltersScopedSubscriptions(t *testing.T) {
 	if err := service.PublishFromServerScoped(
 		context.Background(),
 		TopicPreferencesDesktopUpdated,
-		[]byte(`{"initialized":true,"preferences":{"agentComposerDefaultsByProvider":{},"defaultAgentProvider":"codex","dockIconStyle":"default","dockPlacement":"bottom","locale":"zh-CN","sleepPreventionMode":"never","themeSource":"dark","updateChannel":"stable","updatePolicy":"prompt"}}`),
+		[]byte(`{"initialized":true,"preferences":{"agentComposerDefaultsByProvider":{},"agentGuiConversationRailCollapsedByProvider":{},"defaultAgentProvider":"codex","dockIconStyle":"default","dockPlacement":"bottom","locale":"zh-CN","sleepPreventionMode":"never","themeSource":"dark","updateChannel":"stable","updatePolicy":"prompt"}}`),
 		EventScope{WorkspaceID: "workspace-1"},
 	); err != nil {
 		t.Fatalf("PublishFromServerScoped() error = %v", err)

@@ -1820,6 +1820,16 @@ type DesktopAgentComposerDefaultsByProvider struct {
 	Openclaw   *DesktopAgentComposerDefaults `json:"openclaw,omitempty"`
 }
 
+// DesktopAgentGuiConversationRailCollapsedByProvider defines model for DesktopAgentGuiConversationRailCollapsedByProvider.
+type DesktopAgentGuiConversationRailCollapsedByProvider struct {
+	ClaudeCode *bool `json:"claude-code,omitempty"`
+	Codex      *bool `json:"codex,omitempty"`
+	Gemini     *bool `json:"gemini,omitempty"`
+	Hermes     *bool `json:"hermes,omitempty"`
+	Nexight    *bool `json:"nexight,omitempty"`
+	Openclaw   *bool `json:"openclaw,omitempty"`
+}
+
 // DesktopBrowserUseConnectionMode defines model for DesktopBrowserUseConnectionMode.
 type DesktopBrowserUseConnectionMode string
 
@@ -1834,16 +1844,17 @@ type DesktopLocale string
 
 // DesktopPreferences defines model for DesktopPreferences.
 type DesktopPreferences struct {
-	AgentComposerDefaultsByProvider DesktopAgentComposerDefaultsByProvider `json:"agentComposerDefaultsByProvider"`
-	BrowserUseConnectionMode        *DesktopBrowserUseConnectionMode       `json:"browserUseConnectionMode,omitempty"`
-	DefaultAgentProvider            WorkspaceAgentProvider                 `json:"defaultAgentProvider"`
-	DockIconStyle                   DesktopDockIconStyle                   `json:"dockIconStyle"`
-	DockPlacement                   DesktopDockPlacement                   `json:"dockPlacement"`
-	Locale                          DesktopLocale                          `json:"locale"`
-	SleepPreventionMode             DesktopSleepPreventionMode             `json:"sleepPreventionMode"`
-	ThemeSource                     DesktopThemeSource                     `json:"themeSource"`
-	UpdateChannel                   DesktopUpdateChannel                   `json:"updateChannel"`
-	UpdatePolicy                    DesktopUpdatePolicy                    `json:"updatePolicy"`
+	AgentComposerDefaultsByProvider             DesktopAgentComposerDefaultsByProvider             `json:"agentComposerDefaultsByProvider"`
+	AgentGuiConversationRailCollapsedByProvider DesktopAgentGuiConversationRailCollapsedByProvider `json:"agentGuiConversationRailCollapsedByProvider"`
+	BrowserUseConnectionMode                    *DesktopBrowserUseConnectionMode                   `json:"browserUseConnectionMode,omitempty"`
+	DefaultAgentProvider                        WorkspaceAgentProvider                             `json:"defaultAgentProvider"`
+	DockIconStyle                               DesktopDockIconStyle                               `json:"dockIconStyle"`
+	DockPlacement                               DesktopDockPlacement                               `json:"dockPlacement"`
+	Locale                                      DesktopLocale                                      `json:"locale"`
+	SleepPreventionMode                         DesktopSleepPreventionMode                         `json:"sleepPreventionMode"`
+	ThemeSource                                 DesktopThemeSource                                 `json:"themeSource"`
+	UpdateChannel                               DesktopUpdateChannel                               `json:"updateChannel"`
+	UpdatePolicy                                DesktopUpdatePolicy                                `json:"updatePolicy"`
 }
 
 // DesktopPreferencesStateResponse defines model for DesktopPreferencesStateResponse.

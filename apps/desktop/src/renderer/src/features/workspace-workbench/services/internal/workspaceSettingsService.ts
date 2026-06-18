@@ -931,6 +931,7 @@ IReporterService(WorkspaceSettingsService, undefined, 3);
 
 const noopDesktopPreferencesStore: DesktopPreferencesReadableStoreState = {
   agentComposerDefaultsByProvider: {},
+  agentGuiConversationRailCollapsedByProvider: {},
   browserUseConnectionMode: "isolated",
   changingBrowserUseConnectionMode: null,
   changingDefaultAgentProvider: null,
@@ -982,6 +983,9 @@ const noopDesktopPreferences: DesktopPreferencesService = {
     return Promise.resolve(policy);
   },
   rememberAgentComposerDefaults() {
+    return Promise.resolve();
+  },
+  rememberAgentGuiConversationRailCollapsed() {
     return Promise.resolve();
   }
 };

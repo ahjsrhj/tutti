@@ -40,6 +40,9 @@ func TestSQLiteStoreGetDesktopPreferencesDefaultsWhenUnset(t *testing.T) {
 	if preferences.BrowserUseConnectionMode != "isolated" {
 		t.Fatalf("GetDesktopPreferences() browserUseConnectionMode = %q, want isolated", preferences.BrowserUseConnectionMode)
 	}
+	if len(preferences.AgentGUIConversationRailCollapsedByProvider) != 0 {
+		t.Fatalf("GetDesktopPreferences() rail collapsed preferences = %#v, want empty", preferences.AgentGUIConversationRailCollapsedByProvider)
+	}
 	if preferences.UpdatePolicy != "prompt" {
 		t.Fatalf("GetDesktopPreferences() updatePolicy = %q, want prompt", preferences.UpdatePolicy)
 	}
@@ -61,6 +64,10 @@ func TestSQLiteStorePutDesktopPreferencesPersistsValue(t *testing.T) {
 				PermissionModeID: "full-access",
 				ReasoningEffort:  "high",
 			},
+		},
+		AgentGUIConversationRailCollapsedByProvider: map[string]bool{
+			"codex":       true,
+			"claude-code": false,
 		},
 		DefaultAgentProvider: "claude-code",
 
@@ -105,6 +112,12 @@ func TestSQLiteStorePutDesktopPreferencesPersistsValue(t *testing.T) {
 	}
 	if reloaded.BrowserUseConnectionMode != "autoConnect" {
 		t.Fatalf("GetDesktopPreferences() browserUseConnectionMode = %q, want autoConnect", reloaded.BrowserUseConnectionMode)
+	}
+	if !reloaded.AgentGUIConversationRailCollapsedByProvider["codex"] {
+		t.Fatalf("GetDesktopPreferences() codex rail collapsed = false, want true")
+	}
+	if collapsed, ok := reloaded.AgentGUIConversationRailCollapsedByProvider["claude-code"]; !ok || collapsed {
+		t.Fatalf("GetDesktopPreferences() claude rail collapsed = %v/%v, want present false", collapsed, ok)
 	}
 	if reloaded.UpdatePolicy != "auto" {
 		t.Fatalf("GetDesktopPreferences() updatePolicy = %q, want auto", reloaded.UpdatePolicy)

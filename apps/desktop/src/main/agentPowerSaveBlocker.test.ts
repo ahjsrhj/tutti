@@ -269,6 +269,9 @@ function createFakePreferences(
     getAgentComposerDefaultsByProvider() {
       return {};
     },
+    getAgentGUIConversationRailCollapsedByProvider() {
+      return {};
+    },
     getDefaultAgentProvider() {
       return "codex";
     },

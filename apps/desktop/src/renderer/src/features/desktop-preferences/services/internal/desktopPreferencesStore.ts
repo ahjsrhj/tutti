@@ -1,6 +1,7 @@
 import type { DesktopLocale } from "@shared/i18n";
 import type {
   DesktopAgentComposerDefaultsByProvider,
+  DesktopAgentGuiConversationRailCollapsedByProvider,
   DesktopAgentProvider,
   DesktopBrowserUseConnectionMode,
   DesktopDockIconStyle,
@@ -15,6 +16,7 @@ import type { DesktopPreferencesStoreState } from "../desktopPreferencesTypes.ts
 
 export function createDesktopPreferencesStore(input: {
   agentComposerDefaultsByProvider?: DesktopAgentComposerDefaultsByProvider;
+  agentGuiConversationRailCollapsedByProvider?: DesktopAgentGuiConversationRailCollapsedByProvider;
   browserUseConnectionMode: DesktopBrowserUseConnectionMode;
   defaultAgentProvider: DesktopAgentProvider;
   dockIconStyle: DesktopDockIconStyle;
@@ -37,6 +39,8 @@ export function createDesktopPreferencesStore(input: {
     changingUpdatePolicy: null,
     agentComposerDefaultsByProvider:
       input.agentComposerDefaultsByProvider ?? {},
+    agentGuiConversationRailCollapsedByProvider:
+      input.agentGuiConversationRailCollapsedByProvider ?? {},
     browserUseConnectionMode: input.browserUseConnectionMode,
     defaultAgentProvider: input.defaultAgentProvider,
     dockIconStyle: input.dockIconStyle,

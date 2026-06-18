@@ -51,6 +51,7 @@ test("tuttid event stream client dispatches typed topic events", async () => {
         initialized: true,
         preferences: {
           agentComposerDefaultsByProvider: {},
+          agentGuiConversationRailCollapsedByProvider: {},
           defaultAgentProvider: "codex",
           dockPlacement: "bottom",
           dockIconStyle: "flat",
@@ -75,6 +76,7 @@ test("tuttid event stream client dispatches typed topic events", async () => {
         initialized: true,
         preferences: {
           agentComposerDefaultsByProvider: {},
+          agentGuiConversationRailCollapsedByProvider: {},
           defaultAgentProvider: "codex",
           dockPlacement: "bottom",
           dockIconStyle: "flat",
@@ -150,6 +152,7 @@ test("tuttid event stream client sends and filters scoped subscriptions", async 
         initialized: true,
         preferences: {
           agentComposerDefaultsByProvider: {},
+          agentGuiConversationRailCollapsedByProvider: {},
           defaultAgentProvider: "codex",
           dockPlacement: "bottom",
           dockIconStyle: "flat",
@@ -174,6 +177,7 @@ test("tuttid event stream client sends and filters scoped subscriptions", async 
         initialized: true,
         preferences: {
           agentComposerDefaultsByProvider: {},
+          agentGuiConversationRailCollapsedByProvider: {},
           defaultAgentProvider: "codex",
           dockPlacement: "bottom",
           dockIconStyle: "flat",
@@ -199,6 +203,7 @@ test("tuttid event stream client sends and filters scoped subscriptions", async 
         initialized: true,
         preferences: {
           agentComposerDefaultsByProvider: {},
+          agentGuiConversationRailCollapsedByProvider: {},
           defaultAgentProvider: "codex",
           dockPlacement: "bottom",
           dockIconStyle: "flat",
@@ -278,6 +283,7 @@ test("tuttid event stream client can opt out of a default scope", async () => {
         initialized: true,
         preferences: {
           agentComposerDefaultsByProvider: {},
+          agentGuiConversationRailCollapsedByProvider: {},
           defaultAgentProvider: "codex",
           dockPlacement: "bottom",
           dockIconStyle: "flat",
@@ -328,6 +334,7 @@ test("tuttid event stream client publishes typed intents after connect", async (
     {
       preferences: {
         agentComposerDefaultsByProvider: {},
+        agentGuiConversationRailCollapsedByProvider: {},
         defaultAgentProvider: "codex",
         dockPlacement: "bottom",
         dockIconStyle: "flat",
@@ -348,6 +355,7 @@ test("tuttid event stream client publishes typed intents after connect", async (
       payload: {
         preferences: {
           agentComposerDefaultsByProvider: {},
+          agentGuiConversationRailCollapsedByProvider: {},
           defaultAgentProvider: "codex",
           dockPlacement: "bottom",
           dockIconStyle: "flat",
@@ -416,6 +424,7 @@ test("tuttid event stream client fails handshake on unexpected pre-ready frames"
           initialized: true,
           preferences: {
             agentComposerDefaultsByProvider: {},
+            agentGuiConversationRailCollapsedByProvider: {},
             defaultAgentProvider: "codex",
             dockPlacement: "bottom",
             dockIconStyle: "flat",
@@ -585,6 +594,7 @@ test("tuttid event stream client tears down a failed handshake before retrying",
     {
       preferences: {
         agentComposerDefaultsByProvider: {},
+        agentGuiConversationRailCollapsedByProvider: {},
         defaultAgentProvider: "codex",
         dockPlacement: "bottom",
         dockIconStyle: "flat",

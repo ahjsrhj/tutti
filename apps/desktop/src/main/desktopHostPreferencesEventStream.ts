@@ -45,6 +45,8 @@ export function connectDesktopHostPreferencesEventStream(
       deps.preferences.sync({
         agentComposerDefaultsByProvider:
           nextPreferences.agentComposerDefaultsByProvider,
+        agentGuiConversationRailCollapsedByProvider:
+          nextPreferences.agentGuiConversationRailCollapsedByProvider,
         browserUseConnectionMode: nextPreferences.browserUseConnectionMode,
         defaultAgentProvider: nextPreferences.defaultAgentProvider,
         dockIconStyle: nextPreferences.dockIconStyle,

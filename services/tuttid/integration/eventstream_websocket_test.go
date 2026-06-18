@@ -123,7 +123,7 @@ func TestTuttidBlackBoxEventStreamWebSocketReadyAndValidation(t *testing.T) {
 			"topic":"preferences.desktop.update.requested",
 			"version":1,
 			"payload":{
-				"preferences":{"defaultAgentProvider":"codex","dockIconStyle":"default","locale":"en-US",
+				"preferences":{"agentComposerDefaultsByProvider":{},"agentGuiConversationRailCollapsedByProvider":{},"defaultAgentProvider":"codex","dockIconStyle":"default","locale":"en-US",
 					"themeSource":"system",
 					"unexpected":"value"
 				}
@@ -140,7 +140,7 @@ func TestTuttidBlackBoxEventStreamWebSocketReadyAndValidation(t *testing.T) {
 			"topic":"preferences.desktop.update.requested",
 			"version":1,
 			"payload":{
-				"preferences":{"defaultAgentProvider":"codex","dockIconStyle":"default","locale":"en-US",
+				"preferences":{"agentComposerDefaultsByProvider":{},"agentGuiConversationRailCollapsedByProvider":{},"defaultAgentProvider":"codex","dockIconStyle":"default","locale":"en-US",
 					"themeSource":"system"
 				}
 			},

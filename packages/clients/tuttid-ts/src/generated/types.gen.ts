@@ -201,6 +201,7 @@ export type DesktopBrowserUseConnectionMode = "isolated" | "autoConnect";
 
 export type DesktopPreferences = {
   agentComposerDefaultsByProvider: DesktopAgentComposerDefaultsByProvider;
+  agentGuiConversationRailCollapsedByProvider: DesktopAgentGuiConversationRailCollapsedByProvider;
   browserUseConnectionMode?: DesktopBrowserUseConnectionMode;
   defaultAgentProvider: WorkspaceAgentProvider;
   dockIconStyle: DesktopDockIconStyle;
@@ -225,6 +226,15 @@ export type DesktopAgentComposerDefaultsByProvider = {
   gemini?: DesktopAgentComposerDefaults;
   hermes?: DesktopAgentComposerDefaults;
   openclaw?: DesktopAgentComposerDefaults;
+};
+
+export type DesktopAgentGuiConversationRailCollapsedByProvider = {
+  "claude-code"?: boolean;
+  codex?: boolean;
+  nexight?: boolean;
+  gemini?: boolean;
+  hermes?: boolean;
+  openclaw?: boolean;
 };
 
 export type DesktopPreferencesStateResponse = {

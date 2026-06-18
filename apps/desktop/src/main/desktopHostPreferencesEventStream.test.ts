@@ -34,6 +34,7 @@ test("desktop host preferences follows authoritative preference events", async (
     initialized: true,
     preferences: {
       agentComposerDefaultsByProvider: {},
+      agentGuiConversationRailCollapsedByProvider: {},
       browserUseConnectionMode: "isolated",
       defaultAgentProvider: "codex",
 
@@ -49,6 +50,10 @@ test("desktop host preferences follows authoritative preference events", async (
 
   assert.equal(preferences.getLocale(), "zh-CN");
   assert.equal(preferences.getDefaultAgentProvider(), "codex");
+  assert.deepEqual(
+    preferences.getAgentGUIConversationRailCollapsedByProvider(),
+    {}
+  );
   assert.equal(preferences.getBrowserUseConnectionMode(), "isolated");
   assert.equal(preferences.getDockPlacement(), "bottom");
   assert.equal(preferences.getSleepPreventionMode(), "never");
@@ -60,6 +65,9 @@ test("desktop host preferences follows authoritative preference events", async (
     initialized: true,
     preferences: {
       agentComposerDefaultsByProvider: {},
+      agentGuiConversationRailCollapsedByProvider: {
+        codex: true
+      },
       browserUseConnectionMode: "isolated",
       defaultAgentProvider: "codex",
 
@@ -74,6 +82,12 @@ test("desktop host preferences follows authoritative preference events", async (
   });
 
   assert.equal(preferences.getLocale(), "en");
+  assert.deepEqual(
+    preferences.getAgentGUIConversationRailCollapsedByProvider(),
+    {
+      codex: true
+    }
+  );
   assert.equal(preferences.getThemeSource(), "dark");
   assert.deepEqual(appliedThemeSources, ["dark"]);
   assert.equal(backgroundSyncs, 1);
@@ -83,6 +97,8 @@ test("desktop host preferences follows authoritative preference events", async (
 });
 
 function createHostPreferencesState(): DesktopHostPreferencesState {
+  let agentGUIConversationRailCollapsedByProvider: DesktopPreferencesStateResponse["preferences"]["agentGuiConversationRailCollapsedByProvider"] =
+    {};
   let defaultAgentProvider: DesktopPreferencesStateResponse["preferences"]["defaultAgentProvider"] =
     "codex";
   let browserUseConnectionMode: NonNullable<
@@ -102,6 +118,9 @@ function createHostPreferencesState(): DesktopHostPreferencesState {
   return {
     getAgentComposerDefaultsByProvider() {
       return {};
+    },
+    getAgentGUIConversationRailCollapsedByProvider() {
+      return agentGUIConversationRailCollapsedByProvider;
     },
     getLocale() {
       return locale;
@@ -134,6 +153,10 @@ function createHostPreferencesState(): DesktopHostPreferencesState {
       return () => undefined;
     },
     sync(input) {
+      if (input.agentGuiConversationRailCollapsedByProvider) {
+        agentGUIConversationRailCollapsedByProvider =
+          input.agentGuiConversationRailCollapsedByProvider;
+      }
       if (input.locale) {
         locale = input.locale;
       }

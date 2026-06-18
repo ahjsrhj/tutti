@@ -19,7 +19,7 @@ func (s *SQLiteStore) GetDesktopPreferences(ctx context.Context) (preferencesbiz
 	}
 
 	row := s.db.QueryRowContext(ctx, `
-SELECT default_agent_provider, dock_icon_style, dock_placement, locale, theme_source, sleep_prevention_mode, update_channel, update_policy, agent_composer_defaults_by_provider_json, browser_use_connection_mode
+SELECT default_agent_provider, dock_icon_style, dock_placement, locale, theme_source, sleep_prevention_mode, update_channel, update_policy, agent_composer_defaults_by_provider_json, agent_gui_conversation_rail_collapsed_by_provider_json, browser_use_connection_mode
 FROM desktop_preferences
 WHERE id = ?
 `, desktopPreferencesRowID)
@@ -34,7 +34,8 @@ WHERE id = ?
 	var updateChannel string
 	var updatePolicy string
 	var agentComposerDefaultsJSON string
-	if err := row.Scan(&defaultAgentProvider, &dockIconStyle, &dockPlacement, &locale, &themeSource, &sleepPreventionMode, &updateChannel, &updatePolicy, &agentComposerDefaultsJSON, &browserUseConnectionMode); err != nil {
+	var agentGUIConversationRailCollapsedJSON string
+	if err := row.Scan(&defaultAgentProvider, &dockIconStyle, &dockPlacement, &locale, &themeSource, &sleepPreventionMode, &updateChannel, &updatePolicy, &agentComposerDefaultsJSON, &agentGUIConversationRailCollapsedJSON, &browserUseConnectionMode); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return preferencesbiz.DefaultDesktopPreferences(), nil
 		}
@@ -44,19 +45,24 @@ WHERE id = ?
 	if err != nil {
 		return preferencesbiz.DesktopPreferences{}, fmt.Errorf("decode desktop preferences agent composer defaults: %w", err)
 	}
+	agentGUIConversationRailCollapsed, err := decodeAgentGUIConversationRailCollapsedByProvider(agentGUIConversationRailCollapsedJSON)
+	if err != nil {
+		return preferencesbiz.DesktopPreferences{}, fmt.Errorf("decode desktop preferences agent gui conversation rail: %w", err)
+	}
 
 	return preferencesbiz.DesktopPreferences{
-		AgentComposerDefaultsByProvider: agentComposerDefaults,
-		BrowserUseConnectionMode:        browserUseConnectionMode,
-		DefaultAgentProvider:            defaultAgentProvider,
-		DockIconStyle:                   dockIconStyle,
-		DockPlacement:                   dockPlacement,
-		Initialized:                     true,
-		Locale:                          locale,
-		SleepPreventionMode:             sleepPreventionMode,
-		ThemeSource:                     themeSource,
-		UpdateChannel:                   updateChannel,
-		UpdatePolicy:                    updatePolicy,
+		AgentComposerDefaultsByProvider:             agentComposerDefaults,
+		AgentGUIConversationRailCollapsedByProvider: agentGUIConversationRailCollapsed,
+		BrowserUseConnectionMode:                    browserUseConnectionMode,
+		DefaultAgentProvider:                        defaultAgentProvider,
+		DockIconStyle:                               dockIconStyle,
+		DockPlacement:                               dockPlacement,
+		Initialized:                                 true,
+		Locale:                                      locale,
+		SleepPreventionMode:                         sleepPreventionMode,
+		ThemeSource:                                 themeSource,
+		UpdateChannel:                               updateChannel,
+		UpdatePolicy:                                updatePolicy,
 	}, nil
 }
 
@@ -70,6 +76,10 @@ func (s *SQLiteStore) PutDesktopPreferences(ctx context.Context, preferences pre
 	if err != nil {
 		return preferencesbiz.DesktopPreferences{}, fmt.Errorf("encode desktop preferences agent composer defaults: %w", err)
 	}
+	agentGUIConversationRailCollapsedJSON, err := encodeAgentGUIConversationRailCollapsedByProvider(preferences.AgentGUIConversationRailCollapsedByProvider)
+	if err != nil {
+		return preferencesbiz.DesktopPreferences{}, fmt.Errorf("encode desktop preferences agent gui conversation rail: %w", err)
+	}
 	_, err = s.db.ExecContext(ctx, `
 INSERT INTO desktop_preferences (
   id,
@@ -82,10 +92,11 @@ INSERT INTO desktop_preferences (
   update_channel,
   update_policy,
   agent_composer_defaults_by_provider_json,
+  agent_gui_conversation_rail_collapsed_by_provider_json,
   browser_use_connection_mode,
   updated_at_unix_ms
 )
-VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 ON CONFLICT(id) DO UPDATE SET
   default_agent_provider = excluded.default_agent_provider,
   dock_icon_style = excluded.dock_icon_style,
@@ -96,26 +107,53 @@ ON CONFLICT(id) DO UPDATE SET
   update_channel = excluded.update_channel,
   update_policy = excluded.update_policy,
   agent_composer_defaults_by_provider_json = excluded.agent_composer_defaults_by_provider_json,
+  agent_gui_conversation_rail_collapsed_by_provider_json = excluded.agent_gui_conversation_rail_collapsed_by_provider_json,
   browser_use_connection_mode = excluded.browser_use_connection_mode,
   updated_at_unix_ms = excluded.updated_at_unix_ms
-`, desktopPreferencesRowID, preferences.DefaultAgentProvider, preferences.DockIconStyle, preferences.DockPlacement, preferences.Locale, preferences.ThemeSource, preferences.SleepPreventionMode, preferences.UpdateChannel, preferences.UpdatePolicy, agentComposerDefaultsJSON, preferences.BrowserUseConnectionMode, now)
+`, desktopPreferencesRowID, preferences.DefaultAgentProvider, preferences.DockIconStyle, preferences.DockPlacement, preferences.Locale, preferences.ThemeSource, preferences.SleepPreventionMode, preferences.UpdateChannel, preferences.UpdatePolicy, agentComposerDefaultsJSON, agentGUIConversationRailCollapsedJSON, preferences.BrowserUseConnectionMode, now)
 	if err != nil {
 		return preferencesbiz.DesktopPreferences{}, fmt.Errorf("put desktop preferences: %w", err)
 	}
 
 	return preferencesbiz.DesktopPreferences{
-		AgentComposerDefaultsByProvider: preferences.AgentComposerDefaultsByProvider,
-		BrowserUseConnectionMode:        preferences.BrowserUseConnectionMode,
-		DefaultAgentProvider:            preferences.DefaultAgentProvider,
-		DockIconStyle:                   preferences.DockIconStyle,
-		DockPlacement:                   preferences.DockPlacement,
-		Initialized:                     true,
-		Locale:                          preferences.Locale,
-		SleepPreventionMode:             preferences.SleepPreventionMode,
-		ThemeSource:                     preferences.ThemeSource,
-		UpdateChannel:                   preferences.UpdateChannel,
-		UpdatePolicy:                    preferences.UpdatePolicy,
+		AgentComposerDefaultsByProvider:             preferences.AgentComposerDefaultsByProvider,
+		AgentGUIConversationRailCollapsedByProvider: preferences.AgentGUIConversationRailCollapsedByProvider,
+		BrowserUseConnectionMode:                    preferences.BrowserUseConnectionMode,
+		DefaultAgentProvider:                        preferences.DefaultAgentProvider,
+		DockIconStyle:                               preferences.DockIconStyle,
+		DockPlacement:                               preferences.DockPlacement,
+		Initialized:                                 true,
+		Locale:                                      preferences.Locale,
+		SleepPreventionMode:                         preferences.SleepPreventionMode,
+		ThemeSource:                                 preferences.ThemeSource,
+		UpdateChannel:                               preferences.UpdateChannel,
+		UpdatePolicy:                                preferences.UpdatePolicy,
 	}, nil
+}
+
+func decodeAgentGUIConversationRailCollapsedByProvider(raw string) (map[string]bool, error) {
+	if raw == "" {
+		return map[string]bool{}, nil
+	}
+	var decoded map[string]bool
+	if err := json.Unmarshal([]byte(raw), &decoded); err != nil {
+		return nil, err
+	}
+	if decoded == nil {
+		return map[string]bool{}, nil
+	}
+	return decoded, nil
+}
+
+func encodeAgentGUIConversationRailCollapsedByProvider(value map[string]bool) (string, error) {
+	if value == nil {
+		value = map[string]bool{}
+	}
+	data, err := json.Marshal(value)
+	if err != nil {
+		return "", err
+	}
+	return string(data), nil
 }
 
 func decodeAgentComposerDefaultsByProvider(raw string) (map[string]preferencesbiz.AgentComposerDefaults, error) {

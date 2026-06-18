@@ -72,6 +72,14 @@ export interface PreferencesDesktopPreferencesV1 {
       reasoningEffort?: string;
     };
   };
+  agentGuiConversationRailCollapsedByProvider: {
+    "claude-code"?: boolean;
+    codex?: boolean;
+    nexight?: boolean;
+    gemini?: boolean;
+    hermes?: boolean;
+    openclaw?: boolean;
+  };
   browserUseConnectionMode?: "isolated" | "autoConnect";
   defaultAgentProvider:
     | "claude-code"

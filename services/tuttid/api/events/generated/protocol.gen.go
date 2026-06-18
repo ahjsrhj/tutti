@@ -6,7 +6,7 @@ import "encoding/json"
 
 const (
 	BusinessEventProtocolVersion = 1
-	BusinessEventCatalogRevision = "sha256:071b6b5100486191"
+	BusinessEventCatalogRevision = "sha256:7810c72f962eb593"
 )
 
 type Topic string
@@ -91,6 +91,14 @@ type PreferencesDesktopPreferences struct {
 			ReasoningEffort  *string `json:"reasoningEffort,omitempty"`
 		} `json:"openclaw,omitempty"`
 	} `json:"agentComposerDefaultsByProvider"`
+	AgentGuiConversationRailCollapsedByProvider struct {
+		ClaudeCode *bool `json:"claude-code,omitempty"`
+		Codex      *bool `json:"codex,omitempty"`
+		Nexight    *bool `json:"nexight,omitempty"`
+		Gemini     *bool `json:"gemini,omitempty"`
+		Hermes     *bool `json:"hermes,omitempty"`
+		Openclaw   *bool `json:"openclaw,omitempty"`
+	} `json:"agentGuiConversationRailCollapsedByProvider"`
 	BrowserUseConnectionMode *string `json:"browserUseConnectionMode,omitempty"`
 	DefaultAgentProvider     string  `json:"defaultAgentProvider"`
 	DockIconStyle            string  `json:"dockIconStyle"`

@@ -58,6 +58,9 @@ function createHostServices(): DesktopHostServices {
       getAgentComposerDefaultsByProvider() {
         return {};
       },
+      getAgentGUIConversationRailCollapsedByProvider() {
+        return {};
+      },
       getDefaultAgentProvider() {
         return "codex";
       },

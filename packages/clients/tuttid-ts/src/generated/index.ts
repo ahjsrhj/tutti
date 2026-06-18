@@ -345,6 +345,7 @@ export type {
   DeleteWorkspaceResponses,
   DesktopAgentComposerDefaults,
   DesktopAgentComposerDefaultsByProvider,
+  DesktopAgentGuiConversationRailCollapsedByProvider,
   DesktopBrowserUseConnectionMode,
   DesktopDockIconStyle,
   DesktopDockPlacement,

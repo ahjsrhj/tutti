@@ -220,6 +220,9 @@ function createPreferencesKey(
 ): string {
   return [
     stableAgentComposerDefaultsKey(preferences.agentComposerDefaultsByProvider),
+    stableAgentGuiConversationRailCollapsedByProviderKey(
+      preferences.agentGuiConversationRailCollapsedByProvider
+    ),
     preferences.browserUseConnectionMode ?? "isolated",
     preferences.defaultAgentProvider,
     preferences.dockIconStyle,
@@ -237,6 +240,12 @@ function preferencesEqual(
   return (
     stableAgentComposerDefaultsKey(left.agentComposerDefaultsByProvider) ===
       stableAgentComposerDefaultsKey(right.agentComposerDefaultsByProvider) &&
+    stableAgentGuiConversationRailCollapsedByProviderKey(
+      left.agentGuiConversationRailCollapsedByProvider
+    ) ===
+      stableAgentGuiConversationRailCollapsedByProviderKey(
+        right.agentGuiConversationRailCollapsedByProvider
+      ) &&
     (left.browserUseConnectionMode ?? "isolated") ===
       (right.browserUseConnectionMode ?? "isolated") &&
     left.defaultAgentProvider === right.defaultAgentProvider &&
@@ -248,21 +257,22 @@ function preferencesEqual(
   );
 }
 
+const desktopAgentProviderKeys = [
+  "claude-code",
+  "codex",
+  "nexight",
+  "gemini",
+  "hermes",
+  "openclaw"
+] as const;
+
 function stableAgentComposerDefaultsKey(value: unknown): string {
   if (!value || typeof value !== "object") {
     return "{}";
   }
   const input = value as Record<string, unknown>;
-  const providers = [
-    "claude-code",
-    "codex",
-    "nexight",
-    "gemini",
-    "hermes",
-    "openclaw"
-  ];
   const output: Record<string, Record<string, string>> = {};
-  for (const provider of providers) {
+  for (const provider of desktopAgentProviderKeys) {
     const defaults = input[provider];
     if (!defaults || typeof defaults !== "object") {
       continue;
@@ -277,6 +287,22 @@ function stableAgentComposerDefaultsKey(value: unknown): string {
     }
     if (Object.keys(normalizedDefaults).length > 0) {
       output[provider] = normalizedDefaults;
+    }
+  }
+  return JSON.stringify(output);
+}
+
+function stableAgentGuiConversationRailCollapsedByProviderKey(
+  value: unknown
+): string {
+  if (!value || typeof value !== "object") {
+    return "{}";
+  }
+  const input = value as Record<string, unknown>;
+  const output: Record<string, boolean> = {};
+  for (const provider of desktopAgentProviderKeys) {
+    if (typeof input[provider] === "boolean") {
+      output[provider] = input[provider];
     }
   }
   return JSON.stringify(output);

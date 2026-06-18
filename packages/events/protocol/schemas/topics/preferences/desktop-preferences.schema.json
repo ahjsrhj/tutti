@@ -6,6 +6,7 @@
   "additionalProperties": false,
   "required": [
     "agentComposerDefaultsByProvider",
+    "agentGuiConversationRailCollapsedByProvider",
     "defaultAgentProvider",
     "dockIconStyle",
     "dockPlacement",
@@ -26,6 +27,18 @@
         "gemini": { "$ref": "#/$defs/agentComposerDefaults" },
         "hermes": { "$ref": "#/$defs/agentComposerDefaults" },
         "openclaw": { "$ref": "#/$defs/agentComposerDefaults" }
+      }
+    },
+    "agentGuiConversationRailCollapsedByProvider": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "claude-code": { "type": "boolean" },
+        "codex": { "type": "boolean" },
+        "nexight": { "type": "boolean" },
+        "gemini": { "type": "boolean" },
+        "hermes": { "type": "boolean" },
+        "openclaw": { "type": "boolean" }
       }
     },
     "browserUseConnectionMode": {
