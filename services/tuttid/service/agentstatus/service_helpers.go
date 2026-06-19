@@ -265,12 +265,40 @@ func sleepContext(ctx context.Context, delay time.Duration) bool {
 }
 
 func parseAuthStatusCommandOutput(provider string, output []byte) (AuthInfo, bool) {
+	if auth, ok := parseAuthCommandConfigurationError(output); ok {
+		return auth, true
+	}
 	switch agentprovider.Normalize(provider) {
 	case agentprovider.ClaudeCode:
 		return parseClaudeAuthStatusOutput(output)
+	case agentprovider.Codex:
+		return parseCodexAuthStatusOutput(output)
 	default:
 		return AuthInfo{}, false
 	}
+}
+
+func parseAuthCommandConfigurationError(output []byte) (AuthInfo, bool) {
+	normalized := strings.ToLower(string(bytes.TrimSpace(output)))
+	if strings.Contains(normalized, "error loading configuration") {
+		return AuthInfo{Status: AuthUnknown}, true
+	}
+	return AuthInfo{}, false
+}
+
+func parseCodexAuthStatusOutput(output []byte) (AuthInfo, bool) {
+	normalized := strings.ToLower(string(bytes.TrimSpace(output)))
+	if normalized == "" {
+		return AuthInfo{}, false
+	}
+	if strings.Contains(normalized, "not logged in") ||
+		strings.Contains(normalized, "logged out") {
+		return AuthInfo{Status: AuthRequired}, true
+	}
+	if strings.Contains(normalized, "logged in") {
+		return AuthInfo{Status: AuthAuthenticated}, true
+	}
+	return AuthInfo{}, false
 }
 
 func parseClaudeAuthStatusOutput(output []byte) (AuthInfo, bool) {

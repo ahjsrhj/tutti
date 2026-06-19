@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/tutti-os/tutti/services/tuttid/biz/agentprovider"
 	externalagentregistry "github.com/tutti-os/tutti/services/tuttid/service/externalagentregistry"
 	managedruntime "github.com/tutti-os/tutti/services/tuttid/service/managedruntime"
 )
@@ -227,6 +228,9 @@ func (s Service) Probe(ctx context.Context, input ProbeInput) (ProbeResult, erro
 		return result, nil
 	}
 	if !status.Adapter.Installed {
+		if status.Availability.ReasonCode == "acp_adapter_launch_failed" {
+			return s.probeAdapterRuntimeCommand(ctx, spec, runtimeResolution, now), nil
+		}
 		result.Status = ProbeFailed
 		result.ReasonCode = firstNonBlank(status.Availability.ReasonCode, "acp_adapter_not_found")
 		result.Message = agentProviderProbeAdapterUnavailableMessage(result.ReasonCode)
@@ -366,7 +370,7 @@ func (s Service) statusForSpec(ctx context.Context, spec ProviderSpec, now time.
 	adapterInstalled := strings.TrimSpace(runtimeResolution.AdapterPath) != ""
 	adapterReady := adapterInstalled && adapterPackageRequirementSatisfied(spec.AdapterPackage, runtimeResolution.AdapterVersion)
 	adapterLaunchFailed := false
-	if installed && adapterReady && shouldProbeAdapterCommandForStatus(spec) {
+	if installed && adapterReady && s.shouldProbeAdapterCommandForStatus(spec, runtimeResolution) {
 		probe := s.probeAdapterRuntimeCommand(ctx, spec, runtimeResolution, now)
 		if probe.Status == ProbeFailed {
 			adapterReady = false
@@ -427,8 +431,11 @@ func (s Service) statusForSpec(ctx context.Context, spec ProviderSpec, now time.
 	}
 }
 
-func shouldProbeAdapterCommandForStatus(spec ProviderSpec) bool {
-	return strings.TrimSpace(spec.ExternalRegistryID) != ""
+func (s Service) shouldProbeAdapterCommandForStatus(spec ProviderSpec, runtimeResolution providerRuntimeResolution) bool {
+	if strings.TrimSpace(spec.ExternalRegistryID) != "" {
+		return true
+	}
+	return spec.Provider == agentprovider.Codex && s.executableFile(runtimeResolution.AdapterPath)
 }
 
 func agentProviderProbeAdapterUnavailableMessage(reasonCode string) string {

@@ -164,6 +164,126 @@ func TestServiceListReportsReadyWhenInstalledAndAuthenticated(t *testing.T) {
 	}
 }
 
+func TestServiceListUsesCodexLoginStatusCommand(t *testing.T) {
+	service := testService(func(name string) (string, error) {
+		return "/usr/local/bin/" + name, nil
+	}, map[string]bool{})
+	service.RunAuthStatusCommand = func(_ context.Context, spec ProviderSpec, binaryPath string) (AuthInfo, bool) {
+		if spec.Provider != "codex" {
+			t.Fatalf("Provider = %q, want codex", spec.Provider)
+		}
+		if strings.Join(spec.AuthStatusCommand, " ") != "login status" {
+			t.Fatalf("AuthStatusCommand = %v, want login status", spec.AuthStatusCommand)
+		}
+		if binaryPath != "/usr/local/bin/codex" {
+			t.Fatalf("binaryPath = %q, want /usr/local/bin/codex", binaryPath)
+		}
+		return parseCodexAuthStatusOutput([]byte("Logged in using ChatGPT"))
+	}
+
+	snapshot, err := service.List(context.Background(), ListInput{Providers: []string{"codex"}})
+	if err != nil {
+		t.Fatalf("List() error = %v", err)
+	}
+
+	status := onlyStatus(t, snapshot)
+	if status.Availability.Status != AvailabilityReady {
+		t.Fatalf("Availability.Status = %q, want %q", status.Availability.Status, AvailabilityReady)
+	}
+	if status.Auth.Status != AuthAuthenticated {
+		t.Fatalf("Auth.Status = %q, want %q", status.Auth.Status, AuthAuthenticated)
+	}
+}
+
+func TestServiceListDoesNotUseCodexAuthMarkerAfterConfigError(t *testing.T) {
+	service := testService(func(name string) (string, error) {
+		return "/usr/local/bin/" + name, nil
+	}, map[string]bool{"/home/test/.codex/auth.json": true})
+	service.RunAuthStatusCommand = func(_ context.Context, spec ProviderSpec, _ string) (AuthInfo, bool) {
+		if spec.Provider != "codex" {
+			t.Fatalf("Provider = %q, want codex", spec.Provider)
+		}
+		return parseAuthStatusCommandOutput("codex", []byte("Error loading configuration: /home/test/.codex/config.toml:8:16: unknown variant `priority`, expected `fast` or `flex`"))
+	}
+
+	snapshot, err := service.List(context.Background(), ListInput{Providers: []string{"codex"}})
+	if err != nil {
+		t.Fatalf("List() error = %v", err)
+	}
+
+	status := onlyStatus(t, snapshot)
+	if status.Availability.Status != AvailabilityAuthRequired {
+		t.Fatalf("Availability.Status = %q, want %q", status.Availability.Status, AvailabilityAuthRequired)
+	}
+	if status.Availability.ReasonCode != "auth_unknown" {
+		t.Fatalf("ReasonCode = %q, want auth_unknown", status.Availability.ReasonCode)
+	}
+	if status.Auth.Status != AuthUnknown {
+		t.Fatalf("Auth.Status = %q, want %q", status.Auth.Status, AuthUnknown)
+	}
+}
+
+func TestServiceListReportsInstallActionWhenCodexAdapterCommandFails(t *testing.T) {
+	home := t.TempDir()
+	binDir := filepath.Join(home, "bin")
+	codexPath := filepath.Join(binDir, "codex")
+	adapterPath := filepath.Join(binDir, "codex-acp")
+	writeExecutable(t, codexPath, "#!/bin/sh\nexit 0\n")
+	writeExecutable(t, adapterPath, "#!/bin/sh\necho 'codex-acp failed to start' >&2\nexit 127\n")
+
+	service := Service{
+		Environ: func() []string {
+			return []string{"PATH=" + binDir}
+		},
+		FileExists: func(path string) bool {
+			return path == filepath.Join(home, ".codex", "auth.json")
+		},
+		HomeDir: func() (string, error) {
+			return home, nil
+		},
+		LookPath: func(name string) (string, error) {
+			switch name {
+			case "codex":
+				return codexPath, nil
+			case "codex-acp":
+				return adapterPath, nil
+			default:
+				return "", errors.New("not found")
+			}
+		},
+		IsExecutableFile: isTestExecutableUnderHome(home),
+		Now: func() time.Time {
+			return time.Date(2026, 6, 2, 8, 0, 0, 0, time.UTC)
+		},
+		RunAuthStatusCommand: func(context.Context, ProviderSpec, string) (AuthInfo, bool) {
+			return AuthInfo{Status: AuthAuthenticated}, true
+		},
+	}
+
+	snapshot, err := service.List(context.Background(), ListInput{Providers: []string{"codex"}})
+	if err != nil {
+		t.Fatalf("List() error = %v", err)
+	}
+
+	status := onlyStatus(t, snapshot)
+	if status.Availability.Status != AvailabilityNotInstalled {
+		t.Fatalf("Availability.Status = %q, want %q", status.Availability.Status, AvailabilityNotInstalled)
+	}
+	if status.Availability.ReasonCode != "acp_adapter_launch_failed" {
+		t.Fatalf("ReasonCode = %q, want acp_adapter_launch_failed", status.Availability.ReasonCode)
+	}
+	if !status.CLI.Installed {
+		t.Fatal("CLI.Installed = false, want true")
+	}
+	if status.Adapter.Installed {
+		t.Fatal("Adapter.Installed = true, want false")
+	}
+	action := firstAction(t, status.Actions)
+	if action.ID != ActionInstall || action.Kind != ActionKindDaemonAction {
+		t.Fatalf("first action = %#v, want daemon install", action)
+	}
+}
+
 func TestServiceListIgnoresStaleGlobalClaudeACPAdapter(t *testing.T) {
 	home := t.TempDir()
 	binDir := filepath.Join(home, ".nvm", "versions", "node", "v24.12.0", "bin")

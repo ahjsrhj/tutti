@@ -106,6 +106,7 @@ func DefaultRegistry() Registry {
 			BinaryNames:        []string{"codex"},
 			AdapterBinaryNames: []string{"codex-acp"},
 			AdapterCommand:     []string{"codex-acp"},
+			AuthStatusCommand:  []string{"login", "status"},
 			AuthMarkerPaths:    []string{"~/.codex/auth.json"},
 			Install: InstallerSpec{
 				Kind:           InstallerKindOfficialScript,
