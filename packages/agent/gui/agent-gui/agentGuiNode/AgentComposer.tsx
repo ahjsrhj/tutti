@@ -19,7 +19,9 @@ import type {
 } from "./model/agentGuiNodeTypes";
 import {
   Popover,
-  PopoverAnchor
+  PopoverAnchor,
+  PopoverContent,
+  PopoverTrigger
 } from "../../app/renderer/components/ui/popover";
 import { Spinner } from "../../app/renderer/components/ui/spinner";
 import {
@@ -123,11 +125,18 @@ import {
 } from "../../actions/workspaceLinkActions";
 import type { AgentContextMentionProvider } from "./agentContextMentionProvider";
 import { hasWorkspaceFileDropData } from "../terminalNode/workspaceFileDrop";
-import { AgentSlashStatusPanel } from "./AgentSlashStatusPanel";
+import {
+  AgentSlashStatusPanel,
+  formatSlashStatusTokenCount
+} from "./AgentSlashStatusPanel";
 import { AgentReviewPickerPanel } from "./AgentReviewPickerPanel";
 import { ComposerFloatingMenuSurface } from "./composerFloatingMenu/ComposerFloatingMenuSurface";
+import {
+  USAGE_CRITICAL_PERCENT,
+  USAGE_WARN_PERCENT
+} from "./model/agentUsageThresholds";
 
-export { formatSlashStatusTokenCount } from "./AgentSlashStatusPanel";
+export { formatSlashStatusTokenCount };
 
 /**
  * 引用 picker 的确认结果:松散文件按 file mention 插入;mentionItems(如文件夹 bundle)
@@ -144,6 +153,7 @@ export interface AgentComposerProps {
   currentUserId?: string | null;
   provider: string;
   slashStatus?: AgentComposerSlashStatus | null;
+  usage?: AgentComposerUsage | null;
   draftContent: AgentComposerDraft;
   availableCommands: readonly AgentSessionCommand[];
   hasCompactableContext?: boolean;
@@ -245,6 +255,11 @@ export interface AgentComposerProps {
     }) => string;
     slashStatusContextUnavailable: string;
     slashStatusLimitsUnavailable: string;
+    usageChipLabel: (input: { percent: number }) => string;
+    usagePopoverTitle: string;
+    usageContextWindowLabel: string;
+    usageTokensLabel: string;
+    usageLimitsLabel: string;
     approvalLead: string;
     planLead: string;
     planModes: Array<{ id: string; label: string; description: string }>;
@@ -388,6 +403,164 @@ export interface AgentComposerSlashStatusLimit {
   reset?: string | null;
 }
 
+export interface AgentComposerUsage {
+  percentUsed: number | null;
+  usedTokens: number | null;
+  totalTokens: number | null;
+}
+
+type AgentUsageChipLevel = "normal" | "warning" | "critical";
+
+function agentUsageChipLevel(percentUsed: number): AgentUsageChipLevel {
+  if (percentUsed >= USAGE_CRITICAL_PERCENT) {
+    return "critical";
+  }
+  if (percentUsed >= USAGE_WARN_PERCENT) {
+    return "warning";
+  }
+  return "normal";
+}
+
+function agentUsageRingColor(level: AgentUsageChipLevel): string {
+  if (level === "critical") {
+    return "var(--state-danger)";
+  }
+  if (level === "warning") {
+    return "var(--state-warning)";
+  }
+  return "var(--text-secondary)";
+}
+
+function AgentUsageChip({
+  percentUsed,
+  usedTokens,
+  totalTokens,
+  limits,
+  labels
+}: {
+  percentUsed: number;
+  usedTokens: number | null;
+  totalTokens: number | null;
+  limits: readonly AgentComposerSlashStatusLimit[];
+  labels: Pick<
+    AgentComposerProps["labels"],
+    | "usageChipLabel"
+    | "usagePopoverTitle"
+    | "usageContextWindowLabel"
+    | "usageLimitsLabel"
+  >;
+}): React.JSX.Element {
+  "use memo";
+
+  const clampedPercent = Math.max(0, Math.min(100, percentUsed));
+  const chipLabel = labels.usageChipLabel({ percent: clampedPercent });
+  const showTokens = usedTokens !== null && totalTokens !== null;
+  const usageLevel = agentUsageChipLevel(clampedPercent);
+  const ringColor = agentUsageRingColor(usageLevel);
+
+  return (
+    <Popover>
+      <PopoverTrigger asChild>
+        <button
+          type="button"
+          aria-label={chipLabel}
+          className="nodrag relative mr-2 inline-flex size-4 shrink-0 cursor-default items-center justify-center rounded-full p-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:color-mix(in_srgb,var(--text-primary)_34%,transparent)] [-webkit-app-region:no-drag]"
+          data-testid="agent-gui-usage-chip"
+          data-usage-level={usageLevel}
+          title={chipLabel}
+          style={{
+            background: `conic-gradient(${ringColor} ${clampedPercent}%, color-mix(in srgb, ${ringColor} 16%, transparent) 0)`
+          }}
+        >
+          <span
+            aria-hidden="true"
+            className="absolute inset-0.5 rounded-full bg-[var(--background-panel)]"
+          />
+        </button>
+      </PopoverTrigger>
+      <PopoverContent
+        side="bottom"
+        align="end"
+        className="w-[320px] max-w-[calc(100vw-32px)] gap-3 text-xs"
+        data-testid="agent-gui-usage-popover"
+      >
+        <div className="flex min-w-0 flex-col gap-3">
+          <span className="text-[13px] font-semibold leading-4">
+            {labels.usagePopoverTitle}
+          </span>
+          {showTokens ? (
+            <AgentUsageMeter
+              label={labels.usageContextWindowLabel}
+              value={`${formatSlashStatusTokenCount(usedTokens)} / ${formatSlashStatusTokenCount(totalTokens)} (${clampedPercent}%)`}
+              percent={clampedPercent}
+              testId="agent-gui-usage-context-meter"
+            />
+          ) : null}
+          {limits.length > 0 ? (
+            <div className="flex min-w-0 flex-col gap-2">
+              <span className="font-semibold">{labels.usageLimitsLabel}</span>
+              {limits.map((limit) => (
+                <AgentUsageMeter
+                  key={limit.id}
+                  label={limit.label}
+                  value={`${limit.value}${limit.reset ? ` (${limit.reset})` : ""}`}
+                  percent={
+                    typeof limit.percentRemaining === "number" &&
+                    Number.isFinite(limit.percentRemaining)
+                      ? limit.percentRemaining
+                      : null
+                  }
+                />
+              ))}
+            </div>
+          ) : null}
+        </div>
+      </PopoverContent>
+    </Popover>
+  );
+}
+
+function AgentUsageMeter({
+  label,
+  value,
+  percent,
+  testId
+}: {
+  label: string;
+  value: string;
+  percent: number | null;
+  testId?: string;
+}): React.JSX.Element {
+  const clampedPercent =
+    typeof percent === "number" && Number.isFinite(percent)
+      ? Math.max(0, Math.min(100, percent))
+      : null;
+
+  return (
+    <div className="grid min-w-0 gap-1" data-testid={testId}>
+      <div className="flex min-w-0 items-center justify-between gap-3">
+        <span className="min-w-0 truncate text-[var(--text-secondary)]">
+          {label}
+        </span>
+        <span className="shrink-0 whitespace-nowrap text-[var(--text-secondary)]">
+          {value}
+        </span>
+      </div>
+      {clampedPercent !== null ? (
+        <span
+          aria-hidden="true"
+          className="relative h-1.5 overflow-hidden rounded-full bg-[color-mix(in_srgb,var(--text-primary)_10%,transparent)]"
+        >
+          <span
+            className="absolute inset-y-0 left-0 min-w-0.5 rounded-full bg-[var(--agent-gui-text-primary,var(--text-primary))]"
+            style={{ width: `${clampedPercent}%` }}
+          />
+        </span>
+      ) : null}
+    </div>
+  );
+}
+
 const composerStyles = {
   footerGroup: styles.composerFooterLeft,
   footerGroupRight: styles.composerFooterRight,
@@ -472,6 +645,7 @@ export function AgentComposer({
   currentUserId,
   provider,
   slashStatus = null,
+  usage = null,
   draftContent,
   availableCommands,
   hasCompactableContext = true,
@@ -2280,6 +2454,20 @@ export function AgentComposer({
               </Select>
             </div>
             <div className={composerStyles.footerGroupRight}>
+              {usage && usage.percentUsed !== null ? (
+                <AgentUsageChip
+                  percentUsed={usage.percentUsed}
+                  usedTokens={usage.usedTokens}
+                  totalTokens={usage.totalTokens}
+                  limits={slashStatus?.limits ?? []}
+                  labels={{
+                    usageChipLabel: labels.usageChipLabel,
+                    usagePopoverTitle: labels.usagePopoverTitle,
+                    usageContextWindowLabel: labels.usageContextWindowLabel,
+                    usageLimitsLabel: labels.usageLimitsLabel
+                  }}
+                />
+              ) : null}
               {composerSettings.supportsPermissionMode ||
               composerSettings.supportsPlanMode ? (
                 <AgentPermissionModeDropdown

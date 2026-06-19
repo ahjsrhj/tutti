@@ -298,7 +298,7 @@ describe("agent GUI workbench contribution copy", () => {
     expect(preview?.revision).not.toContain("Stale session title");
   });
 
-  it("shows a new-session action next to the rail toggle when collapsed", () => {
+  it("shows a new-session action when collapsed", () => {
     const contribution = createAgentGuiWorkbenchContribution({
       renderBody: () => null,
       workspaceId: "workspace-1"
@@ -364,5 +364,67 @@ describe("agent GUI workbench contribution copy", () => {
     expect(events[0]?.detail).toEqual({
       instanceId: "agent-gui:codex:panel:test-1"
     });
+  });
+
+  it("keeps the app title separate from the active session title when collapsed", () => {
+    const contribution = createAgentGuiWorkbenchContribution({
+      renderBody: () => null,
+      resolveDockPopupTitle: (state) =>
+        state?.lastActiveAgentSessionId === "session-1"
+          ? "Current session title"
+          : null,
+      workspaceId: "workspace-1"
+    });
+
+    render(
+      contribution.nodes?.[0]?.renderHeader?.({
+        activation: null,
+        defaultActions: null,
+        displayMode: "floating",
+        dragHandleProps: {},
+        externalNodeState: {
+          conversationRailCollapsed: true,
+          lastActiveAgentSessionId: "session-1"
+        },
+        externalWorkspaceState: null,
+        instanceId: "agent-gui:codex:panel:test-1",
+        instanceKey: null,
+        isFocused: true,
+        node: {
+          data: {
+            runtimeNodeState: null
+          },
+          displayMode: "floating",
+          frame: { height: 560, width: 1040, x: 0, y: 0 },
+          id: "agent-gui-node-1",
+          title: "Codex"
+        },
+        surfaceSize: { height: 800, width: 1200 },
+        windowActions: {
+          applyQuickLayout: () => {},
+          close: () => {},
+          focus: () => {},
+          minimize: () => {},
+          resize: () => {},
+          toggleDisplayMode: () => {}
+        }
+      } as never) ?? null
+    );
+
+    const newConversationButton = screen.getByRole("button", {
+      name: agentGuiWorkbenchDefaultCopy.newConversation
+    });
+    const toggleButton = screen.getByTestId(
+      "agent-gui-toggle-conversation-rail"
+    );
+    expect(screen.getByText("Codex")).toBeInTheDocument();
+    expect(screen.getByText("Codex").nextElementSibling).toBe(toggleButton);
+    expect(toggleButton.nextElementSibling).toBe(newConversationButton);
+    expect(newConversationButton.nextElementSibling).toHaveTextContent(
+      "Current session title"
+    );
+    expect(screen.getByText("Current session title")).toHaveClass(
+      "max-w-[360px]"
+    );
   });
 });

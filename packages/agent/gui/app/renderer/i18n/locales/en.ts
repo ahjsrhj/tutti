@@ -515,11 +515,11 @@ export const en = {
       slashStatusContextUnavailable: "Context usage unavailable",
       slashStatusLimitsUnavailable: "Rate limits unavailable from this agent",
       usageChipLabel: "Context {{percent}}%",
-      usagePopoverTitle: "Usage",
+      usagePopoverTitle: "Plan usage",
+      usageContextWindowLabel: "Context window",
       usageTokensLabel: "Tokens",
       usageLimitsLabel: "Limits",
       usageCompactAction: "Compact",
-      usageCompactTooltip: "Compact the conversation context (/compact)",
       usageAlertWarnMessage:
         "Context is {{percent}}% full. Consider compacting the conversation.",
       usageAlertCriticalMessage:

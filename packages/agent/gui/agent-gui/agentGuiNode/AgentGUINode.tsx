@@ -39,9 +39,11 @@ import {
 } from "./AgentGUINodeView";
 import {
   normalizeAgentGUIProviderIdentity,
+  resolveAgentGUIConversationDisplayTitle,
   resolveAgentGUIDockConversationTitle,
   resolveAgentGUIProviderDisplayLabel
 } from "./model/agentGuiProviderIdentity";
+import { formatAgentSessionMentionText } from "../../shared/utils/agentSessionMentionText";
 import {
   buildDockAgentProbeTooltipLines,
   findWorkspaceAgentProbeForDockProvider,
@@ -694,6 +696,15 @@ export const AgentGUINode = memo(function AgentGUINode({
   const activeConversationDockTitle = viewModel.activeConversation
     ? resolveAgentGUIDockConversationTitle(viewModel.activeConversation)
     : null;
+  const activeConversationWindowTitle = viewModel.activeConversation
+    ? formatAgentSessionMentionText(
+        resolveAgentGUIConversationDisplayTitle(
+          viewModel.activeConversation,
+          fallbackAgentTitle
+        ),
+        { language: locale }
+      )
+    : null;
   const labels = useMemo<AgentGUIViewLabels>(
     () => ({
       initialPlaceholder: t("agentHost.agentGui.initialPlaceholder", {
@@ -795,10 +806,10 @@ export const AgentGUINode = memo(function AgentGUINode({
       usageChipLabel: (input: { percent: number }) =>
         t("agentHost.agentGui.usageChipLabel", { percent: input.percent }),
       usagePopoverTitle: t("agentHost.agentGui.usagePopoverTitle"),
+      usageContextWindowLabel: t("agentHost.agentGui.usageContextWindowLabel"),
       usageTokensLabel: t("agentHost.agentGui.usageTokensLabel"),
       usageLimitsLabel: t("agentHost.agentGui.usageLimitsLabel"),
       usageCompactAction: t("agentHost.agentGui.usageCompactAction"),
-      usageCompactTooltip: t("agentHost.agentGui.usageCompactTooltip"),
       usageAlertWarnMessage: (input: { percent: number }) =>
         t("agentHost.agentGui.usageAlertWarnMessage", {
           percent: input.percent
@@ -1082,7 +1093,14 @@ export const AgentGUINode = memo(function AgentGUINode({
     }),
     [t]
   );
-  const windowTitle = windowAgentTitle || title;
+  const collapsedWindowConversationTitle = isConversationRailCollapsed
+    ? (activeConversationDockTitle ?? state.lastActiveConversationTitle ?? null)
+    : null;
+  const windowTitle =
+    collapsedWindowConversationTitle ||
+    (isConversationRailCollapsed ? activeConversationWindowTitle : null) ||
+    windowAgentTitle ||
+    title;
   useEffect(() => {
     if (previewMode) {
       return;

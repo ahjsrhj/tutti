@@ -14,6 +14,7 @@ export interface AgentGuiWorkbenchHeaderProps extends HTMLAttributes<HTMLElement
   defaultActions?: ReactNode;
   isConversationRailAutoCollapsed: boolean;
   isConversationRailCollapsed: boolean;
+  conversationTitle?: string | null;
   onCreateConversation?: () => void;
   onToggleConversationRail: (nextCollapsed: boolean) => void;
   title?: string;
@@ -25,6 +26,7 @@ export function AgentGuiWorkbenchHeader({
   defaultActions,
   isConversationRailAutoCollapsed,
   isConversationRailCollapsed,
+  conversationTitle,
   onCreateConversation,
   onToggleConversationRail,
   title,
@@ -33,6 +35,8 @@ export function AgentGuiWorkbenchHeader({
   const toggleLabel = isConversationRailCollapsed
     ? copy.expandConversationRail
     : copy.collapseConversationRail;
+  const appTitle = title?.trim() || copy.fallbackAgentLabel;
+  const sessionTitle = conversationTitle?.trim() || "";
 
   return createElement(
     "header",
@@ -45,14 +49,14 @@ export function AgentGuiWorkbenchHeader({
     },
     createElement(
       "div",
-      { className: "flex min-w-0 items-center gap-1" },
+      { className: "flex min-w-0 flex-1 items-center gap-1" },
       createElement(
         "span",
         {
           className:
-            "min-w-0 truncate text-[13px] font-semibold leading-5 text-[var(--text-primary)]"
+            "shrink-0 truncate text-[13px] font-semibold leading-5 text-[var(--text-primary)]"
         },
-        title?.trim() || copy.fallbackAgentLabel
+        appTitle
       ),
       createElement(
         Button as never,
@@ -98,6 +102,16 @@ export function AgentGuiWorkbenchHeader({
               "aria-hidden": true,
               className: "size-[16px]"
             })
+          )
+        : null,
+      isConversationRailCollapsed && sessionTitle
+        ? createElement(
+            "span",
+            {
+              className:
+                "min-w-0 max-w-[360px] flex-1 truncate text-[13px] font-semibold leading-5 text-[var(--text-primary)]"
+            },
+            sessionTitle
           )
         : null
     ),

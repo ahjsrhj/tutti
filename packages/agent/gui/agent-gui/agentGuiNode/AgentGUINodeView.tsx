@@ -36,12 +36,7 @@ import {
 } from "@tutti-os/ui-system";
 import { WorkspaceUserProjectSelect } from "@tutti-os/workspace-user-project/ui";
 import type { WorkspaceUserProjectI18nRuntime } from "@tutti-os/workspace-user-project/i18n";
-import {
-  Badge,
-  BareIconButton,
-  Button as UiSystemButton,
-  ScrollArea
-} from "@tutti-os/ui-system/components";
+import { BareIconButton, ScrollArea } from "@tutti-os/ui-system/components";
 import { Button } from "../../app/renderer/components/ui/button";
 import {
   EditIcon,
@@ -86,7 +81,6 @@ import { CanvasNodeTrashLinedIcon } from "../shared/canvasNodeChromeIcons";
 import { AgentSessionChrome } from "./AgentSessionChrome";
 import {
   AgentComposer,
-  formatSlashStatusTokenCount,
   type AgentComposerGitBranchLoader,
   type AgentComposerProps,
   type AgentComposerPromptTip,
@@ -94,7 +88,6 @@ import {
   type AgentComposerSlashStatus,
   type WorkspaceReferencePickResult
 } from "./AgentComposer";
-import type { AgentActivityUsage } from "@tutti-os/agent-activity-core";
 import {
   USAGE_CRITICAL_PERCENT,
   USAGE_WARN_PERCENT
@@ -340,10 +333,10 @@ export interface AgentGUIViewLabels {
   slashStatusLimitsUnavailable: string;
   usageChipLabel: (input: { percent: number }) => string;
   usagePopoverTitle: string;
+  usageContextWindowLabel: string;
   usageTokensLabel: string;
   usageLimitsLabel: string;
   usageCompactAction: string;
-  usageCompactTooltip: string;
   usageAlertWarnMessage: (input: { percent: number }) => string;
   usageAlertCriticalMessage: (input: { percent: number }) => string;
   usageAlertDismiss: string;
@@ -496,72 +489,6 @@ function syncStateTone(status: SyncIndicatorStatus): StatusDotTone {
       return "red";
     case "synced":
       return "blue";
-  }
-}
-
-function conversationStatusTone(
-  status: AgentGUINodeViewModel["conversations"][number]["status"] | undefined
-): StatusDotTone {
-  switch (status) {
-    case "working":
-      return "blue";
-    case "waiting":
-      return "amber";
-    case "completed":
-      return "green";
-    case "failed":
-      return "red";
-    case "canceled":
-      return "amber";
-    case "ready":
-    default:
-      return "green";
-  }
-}
-
-function conversationStatusPulse(
-  status: AgentGUINodeViewModel["conversations"][number]["status"] | undefined
-): boolean {
-  switch (status) {
-    case "working":
-    case "waiting":
-    case "ready":
-    case undefined:
-      return true;
-    case "completed":
-    case "failed":
-    case "canceled":
-    default:
-      return false;
-  }
-}
-
-function conversationStatusLabel(
-  status: AgentGUINodeViewModel["conversations"][number]["status"] | undefined,
-  labels: Pick<
-    AgentGUIViewLabels,
-    | "statusWorking"
-    | "statusWaiting"
-    | "statusReady"
-    | "statusCompleted"
-    | "statusFailed"
-    | "statusCanceled"
-  >
-): string {
-  switch (status) {
-    case "working":
-      return labels.statusWorking;
-    case "waiting":
-      return labels.statusWaiting;
-    case "completed":
-      return labels.statusCompleted;
-    case "failed":
-      return labels.statusFailed;
-    case "canceled":
-      return labels.statusCanceled;
-    case "ready":
-    default:
-      return labels.statusReady;
   }
 }
 
@@ -1247,6 +1174,7 @@ export function AgentGUINodeView({
             actions={actions}
             labels={labels}
             uiLanguage={uiLanguage}
+            hideDetailHeader={conversationRailCollapsed}
             isActive={isActive}
             composerFocusRequestSequence={detailComposerFocusRequestSequence}
             isAgentProviderReady={isAgentProviderReady}
@@ -1302,6 +1230,7 @@ interface AgentGUIDetailPaneProps {
   labels: AgentGUIViewLabels;
   workspaceUserProjectI18n: WorkspaceUserProjectI18nRuntime;
   uiLanguage: UiLanguage;
+  hideDetailHeader: boolean;
   isActive: boolean;
   composerFocusRequestSequence: number | null;
   isAgentProviderReady: boolean;
@@ -1394,6 +1323,7 @@ const AgentGUIDetailPane = memo(function AgentGUIDetailPane({
   labels,
   workspaceUserProjectI18n,
   uiLanguage,
+  hideDetailHeader,
   isActive,
   composerFocusRequestSequence,
   isAgentProviderReady,
@@ -1538,9 +1468,6 @@ const AgentGUIDetailPane = memo(function AgentGUIDetailPane({
     detailStatus: activeDetailStatus,
     conversation
   });
-  const displayConversationStatus = viewModel.isSubmitting
-    ? "working"
-    : (derivedBusyStatus ?? viewModel.activeConversation?.status);
   const activeConversationTurnBusy =
     viewModel.isSubmitting || derivedBusyStatus !== null;
   const isComposerSending =
@@ -1591,13 +1518,6 @@ const AgentGUIDetailPane = memo(function AgentGUIDetailPane({
   const syncLabel = syncStateLabel(syncStatus, labels);
   const showSyncIndicator = Boolean(viewModel.activeConversation?.syncState);
   const showFailedSyncLabel = showSyncIndicator && syncStatus === "failed";
-  const activeConversationStatusLabel = conversationStatusLabel(
-    displayConversationStatus,
-    labels
-  );
-  const statusGroupTitle = showSyncIndicator
-    ? `${activeConversationStatusLabel} · ${syncLabel}`
-    : activeConversationStatusLabel;
   const conversationFlowLabels = useMemo(
     () => ({
       thinkingLabel: labels.thinkingLabel,
@@ -1756,6 +1676,11 @@ const AgentGUIDetailPane = memo(function AgentGUIDetailPane({
       slashStatusContextValue: labels.slashStatusContextValue,
       slashStatusContextUnavailable: labels.slashStatusContextUnavailable,
       slashStatusLimitsUnavailable: labels.slashStatusLimitsUnavailable,
+      usageChipLabel: labels.usageChipLabel,
+      usagePopoverTitle: labels.usagePopoverTitle,
+      usageContextWindowLabel: labels.usageContextWindowLabel,
+      usageTokensLabel: labels.usageTokensLabel,
+      usageLimitsLabel: labels.usageLimitsLabel,
       fileMentionPalette: labels.fileMentionPalette,
       fileMentionLoading: labels.fileMentionLoading,
       fileMentionEmpty: labels.fileMentionEmpty,
@@ -1844,6 +1769,11 @@ const AgentGUIDetailPane = memo(function AgentGUIDetailPane({
       labels.slashStatusLimitsUnavailable,
       labels.slashStatusSession,
       labels.slashStatusTitle,
+      labels.usageChipLabel,
+      labels.usageContextWindowLabel,
+      labels.usageLimitsLabel,
+      labels.usagePopoverTitle,
+      labels.usageTokensLabel,
       labels.stop,
       labels.stopping
     ]
@@ -1907,6 +1837,7 @@ const AgentGUIDetailPane = memo(function AgentGUIDetailPane({
       currentUserId: viewModel.currentUserId,
       provider: viewModel.data.provider,
       slashStatus,
+      usage: viewModel.usage,
       draftContent: viewModel.draftContent,
       availableCommands: viewModel.availableCommands,
       hasCompactableContext: viewModel.hasSentUserMessage,
@@ -1999,6 +1930,7 @@ const AgentGUIDetailPane = memo(function AgentGUIDetailPane({
       viewModel.isRespondingApproval,
       viewModel.promptImagesSupported,
       viewModel.queuedPrompts,
+      viewModel.usage,
       viewModel.workspaceId,
       viewModel.workspacePath,
       workspaceUserProjectI18n,
@@ -2172,19 +2104,13 @@ const AgentGUIDetailPane = memo(function AgentGUIDetailPane({
     <main className={styles.detail}>
       <AgentGUIDetailHeader
         activeConversation={viewModel.activeConversation}
+        hidden={hideDetailHeader}
         labels={labels}
         uiLanguage={uiLanguage}
-        statusGroupTitle={statusGroupTitle}
         showSyncIndicator={showSyncIndicator}
         syncStatus={syncStatus}
         syncLabel={syncLabel}
-        activeConversationStatus={displayConversationStatus}
-        activeConversationStatusLabel={activeConversationStatusLabel}
         showFailedSyncLabel={showFailedSyncLabel}
-        usage={viewModel.usage}
-        usageLimits={slashStatusLimits}
-        compactSupported={viewModel.compactSupported}
-        onSubmitCompact={actions.submitCompact}
       />
       <ScrollArea
         scrollbarMode="native"
@@ -2216,6 +2142,7 @@ const AgentGUIDetailPane = memo(function AgentGUIDetailPane({
               currentUserId: viewModel.currentUserId,
               provider: viewModel.data.provider,
               slashStatus,
+              usage: viewModel.usage,
               draftContent: viewModel.draftContent,
               availableCommands: viewModel.availableCommands,
               hasCompactableContext: viewModel.hasSentUserMessage,
@@ -2308,63 +2235,33 @@ const AgentGUIDetailPane = memo(function AgentGUIDetailPane({
 
 interface AgentGUIDetailHeaderProps {
   activeConversation: AgentGUINodeViewModel["activeConversation"];
-  labels: Pick<
-    AgentGUIViewLabels,
-    | "fallbackAgentTitle"
-    | "selectConversation"
-    | "usageChipLabel"
-    | "usagePopoverTitle"
-    | "usageTokensLabel"
-    | "usageLimitsLabel"
-    | "usageCompactAction"
-    | "usageCompactTooltip"
-  >;
+  hidden: boolean;
+  labels: Pick<AgentGUIViewLabels, "fallbackAgentTitle">;
   uiLanguage: UiLanguage;
-  statusGroupTitle: string;
   showSyncIndicator: boolean;
   syncStatus: SyncIndicatorStatus;
   syncLabel: string;
-  activeConversationStatus:
-    | AgentGUINodeViewModel["conversations"][number]["status"]
-    | undefined;
-  activeConversationStatusLabel: string;
   showFailedSyncLabel: boolean;
-  usage: AgentActivityUsage | null;
-  usageLimits: readonly AgentComposerSlashStatusLimit[];
-  compactSupported: boolean | null;
-  onSubmitCompact: () => Promise<void> | void;
 }
 
 const AgentGUIDetailHeader = memo(function AgentGUIDetailHeader({
   activeConversation,
+  hidden,
   labels,
   uiLanguage,
-  statusGroupTitle,
   showSyncIndicator,
   syncStatus,
   syncLabel,
-  activeConversationStatus,
-  activeConversationStatusLabel,
-  showFailedSyncLabel,
-  usage,
-  usageLimits,
-  compactSupported,
-  onSubmitCompact
+  showFailedSyncLabel
 }: AgentGUIDetailHeaderProps): React.JSX.Element | null {
   "use memo";
 
-  if (!activeConversation) {
+  if (hidden || !activeConversation) {
     return null;
   }
 
   const runPath = activeConversation.cwd.trim();
-  const showConversationStatus = activeConversationStatus !== "ready";
-  let statusTitle: string | undefined;
-  if (showConversationStatus) {
-    statusTitle = statusGroupTitle;
-  } else if (showSyncIndicator) {
-    statusTitle = syncLabel;
-  }
+  const statusTitle = showSyncIndicator ? syncLabel : undefined;
 
   return (
     <div className={styles.detailHeader}>
@@ -2378,38 +2275,6 @@ const AgentGUIDetailHeader = memo(function AgentGUIDetailHeader({
         className="inline-flex flex-none items-center gap-2 whitespace-nowrap"
         title={statusTitle}
       >
-        {usage && usage.percentUsed !== null ? (
-          <AgentUsageChip
-            percentUsed={usage.percentUsed}
-            usedTokens={usage.usedTokens}
-            totalTokens={usage.totalTokens}
-            limits={usageLimits}
-            labels={labels}
-          />
-        ) : null}
-        {usage && usage.percentUsed !== null && compactSupported !== false ? (
-          <AgentGUICompactButton
-            conversationId={activeConversation.id}
-            status={activeConversationStatus}
-            label={labels.usageCompactAction}
-            tooltip={labels.usageCompactTooltip}
-            onSubmitCompact={onSubmitCompact}
-          />
-        ) : null}
-        {showConversationStatus ? (
-          <>
-            <StatusDot
-              tone={conversationStatusTone(activeConversationStatus)}
-              pulse={conversationStatusPulse(activeConversationStatus)}
-              size="sm"
-              ariaLabel={activeConversationStatusLabel}
-              title={activeConversationStatusLabel}
-            />
-            <span className={styles.detailHeaderStatus}>
-              {activeConversationStatusLabel}
-            </span>
-          </>
-        ) : null}
         {showSyncIndicator ? (
           <StatusDot
             tone={syncStateTone(syncStatus)}
@@ -2449,175 +2314,6 @@ function AgentRunPathInfo({ path }: { path: string }): React.JSX.Element {
         className="max-w-[320px] text-[11px] [overflow-wrap:anywhere]"
       >
         {path}
-      </TooltipContent>
-    </Tooltip>
-  );
-}
-
-function AgentGUICompactButton({
-  conversationId,
-  status,
-  label,
-  tooltip,
-  onSubmitCompact
-}: {
-  conversationId: string;
-  status: AgentGUINodeViewModel["conversations"][number]["status"] | undefined;
-  label: string;
-  tooltip: string;
-  onSubmitCompact: () => Promise<void> | void;
-}): React.JSX.Element {
-  "use memo";
-
-  const [pendingConversationId, setPendingConversationId] = useState<
-    string | null
-  >(null);
-  const lastStatusRef = useRef(status);
-
-  useEffect(() => {
-    const previousStatus = lastStatusRef.current;
-    lastStatusRef.current = status;
-    if (
-      pendingConversationId === conversationId &&
-      ((status === "ready" && previousStatus !== "ready") ||
-        status === "completed" ||
-        status === "failed" ||
-        status === "canceled")
-    ) {
-      setPendingConversationId(null);
-    }
-  }, [conversationId, pendingConversationId, status]);
-
-  const isPending = pendingConversationId === conversationId;
-  const disabled = isPending || status === "working";
-
-  return (
-    <Tooltip>
-      <TooltipTrigger asChild>
-        <UiSystemButton
-          type="button"
-          variant="secondary"
-          size="xs"
-          className="text-[13px] font-normal"
-          data-testid="agent-gui-compact-button"
-          disabled={disabled}
-          aria-label={label}
-          onClick={() => {
-            if (disabled) {
-              return;
-            }
-            setPendingConversationId(conversationId);
-            const submission = onSubmitCompact();
-            if (submission) {
-              void submission.catch(() => {
-                setPendingConversationId(null);
-              });
-            }
-          }}
-        >
-          {label}
-        </UiSystemButton>
-      </TooltipTrigger>
-      <TooltipContent
-        side="bottom"
-        align="end"
-        className="max-w-[320px] cursor-default text-xs"
-      >
-        {tooltip}
-      </TooltipContent>
-    </Tooltip>
-  );
-}
-
-type AgentUsageChipLevel = "normal" | "warning" | "critical";
-type AgentUsageBadgeVariant = "secondary" | "warning" | "destructive";
-
-function agentUsageChipLevel(percentUsed: number): AgentUsageChipLevel {
-  if (percentUsed >= USAGE_CRITICAL_PERCENT) {
-    return "critical";
-  }
-  if (percentUsed >= USAGE_WARN_PERCENT) {
-    return "warning";
-  }
-  return "normal";
-}
-
-function agentUsageBadgeVariant(
-  level: AgentUsageChipLevel
-): AgentUsageBadgeVariant {
-  if (level === "critical") {
-    return "destructive";
-  }
-  if (level === "warning") {
-    return "warning";
-  }
-  return "secondary";
-}
-
-function AgentUsageChip({
-  percentUsed,
-  usedTokens,
-  totalTokens,
-  limits,
-  labels
-}: {
-  percentUsed: number;
-  usedTokens: number | null;
-  totalTokens: number | null;
-  limits: readonly AgentComposerSlashStatusLimit[];
-  labels: Pick<
-    AgentGUIViewLabels,
-    | "usageChipLabel"
-    | "usagePopoverTitle"
-    | "usageTokensLabel"
-    | "usageLimitsLabel"
-  >;
-}): React.JSX.Element {
-  "use memo";
-
-  const chipLabel = labels.usageChipLabel({ percent: percentUsed });
-  const showTokens = usedTokens !== null && totalTokens !== null;
-  const usageLevel = agentUsageChipLevel(percentUsed);
-
-  return (
-    <Tooltip>
-      <TooltipTrigger asChild>
-        <Badge
-          asChild
-          variant={agentUsageBadgeVariant(usageLevel)}
-          className="cursor-default text-[13px] font-normal"
-          data-testid="agent-gui-usage-chip"
-          data-usage-level={usageLevel}
-        >
-          <span aria-label={chipLabel}>{chipLabel}</span>
-        </Badge>
-      </TooltipTrigger>
-      <TooltipContent
-        side="bottom"
-        align="end"
-        className="max-w-[320px] text-xs"
-      >
-        <div className="flex min-w-0 flex-col gap-1">
-          <span className="font-semibold">{labels.usagePopoverTitle}</span>
-          {showTokens ? (
-            <span className="whitespace-nowrap">
-              {labels.usageTokensLabel}:{" "}
-              {formatSlashStatusTokenCount(usedTokens)} /{" "}
-              {formatSlashStatusTokenCount(totalTokens)}
-            </span>
-          ) : null}
-          {limits.length > 0 ? (
-            <>
-              <span className="font-semibold">{labels.usageLimitsLabel}</span>
-              {limits.map((limit) => (
-                <span key={limit.id} className="whitespace-nowrap">
-                  {limit.label}: {limit.value}
-                  {limit.reset ? ` (${limit.reset})` : ""}
-                </span>
-              ))}
-            </>
-          ) : null}
-        </div>
       </TooltipContent>
     </Tooltip>
   );
