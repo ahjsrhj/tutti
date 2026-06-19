@@ -36,13 +36,7 @@ import {
 } from "@tutti-os/ui-system";
 import { WorkspaceUserProjectSelect } from "@tutti-os/workspace-user-project/ui";
 import type { WorkspaceUserProjectI18nRuntime } from "@tutti-os/workspace-user-project/i18n";
-import {
-  BareIconButton,
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-  ScrollArea
-} from "@tutti-os/ui-system/components";
+import { BareIconButton, ScrollArea } from "@tutti-os/ui-system/components";
 import { Button } from "../../app/renderer/components/ui/button";
 import {
   EditIcon,
@@ -87,7 +81,6 @@ import { CanvasNodeTrashLinedIcon } from "../shared/canvasNodeChromeIcons";
 import { AgentSessionChrome } from "./AgentSessionChrome";
 import {
   AgentComposer,
-  formatSlashStatusTokenCount,
   type AgentComposerGitBranchLoader,
   type AgentComposerProps,
   type AgentComposerPromptTip,
@@ -95,7 +88,6 @@ import {
   type AgentComposerSlashStatus,
   type WorkspaceReferencePickResult
 } from "./AgentComposer";
-import type { AgentActivityUsage } from "@tutti-os/agent-activity-core";
 import {
   USAGE_CRITICAL_PERCENT,
   USAGE_WARN_PERCENT
@@ -345,7 +337,6 @@ export interface AgentGUIViewLabels {
   usageTokensLabel: string;
   usageLimitsLabel: string;
   usageCompactAction: string;
-  usageCompactTooltip: string;
   usageAlertWarnMessage: (input: { percent: number }) => string;
   usageAlertCriticalMessage: (input: { percent: number }) => string;
   usageAlertDismiss: string;
@@ -1174,6 +1165,7 @@ export function AgentGUINodeView({
             actions={actions}
             labels={labels}
             uiLanguage={uiLanguage}
+            hideDetailHeader={conversationRailCollapsed}
             isActive={isActive}
             composerFocusRequestSequence={detailComposerFocusRequestSequence}
             isAgentProviderReady={isAgentProviderReady}
@@ -1229,6 +1221,7 @@ interface AgentGUIDetailPaneProps {
   labels: AgentGUIViewLabels;
   workspaceUserProjectI18n: WorkspaceUserProjectI18nRuntime;
   uiLanguage: UiLanguage;
+  hideDetailHeader: boolean;
   isActive: boolean;
   composerFocusRequestSequence: number | null;
   isAgentProviderReady: boolean;
@@ -1321,6 +1314,7 @@ const AgentGUIDetailPane = memo(function AgentGUIDetailPane({
   labels,
   workspaceUserProjectI18n,
   uiLanguage,
+  hideDetailHeader,
   isActive,
   composerFocusRequestSequence,
   isAgentProviderReady,
@@ -1679,6 +1673,11 @@ const AgentGUIDetailPane = memo(function AgentGUIDetailPane({
       slashStatusContextValue: labels.slashStatusContextValue,
       slashStatusContextUnavailable: labels.slashStatusContextUnavailable,
       slashStatusLimitsUnavailable: labels.slashStatusLimitsUnavailable,
+      usageChipLabel: labels.usageChipLabel,
+      usagePopoverTitle: labels.usagePopoverTitle,
+      usageContextWindowLabel: labels.usageContextWindowLabel,
+      usageTokensLabel: labels.usageTokensLabel,
+      usageLimitsLabel: labels.usageLimitsLabel,
       fileMentionPalette: labels.fileMentionPalette,
       fileMentionLoading: labels.fileMentionLoading,
       fileMentionEmpty: labels.fileMentionEmpty,
@@ -1771,6 +1770,11 @@ const AgentGUIDetailPane = memo(function AgentGUIDetailPane({
       labels.slashStatusLimitsUnavailable,
       labels.slashStatusSession,
       labels.slashStatusTitle,
+      labels.usageChipLabel,
+      labels.usageContextWindowLabel,
+      labels.usageLimitsLabel,
+      labels.usagePopoverTitle,
+      labels.usageTokensLabel,
       labels.stop,
       labels.stopping
     ]
@@ -1834,6 +1838,7 @@ const AgentGUIDetailPane = memo(function AgentGUIDetailPane({
       currentUserId: viewModel.currentUserId,
       provider: viewModel.data.provider,
       slashStatus,
+      usage: viewModel.usage,
       draftContent: viewModel.draftContent,
       availableCommands: viewModel.availableCommands,
       hasCompactableContext: viewModel.hasSentUserMessage,
@@ -1926,6 +1931,7 @@ const AgentGUIDetailPane = memo(function AgentGUIDetailPane({
       viewModel.isRespondingApproval,
       viewModel.promptImagesSupported,
       viewModel.queuedPrompts,
+      viewModel.usage,
       viewModel.workspaceId,
       viewModel.workspacePath,
       workspaceUserProjectI18n,
@@ -2099,14 +2105,13 @@ const AgentGUIDetailPane = memo(function AgentGUIDetailPane({
     <main className={styles.detail}>
       <AgentGUIDetailHeader
         activeConversation={viewModel.activeConversation}
+        hidden={hideDetailHeader}
         labels={labels}
         uiLanguage={uiLanguage}
         showSyncIndicator={showSyncIndicator}
         syncStatus={syncStatus}
         syncLabel={syncLabel}
         showFailedSyncLabel={showFailedSyncLabel}
-        usage={viewModel.usage}
-        usageLimits={slashStatusLimits}
       />
       {showProviderSetupNotice ? (
         <div
@@ -2155,6 +2160,7 @@ const AgentGUIDetailPane = memo(function AgentGUIDetailPane({
               currentUserId: viewModel.currentUserId,
               provider: viewModel.data.provider,
               slashStatus,
+              usage: viewModel.usage,
               draftContent: viewModel.draftContent,
               availableCommands: viewModel.availableCommands,
               hasCompactableContext: viewModel.hasSentUserMessage,
@@ -2247,38 +2253,28 @@ const AgentGUIDetailPane = memo(function AgentGUIDetailPane({
 
 interface AgentGUIDetailHeaderProps {
   activeConversation: AgentGUINodeViewModel["activeConversation"];
-  labels: Pick<
-    AgentGUIViewLabels,
-    | "fallbackAgentTitle"
-    | "selectConversation"
-    | "usageChipLabel"
-    | "usagePopoverTitle"
-    | "usageContextWindowLabel"
-    | "usageLimitsLabel"
-  >;
+  hidden: boolean;
+  labels: Pick<AgentGUIViewLabels, "fallbackAgentTitle">;
   uiLanguage: UiLanguage;
   showSyncIndicator: boolean;
   syncStatus: SyncIndicatorStatus;
   syncLabel: string;
   showFailedSyncLabel: boolean;
-  usage: AgentActivityUsage | null;
-  usageLimits: readonly AgentComposerSlashStatusLimit[];
 }
 
 const AgentGUIDetailHeader = memo(function AgentGUIDetailHeader({
   activeConversation,
+  hidden,
   labels,
   uiLanguage,
   showSyncIndicator,
   syncStatus,
   syncLabel,
-  showFailedSyncLabel,
-  usage,
-  usageLimits
+  showFailedSyncLabel
 }: AgentGUIDetailHeaderProps): React.JSX.Element | null {
   "use memo";
 
-  if (!activeConversation) {
+  if (hidden || !activeConversation) {
     return null;
   }
 
@@ -2297,15 +2293,6 @@ const AgentGUIDetailHeader = memo(function AgentGUIDetailHeader({
         className="inline-flex flex-none items-center gap-2 whitespace-nowrap"
         title={statusTitle}
       >
-        {usage && usage.percentUsed !== null ? (
-          <AgentUsageChip
-            percentUsed={usage.percentUsed}
-            usedTokens={usage.usedTokens}
-            totalTokens={usage.totalTokens}
-            limits={usageLimits}
-            labels={labels}
-          />
-        ) : null}
         {showSyncIndicator ? (
           <StatusDot
             tone={syncStateTone(syncStatus)}
@@ -2347,160 +2334,6 @@ function AgentRunPathInfo({ path }: { path: string }): React.JSX.Element {
         {path}
       </TooltipContent>
     </Tooltip>
-  );
-}
-
-type AgentUsageChipLevel = "normal" | "warning" | "critical";
-
-function agentUsageChipLevel(percentUsed: number): AgentUsageChipLevel {
-  if (percentUsed >= USAGE_CRITICAL_PERCENT) {
-    return "critical";
-  }
-  if (percentUsed >= USAGE_WARN_PERCENT) {
-    return "warning";
-  }
-  return "normal";
-}
-
-function agentUsageRingColor(level: AgentUsageChipLevel): string {
-  if (level === "critical") {
-    return "var(--agent-gui-danger, var(--state-danger))";
-  }
-  if (level === "warning") {
-    return "var(--agent-gui-warning, var(--cove-label-orange))";
-  }
-  return "var(--agent-gui-text-primary, var(--text-primary))";
-}
-
-function AgentUsageChip({
-  percentUsed,
-  usedTokens,
-  totalTokens,
-  limits,
-  labels
-}: {
-  percentUsed: number;
-  usedTokens: number | null;
-  totalTokens: number | null;
-  limits: readonly AgentComposerSlashStatusLimit[];
-  labels: Pick<
-    AgentGUIViewLabels,
-    | "usageChipLabel"
-    | "usagePopoverTitle"
-    | "usageContextWindowLabel"
-    | "usageLimitsLabel"
-  >;
-}): React.JSX.Element {
-  "use memo";
-
-  const chipLabel = labels.usageChipLabel({ percent: percentUsed });
-  const showTokens = usedTokens !== null && totalTokens !== null;
-  const usageLevel = agentUsageChipLevel(percentUsed);
-  const ringColor = agentUsageRingColor(usageLevel);
-  const displayPercent = Math.max(0, Math.min(100, percentUsed));
-
-  return (
-    <Popover>
-      <PopoverTrigger asChild>
-        <button
-          type="button"
-          className="nodrag inline-flex size-6 items-center justify-center rounded-[6px] bg-transparent p-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:color-mix(in_srgb,var(--text-primary)_34%,transparent)] [-webkit-app-region:no-drag]"
-          data-testid="agent-gui-usage-chip"
-          data-usage-level={usageLevel}
-          aria-label={chipLabel}
-          title={chipLabel}
-        >
-          <span
-            aria-hidden="true"
-            className="relative ml-auto inline-flex size-4.5 rounded-full"
-            style={{
-              background: `conic-gradient(${ringColor} ${displayPercent}%, color-mix(in srgb, ${ringColor} 16%, transparent) 0)`
-            }}
-          >
-            <span className="absolute inset-[3px] rounded-full bg-[var(--background-fronted)]" />
-          </span>
-        </button>
-      </PopoverTrigger>
-      <PopoverContent
-        side="bottom"
-        align="end"
-        className="w-[320px] max-w-[calc(100vw-32px)] gap-3 text-xs"
-        data-testid="agent-gui-usage-popover"
-      >
-        <div className="flex min-w-0 flex-col gap-3">
-          <span className="text-[13px] font-semibold leading-4">
-            {labels.usagePopoverTitle}
-          </span>
-          {showTokens ? (
-            <AgentUsageMeter
-              label={labels.usageContextWindowLabel}
-              value={`${formatSlashStatusTokenCount(usedTokens)} / ${formatSlashStatusTokenCount(totalTokens)} (${displayPercent}%)`}
-              percent={displayPercent}
-              testId="agent-gui-usage-context-meter"
-            />
-          ) : null}
-          {limits.length > 0 ? (
-            <div className="flex min-w-0 flex-col gap-2">
-              <span className="font-semibold">{labels.usageLimitsLabel}</span>
-              {limits.map((limit) => (
-                <AgentUsageMeter
-                  key={limit.id}
-                  label={limit.label}
-                  value={`${limit.value}${limit.reset ? ` (${limit.reset})` : ""}`}
-                  percent={
-                    typeof limit.percentRemaining === "number" &&
-                    Number.isFinite(limit.percentRemaining)
-                      ? limit.percentRemaining
-                      : null
-                  }
-                />
-              ))}
-            </div>
-          ) : null}
-        </div>
-      </PopoverContent>
-    </Popover>
-  );
-}
-
-function AgentUsageMeter({
-  label,
-  value,
-  percent,
-  testId
-}: {
-  label: string;
-  value: string;
-  percent: number | null;
-  testId?: string;
-}): React.JSX.Element {
-  const clampedPercent =
-    typeof percent === "number" && Number.isFinite(percent)
-      ? Math.max(0, Math.min(100, percent))
-      : null;
-
-  return (
-    <div className="grid min-w-0 gap-1" data-testid={testId}>
-      <div className="flex min-w-0 items-center justify-between gap-3">
-        <span className="min-w-0 truncate text-[var(--text-secondary)]">
-          {label}
-        </span>
-        <span className="shrink-0 whitespace-nowrap text-[var(--text-secondary)]">
-          {value}
-        </span>
-      </div>
-      {clampedPercent !== null ? (
-        <span
-          aria-hidden="true"
-          className="relative h-1.5 overflow-hidden rounded-full bg-[color-mix(in_srgb,var(--text-primary)_10%,transparent)]"
-        >
-          <span
-            className="absolute inset-y-0 left-0 min-w-0.5 rounded-full bg-[var(--agent-gui-text-primary,var(--text-primary))]"
-            style={{ width: `${clampedPercent}%` }}
-          />
-        </span>
-      ) : null}
-    </div>
   );
 }
 

@@ -481,7 +481,6 @@ export const zhCN = {
       usageTokensLabel: "Token 用量",
       usageLimitsLabel: "限额",
       usageCompactAction: "压缩",
-      usageCompactTooltip: "压缩会话上下文（/compact）",
       usageAlertWarnMessage: "上下文已使用 {{percent}}%，建议压缩会话。",
       usageAlertCriticalMessage:
         "上下文已使用 {{percent}}%，请立即压缩以继续会话。",

@@ -524,7 +524,6 @@ export const en = {
       usageTokensLabel: "Tokens",
       usageLimitsLabel: "Limits",
       usageCompactAction: "Compact",
-      usageCompactTooltip: "Compact the conversation context (/compact)",
       usageAlertWarnMessage:
         "Context is {{percent}}% full. Consider compacting the conversation.",
       usageAlertCriticalMessage:

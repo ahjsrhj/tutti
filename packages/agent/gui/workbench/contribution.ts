@@ -33,6 +33,7 @@ import {
   resolveAgentGuiWorkbenchProviderLabel
 } from "./providerCatalog.ts";
 import type {
+  AgentGuiWorkbenchNodeState,
   AgentGuiWorkbenchProvider,
   AgentGuiWorkbenchState
 } from "./types.ts";
@@ -181,12 +182,16 @@ export function createAgentGuiWorkbenchContribution(
           windowActions
         }) => {
           const provider = agentGuiWorkbenchProviderFromInstanceId(instanceId);
-          const title = resolveAgentGuiWorkbenchProviderLabel(provider);
-          const workbenchState = normalizeAgentGuiWorkbenchState(
-            externalNodeState ?? node.data.runtimeNodeState
-          );
+          const providerTitle = resolveAgentGuiWorkbenchProviderLabel(provider);
+          const rawWorkbenchState = (externalNodeState ??
+            node.data.runtimeNodeState) as
+            | Partial<AgentGuiWorkbenchNodeState>
+            | null
+            | undefined;
+          const workbenchState =
+            normalizeAgentGuiWorkbenchState(rawWorkbenchState);
           const nodeState = normalizeAgentGuiWorkbenchNodeState(
-            workbenchState,
+            rawWorkbenchState,
             provider
           );
           const isConversationRailAutoCollapsed =
@@ -233,10 +238,15 @@ export function createAgentGuiWorkbenchContribution(
 
           return createElement(AgentGuiWorkbenchHeader, {
             copy,
+            conversationTitle: isConversationRailCollapsed
+              ? (input.resolveDockPopupTitle?.(workbenchState) ??
+                nodeState.lastActiveConversationTitle ??
+                null)
+              : null,
             defaultActions,
             isConversationRailAutoCollapsed,
             isConversationRailCollapsed,
-            title,
+            title: providerTitle,
             ...dragHandleProps,
             onCreateConversation: announceNewConversation,
             onPointerDown: (event) => {

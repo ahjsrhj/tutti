@@ -16,6 +16,7 @@ const composerMock = vi.hoisted(() => ({
     composerFocusRequestSequence?: number | null;
     isSendingTurn?: boolean;
     showStopButton?: boolean;
+    usage?: AgentGUINodeViewModel["usage"];
   }>
 }));
 
@@ -40,11 +41,13 @@ vi.mock("./AgentComposer", () => ({
     composerFocusRequestSequence?: number | null;
     isSendingTurn?: boolean;
     showStopButton?: boolean;
+    usage?: AgentGUINodeViewModel["usage"];
   }) => {
     composerMock.calls.push({
       composerFocusRequestSequence: props.composerFocusRequestSequence,
       isSendingTurn: props.isSendingTurn,
-      showStopButton: props.showStopButton
+      showStopButton: props.showStopButton,
+      usage: props.usage
     });
     return <div data-testid="agent-composer" />;
   },
@@ -788,7 +791,7 @@ describe("AgentGUINodeView layout persistence", () => {
   });
 });
 
-describe("AgentGUINodeView usage chip", () => {
+describe("AgentGUINodeView usage", () => {
   afterEach(() => {
     conversationFlowMock.calls = [];
     composerMock.calls = [];
@@ -813,7 +816,7 @@ describe("AgentGUINodeView usage chip", () => {
     });
   }
 
-  it("renders the usage ring with the context percent as its accessible label", () => {
+  it("passes context usage to the composer", () => {
     renderWithUsage({
       usedTokens: 50_000,
       totalTokens: 200_000,
@@ -821,48 +824,14 @@ describe("AgentGUINodeView usage chip", () => {
       quotas: []
     });
 
-    const chip = screen.getByTestId("agent-gui-usage-chip");
-    expect(chip).toHaveAccessibleName("usageChip:25");
-    expect(chip).not.toHaveTextContent("usageChip:25");
-    expect(chip).toHaveAttribute("data-usage-level", "normal");
-    expect(chip.tagName).toBe("BUTTON");
+    expect(composerMock.calls.at(-1)?.usage).toMatchObject({
+      usedTokens: 50_000,
+      totalTokens: 200_000,
+      percentUsed: 25
+    });
   });
 
-  it("opens a usage menu with context and limit meters", () => {
-    renderWithUsage(
-      {
-        usedTokens: 50_000,
-        totalTokens: 200_000,
-        percentUsed: 25,
-        quotas: []
-      },
-      [
-        {
-          id: "weekly",
-          label: "Weekly",
-          value: "75% left",
-          reset: "resets tomorrow",
-          percentRemaining: 75
-        }
-      ]
-    );
-
-    fireEvent.click(screen.getByTestId("agent-gui-usage-chip"));
-
-    expect(screen.getByTestId("agent-gui-usage-popover")).toHaveTextContent(
-      "usagePopoverTitle"
-    );
-    expect(
-      screen.getByTestId("agent-gui-usage-context-meter")
-    ).toHaveTextContent("usageContextWindowLabel");
-    expect(
-      screen.getByTestId("agent-gui-usage-context-meter")
-    ).toHaveTextContent("50,000 / 200,000 (25%)");
-    expect(screen.getByText("Weekly")).toBeInTheDocument();
-    expect(screen.getByText("75% left (resets tomorrow)")).toBeInTheDocument();
-  });
-
-  it("marks the chip with the warning level at 80 percent and above", () => {
+  it("passes warning-level usage to the composer", () => {
     renderWithUsage({
       usedTokens: 170_000,
       totalTokens: 200_000,
@@ -870,13 +839,10 @@ describe("AgentGUINodeView usage chip", () => {
       quotas: []
     });
 
-    expect(screen.getByTestId("agent-gui-usage-chip")).toHaveAttribute(
-      "data-usage-level",
-      "warning"
-    );
+    expect(composerMock.calls.at(-1)?.usage?.percentUsed).toBe(85);
   });
 
-  it("marks the chip with the critical level at 95 percent and above", () => {
+  it("passes critical-level usage to the composer", () => {
     renderWithUsage({
       usedTokens: 194_000,
       totalTokens: 200_000,
@@ -884,19 +850,16 @@ describe("AgentGUINodeView usage chip", () => {
       quotas: []
     });
 
-    expect(screen.getByTestId("agent-gui-usage-chip")).toHaveAttribute(
-      "data-usage-level",
-      "critical"
-    );
+    expect(composerMock.calls.at(-1)?.usage?.percentUsed).toBe(97);
   });
 
-  it("hides the chip when usage is null", () => {
+  it("passes null usage to the composer", () => {
     renderWithUsage(null);
 
-    expect(screen.queryByTestId("agent-gui-usage-chip")).toBeNull();
+    expect(composerMock.calls.at(-1)?.usage).toBeNull();
   });
 
-  it("hides the chip when percentUsed is null even with quotas", () => {
+  it("passes unavailable usage to the composer", () => {
     renderWithUsage({
       usedTokens: null,
       totalTokens: null,
@@ -904,18 +867,58 @@ describe("AgentGUINodeView usage chip", () => {
       quotas: [{ quotaType: "weekly", percentRemaining: 90 }]
     });
 
-    expect(screen.queryByTestId("agent-gui-usage-chip")).toBeNull();
+    expect(composerMock.calls.at(-1)?.usage?.percentUsed).toBeNull();
   });
-  it("does not render the header compact button", () => {
-    renderWithUsage({
-      usedTokens: 170_000,
-      totalTokens: 200_000,
-      percentUsed: 85,
-      quotas: []
-    });
+});
 
-    expect(screen.getByTestId("agent-gui-usage-chip")).toBeInTheDocument();
+describe("AgentGUINodeView detail header actions", () => {
+  afterEach(() => {
+    conversationFlowMock.calls = [];
+    composerMock.calls = [];
+    statusDotMock.calls = [];
+  });
+
+  const usageWithWindow: AgentGUINodeViewModel["usage"] = {
+    usedTokens: 170_000,
+    totalTokens: 200_000,
+    percentUsed: 85,
+    quotas: []
+  };
+
+  function headerActionViewModel(): AgentGUINodeViewModel {
+    const activeConversation = {
+      ...createConversationSummary("session-1"),
+      status: "working" as const
+    };
+    const conversationDetail = createConversationDetail();
+    return {
+      ...createViewModel(),
+      conversations: [activeConversation],
+      activeConversation,
+      activeConversationId: activeConversation.id,
+      conversationDetail: {
+        ...conversationDetail,
+        session: {
+          ...conversationDetail.session,
+          effectiveStatus: "working",
+          turnPhase: "working"
+        }
+      },
+      usage: usageWithWindow,
+      compactSupported: true
+    };
+  }
+
+  it("does not render compact or working status controls in the detail header", () => {
+    renderAgentGUINodeView({ viewModel: headerActionViewModel() });
+
+    expect(composerMock.calls.at(-1)?.usage).toMatchObject(usageWithWindow);
     expect(screen.queryByTestId("agent-gui-compact-button")).toBeNull();
+    expect(statusDotMock.calls).not.toContainEqual(
+      expect.objectContaining({
+        ariaLabel: "workingLabel"
+      })
+    );
   });
 });
 
@@ -1448,7 +1451,6 @@ function createLabels(): AgentGUIViewLabels {
     usageTokensLabel: "usageTokensLabel",
     usageLimitsLabel: "usageLimitsLabel",
     usageCompactAction: "usageCompactAction",
-    usageCompactTooltip: "usageCompactTooltip",
     usageAlertWarnMessage: ({ percent }) => `usageAlertWarn:${percent}`,
     usageAlertCriticalMessage: ({ percent }) => `usageAlertCritical:${percent}`,
     usageAlertDismiss: "usageAlertDismiss",

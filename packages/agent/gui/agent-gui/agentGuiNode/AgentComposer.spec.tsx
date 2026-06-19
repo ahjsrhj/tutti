@@ -62,14 +62,15 @@ function createImageDataTransfer(file: File): DataTransfer {
 }
 
 vi.mock("../../app/renderer/components/ui/popover", () => ({
-  Popover: ({ children }: { children?: React.ReactNode }) => (
-    <div>{children}</div>
-  ),
+  Popover: ({ children }: { children?: React.ReactNode }) => <>{children}</>,
   PopoverAnchor: ({ children }: { children?: React.ReactNode }) => (
     <div>{children}</div>
   ),
+  PopoverTrigger: ({ children }: { children?: React.ReactNode }) => (
+    <>{children}</>
+  ),
   PopoverContent: ({ children }: { children?: React.ReactNode }) => (
-    <div>{children}</div>
+    <div data-testid="agent-gui-usage-popover">{children}</div>
   )
 }));
 
@@ -1506,6 +1507,125 @@ describe("AgentComposer", () => {
     );
   });
 
+  it("renders context usage immediately before the permission menu", async () => {
+    const { container } = render(
+      <AgentComposer
+        workspaceId="workspace-1"
+        currentUserId="user-1"
+        provider="codex"
+        slashStatus={{
+          limits: [
+            {
+              id: "weekly",
+              label: "7d limit",
+              percentRemaining: 96,
+              value: "96% left"
+            }
+          ]
+        }}
+        usage={{ usedTokens: 50_000, totalTokens: 200_000, percentUsed: 25 }}
+        draftContent={createDraft("")}
+        availableCommands={[] satisfies readonly AgentHostAgentSessionCommand[]}
+        disabled={false}
+        submitDisabled={false}
+        placeholder="placeholder"
+        composerSettings={createComposerSettings({ supportsPlanMode: true })}
+        queuedPrompts={[]}
+        drainingQueuedPromptId={null}
+        canQueueWhileBusy={false}
+        showStopButton={false}
+        activePrompt={null}
+        isInterrupting={false}
+        isSendingTurn={false}
+        isSubmittingPrompt={false}
+        labels={createLabels()}
+        workspaceUserProjectI18n={workspaceUserProjectI18n}
+        onDraftContentChange={vi.fn()}
+        onSettingsChange={vi.fn()}
+        onSubmit={vi.fn()}
+        onSendQueuedPromptNext={vi.fn()}
+        onRemoveQueuedPrompt={vi.fn()}
+        onEditQueuedPrompt={vi.fn()}
+        onInterruptCurrentTurn={vi.fn()}
+        onSubmitInteractivePrompt={vi.fn()}
+      />
+    );
+
+    const footerRight = container.querySelector(
+      ".agent-gui-node__composer-footer-right"
+    );
+    const usageChip = screen.getByTestId("agent-gui-usage-chip");
+    const permissionMenu = screen.getByTestId("agent-permission-mode-dropdown");
+    const footerControls = Array.from(footerRight?.children ?? []).filter(
+      (element) =>
+        element.getAttribute("data-testid") !== "agent-gui-usage-popover"
+    );
+    expect(footerControls[0]).toBe(usageChip);
+    expect(footerControls[1]).toBe(permissionMenu);
+    expect(usageChip).toHaveAttribute("aria-label", "上下文 25%");
+    expect(usageChip).toHaveAttribute("data-usage-level", "normal");
+    expect(usageChip.tagName).toBe("BUTTON");
+    expect(usageChip).toHaveClass("size-4");
+    expect(usageChip).toHaveClass("mr-2");
+    expect(usageChip).not.toHaveAttribute("data-slot", "badge");
+
+    fireEvent.click(usageChip);
+    await waitFor(() =>
+      expect(screen.getByTestId("agent-gui-usage-popover")).toBeVisible()
+    );
+    expect(
+      screen.getByTestId("agent-gui-usage-context-meter")
+    ).toHaveTextContent("上下文窗口");
+    expect(
+      screen.getByTestId("agent-gui-usage-context-meter")
+    ).toHaveTextContent("50,000 / 200,000 (25%)");
+    expect(screen.getByText("7d limit")).toBeInTheDocument();
+    expect(screen.getByText("96% left")).toBeInTheDocument();
+  });
+
+  it.each([
+    [85, "warning"],
+    [97, "critical"]
+  ])("marks context usage level %s as %s", (percentUsed, level) => {
+    render(
+      <AgentComposer
+        workspaceId="workspace-1"
+        currentUserId="user-1"
+        provider="codex"
+        usage={{ usedTokens: null, totalTokens: null, percentUsed }}
+        draftContent={createDraft("")}
+        availableCommands={[] satisfies readonly AgentHostAgentSessionCommand[]}
+        disabled={false}
+        submitDisabled={false}
+        placeholder="placeholder"
+        composerSettings={createComposerSettings()}
+        queuedPrompts={[]}
+        drainingQueuedPromptId={null}
+        canQueueWhileBusy={false}
+        showStopButton={false}
+        activePrompt={null}
+        isInterrupting={false}
+        isSendingTurn={false}
+        isSubmittingPrompt={false}
+        labels={createLabels()}
+        workspaceUserProjectI18n={workspaceUserProjectI18n}
+        onDraftContentChange={vi.fn()}
+        onSettingsChange={vi.fn()}
+        onSubmit={vi.fn()}
+        onSendQueuedPromptNext={vi.fn()}
+        onRemoveQueuedPrompt={vi.fn()}
+        onEditQueuedPrompt={vi.fn()}
+        onInterruptCurrentTurn={vi.fn()}
+        onSubmitInteractivePrompt={vi.fn()}
+      />
+    );
+
+    expect(screen.getByTestId("agent-gui-usage-chip")).toHaveAttribute(
+      "data-usage-level",
+      level
+    );
+  });
+
   it("does not render the project dropdown below the dock input shell", () => {
     const { container } = render(
       <AgentComposer
@@ -2707,6 +2827,11 @@ function createLabels(): Parameters<typeof AgentComposer>[0]["labels"] {
       `${percentLeft}% left (${usedTokens} used / ${totalTokens})`,
     slashStatusContextUnavailable: "Context usage unavailable",
     slashStatusLimitsUnavailable: "Rate limits unavailable",
+    usageChipLabel: ({ percent }) => `上下文 ${percent}%`,
+    usagePopoverTitle: "用量",
+    usageContextWindowLabel: "上下文窗口",
+    usageTokensLabel: "Token 用量",
+    usageLimitsLabel: "限额",
     approvalLead: "审批",
     planLead: "计划",
     planModes: [],

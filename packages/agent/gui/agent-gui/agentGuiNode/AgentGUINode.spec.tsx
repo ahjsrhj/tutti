@@ -1011,6 +1011,68 @@ describe("AgentGUINode", () => {
     expect(windowTitle).toHaveTextContent("Codex");
   });
 
+  it("uses the active conversation as the window title when the rail is collapsed", () => {
+    mockViewModel = createViewModel({
+      activeConversation: {
+        id: "session-1",
+        provider: "codex",
+        title: "Fresh dock title",
+        status: "ready",
+        cwd: "/workspace",
+        updatedAtUnixMs: 1
+      },
+      activeConversationId: "session-1"
+    });
+
+    const { container } = renderAgentGUINode({
+      title: "Agent",
+      state: {
+        provider: "codex",
+        lastActiveAgentSessionId: "session-1",
+        lastActiveConversationTitle: "Fresh dock title",
+        conversationRailWidthPx: null,
+        conversationRailCollapsed: true
+      }
+    });
+
+    const windowTitle = container.querySelector(
+      '[data-workspace-node-window-title="true"]'
+    );
+    expect(windowTitle).toHaveTextContent("Fresh dock title");
+    expect(
+      container.querySelector(".agent-gui-node__detail-header")
+    ).toBeNull();
+  });
+
+  it("keeps a fallback active conversation title at the window top when the rail is collapsed", () => {
+    mockViewModel = createViewModel({
+      activeConversation: {
+        id: "session-1",
+        provider: "codex",
+        title: "Current task",
+        status: "ready",
+        cwd: "/workspace",
+        updatedAtUnixMs: 1
+      },
+      activeConversationId: "session-1"
+    });
+
+    const { container } = renderAgentGUINode({
+      title: "Agent",
+      state: {
+        provider: "codex",
+        lastActiveAgentSessionId: "session-1",
+        lastActiveConversationTitle: null,
+        conversationRailWidthPx: null,
+        conversationRailCollapsed: true
+      }
+    });
+
+    expect(
+      container.querySelector('[data-workspace-node-window-title="true"]')
+    ).toHaveTextContent("Current task");
+  });
+
   it("does not clear the dock conversation title while the active conversation is unavailable", () => {
     const onUpdateNode =
       vi.fn<
