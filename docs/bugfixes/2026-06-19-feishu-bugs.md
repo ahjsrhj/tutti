@@ -30,3 +30,18 @@
 - Status: fixed locally
 - Commit: this commit
 - Feishu status update: set to `已修复待打包` with fix notes.
+
+## NOAUrbbqEeWz2icEsdkctXY9n7W
+
+- Link: https://ccn53rwonxso.feishu.cn/record/NOAUrbbqEeWz2icEsdkctXY9n7W
+- Base record id: `recvmY89ypTdxP`
+- Bug: On Mac Intel, Claude Code and Codex ACP could not be installed or opened from Agent GUI.
+- Log evidence: `tutti-logs-20260619-143353.zip` shows a dock click for `agent-gui` resolving to `{"kind":"blocked"}` with `dockNodeState:"closed"` and no matching open nodes.
+- Cause: Default Agent GUI dock entries stayed visible while `not_installed` or `auth_required`, but their dock state was `disabled`. Workbench dock click resolution blocks disabled entries before launching the Agent GUI panel, so users could not reach the setup surface that exposes install/login actions.
+- Fix: Keep default Agent GUI providers (`Codex`, `Claude Code`) visible with their setup hover actions, but project `not_installed` and `auth_required` default-provider dock states as launchable so the Agent GUI setup panel can open.
+- Verification:
+  - `node --import ./apps/desktop/test/register-asset-stub.mjs --test --experimental-strip-types ./apps/desktop/src/renderer/src/features/workspace-workbench/services/internal/workspaceAgentProviderDockStateSource.test.ts`
+  - `pnpm --filter @tutti-os/desktop typecheck`
+- Status: fixed locally
+- Commit: pending
+- Feishu status update: pending
