@@ -233,10 +233,14 @@ func (a *standardACPAdapter) applyProviderSessionMeta(params map[string]any, ses
 		claudeCodeMeta := map[string]any{
 			"options": claudeOptions,
 		}
-		if pluginDir != "" {
-			claudeCodeMeta["emitRawSDKMessages"] = []map[string]string{
-				{"type": "system", "subtype": "init"},
-			}
+		// Capture system/init plus turn `result` messages. acp-agent.js emits the
+		// raw SDK message before it inspects it, so an auth rejection it would
+		// otherwise collapse into an opaque -32000 (e.g. "Not logged in · Please
+		// run /login") is surfaced to us here. `result` is one message per turn,
+		// so the overhead is negligible. See logClaudeSDKMessage.
+		claudeCodeMeta["emitRawSDKMessages"] = []map[string]string{
+			{"type": "system", "subtype": "init"},
+			{"type": "result"},
 		}
 		if len(claudeOptions) > 0 {
 			mergeACPParamsMeta(params, map[string]any{
@@ -1857,22 +1861,90 @@ func (a *standardACPAdapter) logClaudeSDKMessage(session Session, turnID string,
 		return
 	}
 	message, _ := params["message"].(map[string]any)
-	if strings.TrimSpace(asString(message["type"])) != "system" ||
-		strings.TrimSpace(asString(message["subtype"])) != "init" {
+	messageType := strings.TrimSpace(asString(message["type"]))
+	if messageType == "system" && strings.TrimSpace(asString(message["subtype"])) == "init" {
+		slog.Info("agent session Claude SDK init",
+			"event", "agent_session.claude_sdk.init",
+			"provider", a.config.provider,
+			"adapter", a.config.adapterName,
+			"room_id", session.RoomID,
+			"agent_session_id", session.AgentSessionID,
+			"provider_session_id", session.ProviderSessionID,
+			"turn_id", turnID,
+			"plugins", claudeSDKPluginNames(message["plugins"]),
+			"skills", stringSliceFromAny(message["skills"]),
+			"slash_commands", stringSliceFromAny(message["slash_commands"]),
+		)
 		return
 	}
-	slog.Info("agent session Claude SDK init",
-		"event", "agent_session.claude_sdk.init",
-		"provider", a.config.provider,
-		"adapter", a.config.adapterName,
-		"room_id", session.RoomID,
-		"agent_session_id", session.AgentSessionID,
-		"provider_session_id", session.ProviderSessionID,
-		"turn_id", turnID,
-		"plugins", claudeSDKPluginNames(message["plugins"]),
-		"skills", stringSliceFromAny(message["skills"]),
-		"slash_commands", stringSliceFromAny(message["slash_commands"]),
-	)
+	// Surface auth-failure detail that acp-agent.js otherwise collapses into an
+	// opaque -32000 "Authentication required". The CLI emits a synthetic
+	// assistant message or success result whose text says e.g. "Please run
+	// /login" / "OAuth token revoked" / "Session expired"; logging the exact
+	// variant tells us which credential path actually failed (esp. for plan mode).
+	if detail := claudeSDKAuthFailureDetail(message); detail != "" {
+		slog.Warn("agent session Claude SDK auth failure detail",
+			"event", "agent_session.claude_sdk.auth_failure_detail",
+			"provider", a.config.provider,
+			"adapter", a.config.adapterName,
+			"room_id", session.RoomID,
+			"agent_session_id", session.AgentSessionID,
+			"provider_session_id", session.ProviderSessionID,
+			"turn_id", turnID,
+			"message_type", messageType,
+			"message_subtype", strings.TrimSpace(asString(message["subtype"])),
+			"message_model", strings.TrimSpace(asString(message["model"])),
+			"detail", detail,
+		)
+	}
+}
+
+// claudeSDKAuthFailureDetail returns the auth-related text from a raw SDK
+// message when it looks like a local login/credential rejection, else "".
+func claudeSDKAuthFailureDetail(message map[string]any) string {
+	text := claudeSDKMessageText(message)
+	if text == "" {
+		return ""
+	}
+	lower := strings.ToLower(text)
+	for _, marker := range []string{"please run /login", "not logged in", "oauth token", "session expired", "authentication", "api key authentication"} {
+		if strings.Contains(lower, marker) {
+			if len(text) > 600 {
+				text = text[:600]
+			}
+			return text
+		}
+	}
+	return ""
+}
+
+// claudeSDKMessageText extracts human-readable text from an SDK message's
+// `result` field or nested `message.content` text blocks.
+func claudeSDKMessageText(message map[string]any) string {
+	if result := strings.TrimSpace(asString(message["result"])); result != "" {
+		return result
+	}
+	inner, ok := message["message"].(map[string]any)
+	if !ok {
+		return ""
+	}
+	switch content := inner["content"].(type) {
+	case string:
+		return strings.TrimSpace(content)
+	case []any:
+		var parts []string
+		for _, block := range content {
+			b, ok := block.(map[string]any)
+			if !ok {
+				continue
+			}
+			if t := strings.TrimSpace(asString(b["text"])); t != "" {
+				parts = append(parts, t)
+			}
+		}
+		return strings.TrimSpace(strings.Join(parts, "\n"))
+	}
+	return ""
 }
 
 func claudeSDKPluginNames(value any) []string {

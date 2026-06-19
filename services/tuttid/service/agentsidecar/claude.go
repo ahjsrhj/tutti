@@ -6,12 +6,10 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"strings"
 )
 
 const claudeSystemPromptFileEnv = "TUTTI_CLAUDE_SYSTEM_PROMPT_FILE"
 const claudePluginDirEnv = "TUTTI_CLAUDE_PLUGIN_DIR"
-const claudeConfigDirEnv = "CLAUDE_CONFIG_DIR"
 const claudeSkillListingBudgetEnv = "SLASH_COMMAND_TOOL_CHAR_BUDGET"
 const claudeSkillListingBudgetChars = "20000"
 
@@ -42,57 +40,18 @@ func (ClaudeCodePreparer) Prepare(_ context.Context, input ProviderPrepareInput)
 		claudePluginDirEnv + "=" + pluginDir,
 		claudeSkillListingBudgetEnv + "=" + claudeSkillListingBudgetChars,
 	}
-	if input.PlanMode {
-		configDir := filepath.Join(input.RuntimeRoot, "claude-config")
-		if err := installClaudePlanSettings(configDir); err != nil {
-			return ProviderPrepareResult{}, err
-		}
-		if input.Manifest != nil {
-			input.Manifest.RecordManagedFile(configDir, "provider-config", true)
-		}
-		env = append(env, claudeConfigDirEnv+"="+configDir)
-	}
+	// Plan mode is enabled exclusively through the ACP `set_mode("plan")` call
+	// (see effectiveModeID in the daemon runtime). We intentionally do NOT set
+	// CLAUDE_CONFIG_DIR to seed `permissions.defaultMode=plan`: pointing the CLI
+	// at a fresh config directory makes it stop reading the user's real
+	// credentials (keychain on macOS, ~/.claude/.credentials.json elsewhere),
+	// so plan turns fail with "Not logged in · Please run /login" (-32000) for
+	// OAuth users while every other mode keeps working. input.PlanMode is left
+	// unused here on purpose.
 	return ProviderPrepareResult{
 		Cwd: input.Cwd,
 		Env: env,
 	}, nil
-}
-
-func installClaudePlanSettings(configDir string) error {
-	if err := os.MkdirAll(configDir, 0o700); err != nil {
-		return fmt.Errorf("create claude config directory: %w", err)
-	}
-	settings := readUserClaudeSettings()
-	permissions, _ := settings["permissions"].(map[string]any)
-	if permissions == nil {
-		permissions = map[string]any{}
-	}
-	permissions["defaultMode"] = "plan"
-	settings["permissions"] = permissions
-	content, err := json.MarshalIndent(settings, "", "  ")
-	if err != nil {
-		return fmt.Errorf("encode claude plan settings: %w", err)
-	}
-	if err := os.WriteFile(filepath.Join(configDir, "settings.json"), append(content, '\n'), 0o600); err != nil {
-		return fmt.Errorf("write claude plan settings: %w", err)
-	}
-	return nil
-}
-
-func readUserClaudeSettings() map[string]any {
-	home, err := os.UserHomeDir()
-	if err != nil || strings.TrimSpace(home) == "" {
-		return map[string]any{}
-	}
-	content, err := os.ReadFile(filepath.Join(home, ".claude", "settings.json"))
-	if err != nil {
-		return map[string]any{}
-	}
-	var settings map[string]any
-	if err := json.Unmarshal(content, &settings); err != nil || settings == nil {
-		return map[string]any{}
-	}
-	return settings
 }
 
 func installClaudeTuttiPlugin(pluginDir string, input PrepareInput) error {

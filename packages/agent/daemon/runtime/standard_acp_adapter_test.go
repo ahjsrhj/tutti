@@ -1916,15 +1916,25 @@ func TestClaudeCodeAdapterStartAppendsSessionScopedSystemPrompt(t *testing.T) {
 		t.Fatalf("claudeCode.options.plugins = %#v, want local plugin path %q", plugins, pluginDir)
 	}
 	filters, ok := claudeCode["emitRawSDKMessages"].([]any)
-	if !ok || len(filters) != 1 {
-		t.Fatalf("claudeCode.emitRawSDKMessages = %#v, want init filter", claudeCode["emitRawSDKMessages"])
+	if !ok || len(filters) != 2 {
+		t.Fatalf("claudeCode.emitRawSDKMessages = %#v, want system/init + result filters", claudeCode["emitRawSDKMessages"])
 	}
 	filter, _ := filters[0].(map[string]any)
 	if got, _ := filter["type"].(string); got != "system" {
-		t.Fatalf("claudeCode.emitRawSDKMessages = %#v, want system init filter", filters)
+		t.Fatalf("claudeCode.emitRawSDKMessages = %#v, want system init filter first", filters)
 	}
 	if got, _ := filter["subtype"].(string); got != "init" {
-		t.Fatalf("claudeCode.emitRawSDKMessages = %#v, want system init filter", filters)
+		t.Fatalf("claudeCode.emitRawSDKMessages = %#v, want system init filter first", filters)
+	}
+	emittedTypes := map[string]bool{}
+	for _, f := range filters {
+		m, _ := f.(map[string]any)
+		emittedTypes[asString(m["type"])] = true
+	}
+	for _, want := range []string{"system", "result"} {
+		if !emittedTypes[want] {
+			t.Fatalf("claudeCode.emitRawSDKMessages = %#v, want %q included for auth-failure capture", filters, want)
+		}
 	}
 	instructions, ok := options["planModeInstructions"].(string)
 	if !ok || !strings.Contains(instructions, "do not edit files") || !strings.Contains(instructions, "implementation plan") {

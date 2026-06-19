@@ -1,7 +1,6 @@
 package agentsidecar
 
 import (
-	"encoding/json"
 	"errors"
 	"os"
 	"path/filepath"
@@ -734,7 +733,12 @@ func TestDefaultPreparerClaudeCodeUsesSessionScopedSystemPrompt(t *testing.T) {
 	}
 }
 
-func TestDefaultPreparerClaudePlanModeWritesSessionConfig(t *testing.T) {
+// Plan mode must NOT override CLAUDE_CONFIG_DIR. Doing so points the CLI at a
+// fresh config directory without the user's credentials, which made plan turns
+// fail with "Not logged in · Please run /login" (-32000) for OAuth users while
+// every other permission mode kept working. Plan mode is applied through the ACP
+// `set_mode("plan")` call instead.
+func TestDefaultPreparerClaudePlanModeDoesNotOverrideConfigDir(t *testing.T) {
 	home := t.TempDir()
 	t.Setenv("HOME", home)
 	userClaudeDir := filepath.Join(home, ".claude")
@@ -742,14 +746,7 @@ func TestDefaultPreparerClaudePlanModeWritesSessionConfig(t *testing.T) {
 		t.Fatal(err)
 	}
 	if err := os.WriteFile(filepath.Join(userClaudeDir, "settings.json"), []byte(`{
-  "model": "sonnet",
-  "env": {
-    "ANTHROPIC_BASE_URL": "https://anthropic.proxy.test"
-  },
-  "permissions": {
-    "allow": ["Read"],
-    "defaultMode": "default"
-  }
+  "permissions": { "defaultMode": "default" }
 }`), 0o600); err != nil {
 		t.Fatal(err)
 	}
@@ -768,35 +765,8 @@ func TestDefaultPreparerClaudePlanModeWritesSessionConfig(t *testing.T) {
 		t.Fatalf("Prepare() error = %v", err)
 	}
 
-	configDir := envValue(prepared.Env, claudeConfigDirEnv)
-	if configDir == "" {
-		t.Fatalf("prepared env = %#v, want %s", prepared.Env, claudeConfigDirEnv)
-	}
-	if rel, err := filepath.Rel(cwd, configDir); err == nil && !strings.HasPrefix(rel, "..") {
-		t.Fatalf("claude config dir = %q, want outside cwd %q", configDir, cwd)
-	}
-	content, err := os.ReadFile(filepath.Join(configDir, "settings.json"))
-	if err != nil {
-		t.Fatalf("read claude settings: %v", err)
-	}
-	var settings map[string]any
-	if err := json.Unmarshal(content, &settings); err != nil {
-		t.Fatalf("claude settings JSON = %q: %v", string(content), err)
-	}
-	if got := settings["model"]; got != "sonnet" {
-		t.Fatalf("claude settings model = %#v, want preserved user setting", got)
-	}
-	env, _ := settings["env"].(map[string]any)
-	if got := env["ANTHROPIC_BASE_URL"]; got != "https://anthropic.proxy.test" {
-		t.Fatalf("claude settings env base URL = %#v, want preserved user env", got)
-	}
-	permissions, _ := settings["permissions"].(map[string]any)
-	if got := permissions["defaultMode"]; got != "plan" {
-		t.Fatalf("claude settings permissions.defaultMode = %#v, want plan", got)
-	}
-	allow, _ := permissions["allow"].([]any)
-	if len(allow) != 1 || allow[0] != "Read" {
-		t.Fatalf("claude settings permissions.allow = %#v, want preserved user permissions", permissions["allow"])
+	if got := envValue(prepared.Env, "CLAUDE_CONFIG_DIR"); got != "" {
+		t.Fatalf("prepared env CLAUDE_CONFIG_DIR = %q, want unset so the CLI keeps the user's credentials", got)
 	}
 }
 
