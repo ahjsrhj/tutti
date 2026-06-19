@@ -349,6 +349,9 @@ function createTransportClient(
     async listWorkspaceAgentSessionMessages() {
       throw new Error("not used");
     },
+    async listWorkspaceAgentGeneratedFiles() {
+      throw new Error("not used");
+    },
     async listUserProjects() {
       throw new Error("not used");
     },

@@ -38,7 +38,10 @@ import {
   createWorkspaceAgentGuiDraftLaunchRequest,
   createWorkspaceAgentGuiSessionLaunchRequest
 } from "../services/workspaceAgentGuiLaunch.ts";
-import { resolveWorkspaceAgentChatProvider } from "../services/workspaceOpenFeatureRequest.ts";
+import {
+  resolveWorkspaceAgentChatProvider,
+  resolveWorkspaceAgentProviderLaunchIntent
+} from "../services/workspaceOpenFeatureRequest.ts";
 import type { WorkspaceLaunchpadOpenTrigger } from "../services/workspaceLaunchpadAnalytics.ts";
 import {
   registerWorkspaceBrowserLaunchHandler,
@@ -330,16 +333,37 @@ function ReadyWorkspaceWorkbench({
           defaultProvider: snapshot.defaultProvider,
           requestedProvider: request.provider
         });
-        void requestWorkspaceAgentGuiLaunch({
-          provider: preferred,
-          workspaceId,
-          ...(request.draftPrompt?.trim()
-            ? {
-                autoSubmit: request.autoSubmit === true,
-                draftPrompt: request.draftPrompt.trim()
+        void (async () => {
+          await agentProviderStatusService
+            .ensureLoaded({ providers: [preferred] })
+            .catch(() => null);
+          const intent = resolveWorkspaceAgentProviderLaunchIntent(
+            agentProviderStatusService.getStatus(preferred)
+          );
+          if (intent.kind === "launch") {
+            await requestWorkspaceAgentGuiLaunch({
+              provider: preferred,
+              workspaceId,
+              ...(request.draftPrompt?.trim()
+                ? {
+                    autoSubmit: request.autoSubmit === true,
+                    draftPrompt: request.draftPrompt.trim()
+                  }
+                : {})
+            });
+            return;
+          }
+          if (intent.kind === "action") {
+            await agentProviderStatusService.runAction(
+              preferred,
+              intent.actionId,
+              {
+                workbenchHost,
+                workspaceId
               }
-            : {})
-        }).catch(() => {});
+            );
+          }
+        })().catch(() => {});
         return;
       }
       if (request.feature === "agent-connect") {
@@ -352,33 +376,23 @@ function ReadyWorkspaceWorkbench({
         const targetStatus = snapshot.statuses.find(
           (candidate) => String(candidate.provider) === provider
         );
-        const availability = targetStatus?.availability.status;
-        if (!targetStatus || availability === "ready") {
+        const intent = resolveWorkspaceAgentProviderLaunchIntent(
+          targetStatus ?? null
+        );
+        if (intent.kind === "launch") {
           void requestWorkspaceAgentGuiLaunch({
             provider,
             workspaceId
           }).catch(() => {});
           return;
         }
-        const actionId =
-          availability === "not_installed"
-            ? targetStatus.actions.find((action) => action.id === "install")?.id
-            : availability === "auth_required"
-              ? targetStatus.actions.find((action) => action.id === "login")?.id
-              : targetStatus.actions.find((action) => action.kind !== "refresh")
-                  ?.id;
-        if (actionId) {
+        if (intent.kind === "action" && targetStatus) {
           void agentProviderStatusService
-            .runAction(targetStatus.provider, actionId, {
+            .runAction(targetStatus.provider, intent.actionId, {
               workbenchHost,
               workspaceId
             })
             .catch(() => {});
-        } else {
-          void requestWorkspaceAgentGuiLaunch({
-            provider,
-            workspaceId
-          }).catch(() => {});
         }
         return;
       }

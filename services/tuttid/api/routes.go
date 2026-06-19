@@ -451,6 +451,14 @@ func RegisterRoutes(mux *http.ServeMux, routes Routes) {
 		wrapper.ListWorkspaceAgentSessionMessages(w, r)
 	})
 
+	mux.HandleFunc("/v1/workspaces/{workspaceID}/agent-generated-files", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet {
+			tuttitypes.WriteMethodNotAllowed(w)
+			return
+		}
+		wrapper.ListWorkspaceAgentGeneratedFiles(w, r)
+	})
+
 	mux.HandleFunc("/v1/workspaces/{workspaceID}/agent-sessions/{agentSessionID}/attachments/{attachmentID}", func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodGet {
 			tuttitypes.WriteMethodNotAllowed(w)

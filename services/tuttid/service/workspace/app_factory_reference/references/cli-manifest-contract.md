@@ -112,9 +112,7 @@ Table output response body:
     { "key": "name", "label": "Name" },
     { "key": "status", "label": "Status" }
   ],
-  "rows": [
-    { "name": "daily-report", "status": "queued" }
-  ]
+  "rows": [{ "name": "daily-report", "status": "queued" }]
 }
 ```
 

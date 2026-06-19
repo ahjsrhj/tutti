@@ -2642,6 +2642,10 @@ func (*activityProjectionRepoStub) ListSessionMessages(context.Context, agentact
 	return agentactivitybiz.MessagePage{}, false, nil
 }
 
+func (*activityProjectionRepoStub) ListWorkspaceGeneratedFiles(context.Context, agentactivitybiz.ListWorkspaceGeneratedFilesInput) (agentactivitybiz.GeneratedFileList, bool, error) {
+	return agentactivitybiz.GeneratedFileList{}, false, nil
+}
+
 func (r *activityProjectionRepoStub) ReportSessionMessages(_ context.Context, input agentactivitybiz.SessionMessageReport) (agentactivitybiz.MessageReportResult, error) {
 	r.messageInput = input
 	return r.messageResult, nil

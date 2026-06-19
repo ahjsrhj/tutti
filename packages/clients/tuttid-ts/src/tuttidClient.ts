@@ -38,6 +38,7 @@ import {
   getWorkspaceWorkbench,
   importWorkspaceExternalAgentSessions,
   listCliCapabilities,
+  listWorkspaceAgentGeneratedFiles,
   listUserProjects,
   listWorkspaceAgentSessionMessages,
   listWorkspaceIssues,
@@ -528,6 +529,17 @@ export function createTuttidClient(
         query: request
       });
       return unwrapData(response, "Workspace agent sessions request failed.");
+    },
+    async listWorkspaceAgentGeneratedFiles(workspaceID, request) {
+      const response = await listWorkspaceAgentGeneratedFiles({
+        client,
+        path: { workspaceID },
+        query: request
+      });
+      return unwrapData(
+        response,
+        "Workspace agent generated files request failed."
+      );
     },
     async scanWorkspaceExternalAgentSessionImports(workspaceID, request) {
       const response = await scanWorkspaceExternalAgentSessionImports({

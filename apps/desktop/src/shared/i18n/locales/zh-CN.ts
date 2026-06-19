@@ -83,6 +83,11 @@ export const zhCN = {
     },
     menu: {
       checkForUpdates: "检查更新...",
+      clearLogsCompletedDetail: "已清除 {{count}} 个日志文件。",
+      clearLogsCompletedMessage: "服务日志已清除。",
+      clearLogsFailed: "无法清除日志",
+      clearLogsTitle: "清除日志",
+      clearServiceLogs: "清除服务日志...",
       edit: "编辑",
       exportLogsFailed: "无法导出日志",
       exportLogsTitle: "导出日志",

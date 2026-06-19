@@ -86,6 +86,7 @@ func DefaultRegistry() Registry {
 			BinaryNames:        []string{"claude"},
 			ExternalRegistryID: "claude-acp",
 			AuthStatusCommand:  []string{"auth", "status"},
+			AuthMarkerPaths:    []string{"~/.claude.json", "~/.claude/auth.json"},
 			Install: InstallerSpec{
 				Kind:           InstallerKindOfficialScript,
 				DisplayCommand: "curl -fsSL https://claude.ai/install.sh | bash",
@@ -105,6 +106,7 @@ func DefaultRegistry() Registry {
 			BinaryNames:        []string{"codex"},
 			AdapterBinaryNames: []string{"codex-acp"},
 			AdapterCommand:     []string{"codex-acp"},
+			AuthStatusCommand:  []string{"login", "status"},
 			AuthMarkerPaths:    []string{"~/.codex/auth.json"},
 			Install: InstallerSpec{
 				Kind:           InstallerKindOfficialScript,

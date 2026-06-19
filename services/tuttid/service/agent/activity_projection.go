@@ -477,6 +477,37 @@ func (p *ActivityProjection) ListSessionMessages(
 	}, true
 }
 
+func (p *ActivityProjection) ListWorkspaceGeneratedFiles(
+	input agentactivitybiz.ListWorkspaceGeneratedFilesInput,
+) (GeneratedFileList, bool) {
+	if p == nil || p.repo == nil {
+		return GeneratedFileList{}, false
+	}
+	list, ok, err := p.repo.ListWorkspaceGeneratedFiles(context.Background(), input)
+	if err != nil {
+		slog.Warn("list workspace agent generated files failed",
+			"event", "workspace.agent_generated_files.list_failed",
+			"workspace_id", input.WorkspaceID,
+			"error", err,
+		)
+		return GeneratedFileList{}, false
+	}
+	if !ok {
+		return GeneratedFileList{}, false
+	}
+	files := make([]GeneratedFile, 0, len(list.Files))
+	for _, file := range list.Files {
+		files = append(files, GeneratedFile{
+			Path:  strings.TrimSpace(file.Path),
+			Label: strings.TrimSpace(file.Label),
+		})
+	}
+	return GeneratedFileList{
+		WorkspaceID: strings.TrimSpace(list.WorkspaceID),
+		Files:       files,
+	}, true
+}
+
 func staleResumeMessageUpdates(messages []SessionMessage, occurredAtUnixMS int64) []agentsessionstore.WorkspaceAgentSessionMessageUpdate {
 	turnID := latestStaleResumeTurnID(messages)
 	if turnID == "" {

@@ -398,6 +398,11 @@ func (*CodexAdapter) CanResume(session Session) bool {
 	return strings.TrimSpace(session.ProviderSessionID) != ""
 }
 
+func (a *CodexAdapter) HasLiveSession(session Session) bool {
+	acpSession := a.getSession(session.AgentSessionID)
+	return acpSession != nil && acpSession.client != nil
+}
+
 func (a *CodexAdapter) Close(_ context.Context, session Session) error {
 	if a == nil {
 		return nil

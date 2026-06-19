@@ -84,6 +84,11 @@ export const en = {
     },
     menu: {
       checkForUpdates: "Check for Updates...",
+      clearLogsCompletedDetail: "Cleared {{count}} log files.",
+      clearLogsCompletedMessage: "Service logs have been cleared.",
+      clearLogsFailed: "Unable to clear logs",
+      clearLogsTitle: "Clear Logs",
+      clearServiceLogs: "Clear Service Logs...",
       edit: "Edit",
       exportLogsFailed: "Unable to export logs",
       exportLogsTitle: "Export Logs",

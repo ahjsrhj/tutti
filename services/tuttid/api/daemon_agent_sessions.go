@@ -16,6 +16,7 @@ type AgentSessionService interface {
 	List(context.Context, string) ([]agentservice.Session, error)
 	ListFiltered(context.Context, string, agentservice.ListSessionsInput) ([]agentservice.Session, error)
 	GetComposerOptions(context.Context, agentservice.ComposerOptionsInput) (agentservice.ComposerOptions, error)
+	ListGeneratedFiles(context.Context, string, agentservice.ListGeneratedFilesInput) (agentservice.GeneratedFileList, error)
 	ListMessages(context.Context, string, string, agentservice.ListMessagesInput) (agentservice.SessionMessagesPage, error)
 	ScanExternalImports(context.Context, agentservice.ExternalImportScanInput) (agentservice.ExternalImportScanResult, error)
 	ImportExternalSessions(context.Context, string, agentservice.ExternalImportInput) (agentservice.ExternalImportResult, error)
@@ -240,6 +241,39 @@ func (api DaemonAPI) ListWorkspaceAgentSessionMessages(ctx context.Context, requ
 		HasMore:        page.HasMore,
 		LatestVersion:  int64(page.LatestVersion),
 		Messages:       generatedAgentSessionMessages(page.Messages),
+	}, nil
+}
+
+func (api DaemonAPI) ListWorkspaceAgentGeneratedFiles(ctx context.Context, request tuttigenerated.ListWorkspaceAgentGeneratedFilesRequestObject) (tuttigenerated.ListWorkspaceAgentGeneratedFilesResponseObject, error) {
+	if api.AgentSessionService == nil {
+		return tuttigenerated.ListWorkspaceAgentGeneratedFiles503JSONResponse{
+			ServiceUnavailableErrorJSONResponse: agentSessionServiceUnavailableError(),
+		}, nil
+	}
+	input := agentservice.ListGeneratedFilesInput{}
+	if request.Params.Query != nil {
+		input.Query = strings.TrimSpace(*request.Params.Query)
+	}
+	if request.Params.SessionCwd != nil {
+		input.SessionCwd = strings.TrimSpace(*request.Params.SessionCwd)
+	}
+	if request.Params.Limit != nil {
+		if *request.Params.Limit <= 0 || *request.Params.Limit > 100 {
+			return writeListWorkspaceAgentGeneratedFilesError(agentservice.ErrInvalidArgument), nil
+		}
+		input.Limit = *request.Params.Limit
+	}
+	result, err := api.AgentSessionService.ListGeneratedFiles(
+		ctx,
+		string(request.WorkspaceID),
+		input,
+	)
+	if err != nil {
+		return writeListWorkspaceAgentGeneratedFilesError(err), nil
+	}
+	return tuttigenerated.ListWorkspaceAgentGeneratedFiles200JSONResponse{
+		Entries:     generatedAgentGeneratedFiles(result.Files),
+		WorkspaceId: result.WorkspaceID,
 	}, nil
 }
 
@@ -683,6 +717,25 @@ func generatedAgentSessionMessages(messages []agentservice.SessionMessage) []tut
 			TurnId:            stringPointer(strings.TrimSpace(message.TurnID)),
 			UpdatedAtUnixMs:   int64Pointer(message.UpdatedAtUnixMS),
 			Version:           int64(message.Version),
+		})
+	}
+	return result
+}
+
+func generatedAgentGeneratedFiles(files []agentservice.GeneratedFile) []tuttigenerated.WorkspaceAgentGeneratedFileEntry {
+	result := make([]tuttigenerated.WorkspaceAgentGeneratedFileEntry, 0, len(files))
+	for _, file := range files {
+		path := strings.TrimSpace(file.Path)
+		if path == "" {
+			continue
+		}
+		label := strings.TrimSpace(file.Label)
+		if label == "" {
+			label = path
+		}
+		result = append(result, tuttigenerated.WorkspaceAgentGeneratedFileEntry{
+			Label: label,
+			Path:  path,
 		})
 	}
 	return result

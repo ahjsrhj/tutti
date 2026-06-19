@@ -112,7 +112,8 @@ import { AgentConversationListSkeleton } from "./AgentConversationListSkeleton";
 import { useAgentHostApi } from "../../agentActivityHost";
 import {
   ConversationMeta,
-  groupConversations
+  groupConversations,
+  type ConversationSection
 } from "./agentGuiNodeViewConversation";
 import styles from "./AgentGUINode.styles";
 import type { AgentContextMentionProvider } from "./agentContextMentionProvider";
@@ -1491,6 +1492,8 @@ const AgentGUIDetailPane = memo(function AgentGUIDetailPane({
     : isAgentProviderReady
       ? null
       : labels.installRequiredPlaceholder;
+  const showProviderSetupNotice =
+    !isAgentProviderReady && !isCollaboratorConversation;
   const submitDisabled =
     isCollaboratorConversation ||
     !isAgentProviderReady ||
@@ -2113,6 +2116,23 @@ const AgentGUIDetailPane = memo(function AgentGUIDetailPane({
         usage={viewModel.usage}
         usageLimits={slashStatusLimits}
       />
+      {showProviderSetupNotice ? (
+        <div
+          className={styles.providerSetupNotice}
+          data-testid="agent-gui-provider-setup-notice"
+          role="status"
+        >
+          <Info
+            aria-hidden="true"
+            className={styles.providerSetupNoticeIcon}
+            size={15}
+            strokeWidth={2}
+          />
+          <span className={styles.providerSetupNoticeText}>
+            {labels.installRequiredPlaceholder}
+          </span>
+        </div>
+      ) : null}
       <ScrollArea
         scrollbarMode="native"
         className="min-h-0 flex-1 [&_[data-orientation=vertical][data-slot=scroll-area-scrollbar]]:opacity-100"
@@ -2992,6 +3012,29 @@ const AgentGUIConversationRailPane = memo(
           .join("|"),
       [groupedConversations]
     );
+    const projectConversationCountsByPath = useMemo(() => {
+      const counts = new Map<string, number>();
+      for (const conversation of conversations) {
+        const normalizedPath = normalizeConversationRailProjectPath(
+          conversation.project?.path
+        );
+        if (!normalizedPath) {
+          continue;
+        }
+        counts.set(normalizedPath, (counts.get(normalizedPath) ?? 0) + 1);
+      }
+      return counts;
+    }, [conversations]);
+    const registerConversationItemElement = useCallback(
+      (itemId: string, element: HTMLDivElement | null) => {
+        if (element) {
+          conversationItemElementsRef.current.set(itemId, element);
+        } else {
+          conversationItemElementsRef.current.delete(itemId);
+        }
+      },
+      []
+    );
 
     useLayoutEffect(() => {
       if (!activeConversationId) {
@@ -3072,6 +3115,8 @@ const AgentGUIConversationRailPane = memo(
             groupedConversations.map((section, sectionIndex) => {
               const projectPath =
                 section.kind === "project" ? (section.project?.path ?? "") : "";
+              const normalizedProjectPath =
+                normalizeConversationRailProjectPath(projectPath);
               const projectLabel =
                 section.kind === "project" ? section.label : "";
               const isProjectSection = section.kind === "project";
@@ -3083,13 +3128,9 @@ const AgentGUIConversationRailPane = memo(
                   groupedConversations[sectionIndex - 1]?.kind === "pinned");
               const isSectionCollapsed =
                 isProjectSection && collapsedProjectSectionIds.has(section.id);
-              const projectConversationCount = projectPath
-                ? conversations.filter(
-                    (conversation) =>
-                      normalizeConversationRailProjectPath(
-                        conversation.project?.path
-                      ) === normalizeConversationRailProjectPath(projectPath)
-                  ).length
+              const projectConversationCount = normalizedProjectPath
+                ? (projectConversationCountsByPath.get(normalizedProjectPath) ??
+                  0)
                 : 0;
               return (
                 <Fragment key={section.id}>
@@ -3099,246 +3140,31 @@ const AgentGUIConversationRailPane = memo(
                       workspaceUserProjectI18n={workspaceUserProjectI18n}
                     />
                   ) : null}
-                  <section
-                    className={styles.conversationSection}
-                    data-collapsed={isSectionCollapsed}
-                    data-kind={section.kind}
-                  >
-                    <div className={styles.conversationSectionHeader}>
-                      {isProjectSection ? (
-                        <button
-                          type="button"
-                          className={styles.conversationSectionToggle}
-                          aria-expanded={!isSectionCollapsed}
-                          onClick={() =>
-                            toggleProjectSectionCollapsed(section.id)
-                          }
-                        >
-                          <ChevronRight
-                            aria-hidden="true"
-                            className={styles.conversationSectionChevron}
-                          />
-                          <span className={styles.conversationSectionLabel}>
-                            <FolderIcon
-                              aria-hidden="true"
-                              className={styles.conversationSectionLabelIcon}
-                            />
-                            <span>{section.label}</span>
-                          </span>
-                        </button>
-                      ) : (
-                        <div className={styles.conversationSectionToggle}>
-                          <span className={styles.conversationSectionLabel}>
-                            <span>{section.label}</span>
-                          </span>
-                        </div>
-                      )}
-                      {projectPath ? (
-                        <div className={styles.conversationSectionActions}>
-                          <BareIconButton
-                            className={styles.conversationSectionMoreButton}
-                            aria-label={labels.projectSectionEdit}
-                            title={labels.projectSectionEdit}
-                            size="sm"
-                            disabled={createConversationDisabled}
-                            onClick={() =>
-                              onCreateConversation({ projectPath })
-                            }
-                          >
-                            <EditIcon aria-hidden="true" />
-                          </BareIconButton>
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <BareIconButton
-                                className={styles.conversationSectionMoreButton}
-                                aria-label={labels.projectSectionMoreActions}
-                                title={labels.projectSectionMoreActions}
-                                size="sm"
-                              >
-                                <MoreHorizontalIcon aria-hidden="true" />
-                              </BareIconButton>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent
-                              align="end"
-                              className={`${styles.composerMenuContent} nodrag [-webkit-app-region:no-drag]`}
-                              sideOffset={6}
-                            >
-                              <DropdownMenuItem
-                                className={`${styles.composerMenuItem} nodrag [-webkit-app-region:no-drag]`}
-                                disabled={projectConversationCount === 0}
-                                onSelect={() => {
-                                  const label = projectLabel || projectPath;
-                                  setPendingProjectAction({
-                                    kind: "batch-delete",
-                                    conversationCount: projectConversationCount,
-                                    label,
-                                    path: projectPath
-                                  });
-                                }}
-                              >
-                                <span>{labels.batchDeleteProjectSessions}</span>
-                              </DropdownMenuItem>
-                              <DropdownMenuItem
-                                className={`${styles.composerMenuItem} nodrag [-webkit-app-region:no-drag]`}
-                                onSelect={() => {
-                                  const label = projectLabel || projectPath;
-                                  setPendingProjectAction({
-                                    kind: "remove",
-                                    label,
-                                    path: projectPath
-                                  });
-                                }}
-                              >
-                                <span>{labels.removeProject}</span>
-                              </DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        </div>
-                      ) : null}
-                    </div>
-                    <div
-                      className={styles.conversationSectionItems}
-                      aria-hidden={isSectionCollapsed ? "true" : undefined}
-                    >
-                      <div className={styles.conversationSectionItemsInner}>
-                        {section.items.length === 0 ? (
-                          <div className={styles.conversationSectionEmpty}>
-                            {labels.emptyProjectConversations}
-                          </div>
-                        ) : null}
-                        {section.items.map((item) => {
-                          const isPendingDeleteConversation =
-                            pendingDeleteConversationId === item.id;
-
-                          return (
-                            <div
-                              key={item.id}
-                              ref={(element) => {
-                                if (element) {
-                                  conversationItemElementsRef.current.set(
-                                    item.id,
-                                    element
-                                  );
-                                } else {
-                                  conversationItemElementsRef.current.delete(
-                                    item.id
-                                  );
-                                }
-                              }}
-                              className={styles.conversationItem}
-                              data-active={item.id === activeConversationId}
-                              data-pinned={(item.pinnedAtUnixMs ?? 0) > 0}
-                              data-pending-delete={isPendingDeleteConversation}
-                              data-testid={`agent-gui-conversation-item-${item.id}`}
-                              onMouseLeave={() => {
-                                if (isPendingDeleteConversation) {
-                                  onCancelDeleteConversation();
-                                }
-                              }}
-                            >
-                              <button
-                                type="button"
-                                className={styles.conversationSelect}
-                                onClick={() => onSelectConversation(item.id)}
-                              >
-                                <span className={styles.conversationTitle}>
-                                  {conversationPlainTitle(
-                                    item,
-                                    labels,
-                                    uiLanguage
-                                  )}
-                                </span>
-                                <ConversationMeta
-                                  item={item}
-                                  nowMs={currentTimeMs}
-                                  labels={labels}
-                                />
-                              </button>
-                              <div className={styles.conversationActions}>
-                                {isPendingDeleteConversation ? (
-                                  <button
-                                    type="button"
-                                    className={styles.conversationDeleteButton}
-                                    aria-label={labels.deleteSessionConfirm}
-                                    title={labels.deleteSessionConfirm}
-                                    disabled={isDeletingConversation}
-                                    onClick={(event) => {
-                                      event.stopPropagation();
-                                      onConfirmDeleteConversation();
-                                    }}
-                                  >
-                                    <span
-                                      className={
-                                        styles.conversationDeleteConfirmText
-                                      }
-                                    >
-                                      {labels.deleteSessionConfirm}
-                                    </span>
-                                  </button>
-                                ) : (
-                                  <>
-                                    <BareIconButton
-                                      className={styles.conversationPinButton}
-                                      aria-label={
-                                        (item.pinnedAtUnixMs ?? 0) > 0
-                                          ? labels.unpinSession
-                                          : labels.pinSession
-                                      }
-                                      title={
-                                        (item.pinnedAtUnixMs ?? 0) > 0
-                                          ? labels.unpinSession
-                                          : labels.pinSession
-                                      }
-                                      size="md"
-                                      onPointerDown={(event) => {
-                                        event.stopPropagation();
-                                      }}
-                                      onMouseDown={(event) => {
-                                        event.stopPropagation();
-                                      }}
-                                      onClick={(event) => {
-                                        event.stopPropagation();
-                                        onToggleConversationPinned(
-                                          item.id,
-                                          (item.pinnedAtUnixMs ?? 0) <= 0
-                                        );
-                                      }}
-                                    >
-                                      {(item.pinnedAtUnixMs ?? 0) > 0 ? (
-                                        <PinFilledIcon aria-hidden="true" />
-                                      ) : (
-                                        <PinLinedIcon aria-hidden="true" />
-                                      )}
-                                    </BareIconButton>
-                                    <BareIconButton
-                                      className={
-                                        styles.conversationDeleteButton
-                                      }
-                                      aria-label={labels.deleteSession}
-                                      title={labels.deleteSession}
-                                      size="md"
-                                      onPointerDown={(event) => {
-                                        event.stopPropagation();
-                                      }}
-                                      onMouseDown={(event) => {
-                                        event.stopPropagation();
-                                      }}
-                                      onClick={(event) => {
-                                        event.stopPropagation();
-                                        onRequestDeleteConversation(item.id);
-                                      }}
-                                    >
-                                      <CanvasNodeTrashLinedIcon aria-hidden="true" />
-                                    </BareIconButton>
-                                  </>
-                                )}
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  </section>
+                  <AgentGUIConversationRailSection
+                    activeConversationId={activeConversationId}
+                    createConversationDisabled={createConversationDisabled}
+                    currentTimeMs={currentTimeMs}
+                    isDeletingConversation={isDeletingConversation}
+                    isSectionCollapsed={isSectionCollapsed}
+                    labels={labels}
+                    pendingDeleteConversationId={pendingDeleteConversationId}
+                    projectConversationCount={projectConversationCount}
+                    projectLabel={projectLabel}
+                    projectPath={projectPath}
+                    registerItemElement={registerConversationItemElement}
+                    section={section}
+                    uiLanguage={uiLanguage}
+                    onCancelDeleteConversation={onCancelDeleteConversation}
+                    onConfirmDeleteConversation={onConfirmDeleteConversation}
+                    onCreateConversation={onCreateConversation}
+                    onRequestDeleteConversation={onRequestDeleteConversation}
+                    onSelectConversation={onSelectConversation}
+                    setPendingProjectAction={setPendingProjectAction}
+                    onToggleConversationPinned={onToggleConversationPinned}
+                    onToggleProjectSectionCollapsed={
+                      toggleProjectSectionCollapsed
+                    }
+                  />
                 </Fragment>
               );
             })
@@ -3396,6 +3222,329 @@ const AgentGUIConversationRailPane = memo(
           tone="destructive"
         />
       </aside>
+    );
+  }
+);
+
+interface AgentGUIConversationRailSectionProps {
+  section: ConversationSection;
+  projectPath: string;
+  projectLabel: string;
+  projectConversationCount: number;
+  isSectionCollapsed: boolean;
+  activeConversationId: string | null;
+  pendingDeleteConversationId: string | null;
+  isDeletingConversation: boolean;
+  createConversationDisabled: boolean;
+  currentTimeMs: number;
+  labels: AgentGUIViewLabels;
+  uiLanguage: UiLanguage;
+  registerItemElement: (itemId: string, element: HTMLDivElement | null) => void;
+  onCreateConversation: (options?: { projectPath?: string | null }) => void;
+  onToggleProjectSectionCollapsed: (sectionId: string) => void;
+  setPendingProjectAction: (action: AgentGUIProjectActionDialog | null) => void;
+  onSelectConversation: (agentSessionId: string) => void;
+  onToggleConversationPinned: (agentSessionId: string, pinned: boolean) => void;
+  onRequestDeleteConversation: (agentSessionId: string) => void;
+  onCancelDeleteConversation: () => void;
+  onConfirmDeleteConversation: () => void;
+}
+
+const AgentGUIConversationRailSection = memo(
+  function AgentGUIConversationRailSection({
+    section,
+    projectPath,
+    projectLabel,
+    projectConversationCount,
+    isSectionCollapsed,
+    activeConversationId,
+    pendingDeleteConversationId,
+    isDeletingConversation,
+    createConversationDisabled,
+    currentTimeMs,
+    labels,
+    uiLanguage,
+    registerItemElement,
+    onCreateConversation,
+    onToggleProjectSectionCollapsed,
+    onSelectConversation,
+    setPendingProjectAction,
+    onToggleConversationPinned,
+    onRequestDeleteConversation,
+    onCancelDeleteConversation,
+    onConfirmDeleteConversation
+  }: AgentGUIConversationRailSectionProps): React.JSX.Element {
+    "use memo";
+    const isProjectSection = section.kind === "project";
+    return (
+      <section
+        className={styles.conversationSection}
+        data-collapsed={isSectionCollapsed}
+        data-kind={section.kind}
+      >
+        <div className={styles.conversationSectionHeader}>
+          {isProjectSection ? (
+            <button
+              type="button"
+              className={styles.conversationSectionToggle}
+              aria-expanded={!isSectionCollapsed}
+              onClick={() => onToggleProjectSectionCollapsed(section.id)}
+            >
+              <ChevronRight
+                aria-hidden="true"
+                className={styles.conversationSectionChevron}
+              />
+              <span className={styles.conversationSectionLabel}>
+                <FolderIcon
+                  aria-hidden="true"
+                  className={styles.conversationSectionLabelIcon}
+                />
+                <span>{section.label}</span>
+              </span>
+            </button>
+          ) : (
+            <div className={styles.conversationSectionToggle}>
+              <span className={styles.conversationSectionLabel}>
+                <span>{section.label}</span>
+              </span>
+            </div>
+          )}
+          {projectPath ? (
+            <div className={styles.conversationSectionActions}>
+              <BareIconButton
+                className={styles.conversationSectionMoreButton}
+                aria-label={labels.projectSectionEdit}
+                title={labels.projectSectionEdit}
+                size="sm"
+                disabled={createConversationDisabled}
+                onClick={() => onCreateConversation({ projectPath })}
+              >
+                <EditIcon aria-hidden="true" />
+              </BareIconButton>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <BareIconButton
+                    className={styles.conversationSectionMoreButton}
+                    aria-label={labels.projectSectionMoreActions}
+                    title={labels.projectSectionMoreActions}
+                    size="sm"
+                  >
+                    <MoreHorizontalIcon aria-hidden="true" />
+                  </BareIconButton>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent
+                  align="end"
+                  className={`${styles.composerMenuContent} nodrag [-webkit-app-region:no-drag]`}
+                  sideOffset={6}
+                >
+                  <DropdownMenuItem
+                    className={`${styles.composerMenuItem} nodrag [-webkit-app-region:no-drag]`}
+                    disabled={projectConversationCount === 0}
+                    onSelect={() => {
+                      const label = projectLabel || projectPath;
+                      setPendingProjectAction({
+                        kind: "batch-delete",
+                        conversationCount: projectConversationCount,
+                        label,
+                        path: projectPath
+                      });
+                    }}
+                  >
+                    <span>{labels.batchDeleteProjectSessions}</span>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    className={`${styles.composerMenuItem} nodrag [-webkit-app-region:no-drag]`}
+                    onSelect={() => {
+                      const label = projectLabel || projectPath;
+                      setPendingProjectAction({
+                        kind: "remove",
+                        label,
+                        path: projectPath
+                      });
+                    }}
+                  >
+                    <span>{labels.removeProject}</span>
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+          ) : null}
+        </div>
+        <div
+          className={styles.conversationSectionItems}
+          aria-hidden={isSectionCollapsed ? "true" : undefined}
+        >
+          <div className={styles.conversationSectionItemsInner}>
+            {section.items.length === 0 ? (
+              <div className={styles.conversationSectionEmpty}>
+                {labels.emptyProjectConversations}
+              </div>
+            ) : null}
+            {section.items.map((item) => (
+              <AgentGUIConversationRailItem
+                key={item.id}
+                active={item.id === activeConversationId}
+                currentTimeMs={currentTimeMs}
+                isDeletingConversation={isDeletingConversation}
+                isPendingDeleteConversation={
+                  pendingDeleteConversationId === item.id
+                }
+                item={item}
+                labels={labels}
+                registerItemElement={registerItemElement}
+                uiLanguage={uiLanguage}
+                onCancelDeleteConversation={onCancelDeleteConversation}
+                onConfirmDeleteConversation={onConfirmDeleteConversation}
+                onRequestDeleteConversation={onRequestDeleteConversation}
+                onSelectConversation={onSelectConversation}
+                onToggleConversationPinned={onToggleConversationPinned}
+              />
+            ))}
+          </div>
+        </div>
+      </section>
+    );
+  }
+);
+
+interface AgentGUIConversationRailItemProps {
+  item: AgentGUINodeViewModel["conversations"][number];
+  active: boolean;
+  isPendingDeleteConversation: boolean;
+  isDeletingConversation: boolean;
+  currentTimeMs: number;
+  labels: AgentGUIViewLabels;
+  uiLanguage: UiLanguage;
+  registerItemElement: (itemId: string, element: HTMLDivElement | null) => void;
+  onSelectConversation: (agentSessionId: string) => void;
+  onToggleConversationPinned: (agentSessionId: string, pinned: boolean) => void;
+  onRequestDeleteConversation: (agentSessionId: string) => void;
+  onCancelDeleteConversation: () => void;
+  onConfirmDeleteConversation: () => void;
+}
+
+const AgentGUIConversationRailItem = memo(
+  function AgentGUIConversationRailItem({
+    item,
+    active,
+    isPendingDeleteConversation,
+    isDeletingConversation,
+    currentTimeMs,
+    labels,
+    uiLanguage,
+    registerItemElement,
+    onSelectConversation,
+    onToggleConversationPinned,
+    onRequestDeleteConversation,
+    onCancelDeleteConversation,
+    onConfirmDeleteConversation
+  }: AgentGUIConversationRailItemProps): React.JSX.Element {
+    "use memo";
+    const pinned = (item.pinnedAtUnixMs ?? 0) > 0;
+    const setItemElement = useCallback(
+      (element: HTMLDivElement | null) => {
+        registerItemElement(item.id, element);
+      },
+      [item.id, registerItemElement]
+    );
+    const handleMouseLeave = useCallback(() => {
+      if (isPendingDeleteConversation) {
+        onCancelDeleteConversation();
+      }
+    }, [isPendingDeleteConversation, onCancelDeleteConversation]);
+    const handleSelect = useCallback(() => {
+      onSelectConversation(item.id);
+    }, [item.id, onSelectConversation]);
+    const handleTogglePinned = useCallback(() => {
+      onToggleConversationPinned(item.id, !pinned);
+    }, [item.id, onToggleConversationPinned, pinned]);
+    const handleRequestDelete = useCallback(() => {
+      onRequestDeleteConversation(item.id);
+    }, [item.id, onRequestDeleteConversation]);
+
+    return (
+      <div
+        ref={setItemElement}
+        className={styles.conversationItem}
+        data-active={active}
+        data-pinned={pinned}
+        data-pending-delete={isPendingDeleteConversation}
+        data-testid={`agent-gui-conversation-item-${item.id}`}
+        onMouseLeave={handleMouseLeave}
+      >
+        <button
+          type="button"
+          className={styles.conversationSelect}
+          onClick={handleSelect}
+        >
+          <span className={styles.conversationTitle}>
+            {conversationPlainTitle(item, labels, uiLanguage)}
+          </span>
+          <ConversationMeta item={item} nowMs={currentTimeMs} labels={labels} />
+        </button>
+        <div className={styles.conversationActions}>
+          {isPendingDeleteConversation ? (
+            <button
+              type="button"
+              className={styles.conversationDeleteButton}
+              aria-label={labels.deleteSessionConfirm}
+              title={labels.deleteSessionConfirm}
+              disabled={isDeletingConversation}
+              onClick={(event) => {
+                event.stopPropagation();
+                onConfirmDeleteConversation();
+              }}
+            >
+              <span className={styles.conversationDeleteConfirmText}>
+                {labels.deleteSessionConfirm}
+              </span>
+            </button>
+          ) : (
+            <>
+              <BareIconButton
+                className={styles.conversationPinButton}
+                aria-label={pinned ? labels.unpinSession : labels.pinSession}
+                title={pinned ? labels.unpinSession : labels.pinSession}
+                size="md"
+                onPointerDown={(event) => {
+                  event.stopPropagation();
+                }}
+                onMouseDown={(event) => {
+                  event.stopPropagation();
+                }}
+                onClick={(event) => {
+                  event.stopPropagation();
+                  handleTogglePinned();
+                }}
+              >
+                {pinned ? (
+                  <PinFilledIcon aria-hidden="true" />
+                ) : (
+                  <PinLinedIcon aria-hidden="true" />
+                )}
+              </BareIconButton>
+              <BareIconButton
+                className={styles.conversationDeleteButton}
+                aria-label={labels.deleteSession}
+                title={labels.deleteSession}
+                size="md"
+                onPointerDown={(event) => {
+                  event.stopPropagation();
+                }}
+                onMouseDown={(event) => {
+                  event.stopPropagation();
+                }}
+                onClick={(event) => {
+                  event.stopPropagation();
+                  handleRequestDelete();
+                }}
+              >
+                <CanvasNodeTrashLinedIcon aria-hidden="true" />
+              </BareIconButton>
+            </>
+          )}
+        </div>
+      </div>
     );
   }
 );

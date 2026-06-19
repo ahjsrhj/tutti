@@ -894,6 +894,16 @@ export type WorkspaceAgentSessionMessagesResponse = {
   hasMore: boolean;
 };
 
+export type WorkspaceAgentGeneratedFileEntry = {
+  path: string;
+  label: string;
+};
+
+export type WorkspaceAgentGeneratedFileListResponse = {
+  workspaceId: string;
+  entries: Array<WorkspaceAgentGeneratedFileEntry>;
+};
+
 export type WorkspaceAgentSessionListResponse = {
   workspaceId: string;
   sessions: Array<WorkspaceAgentSession>;
@@ -4243,6 +4253,59 @@ export type GetWorkspaceAgentSessionResponses = {
 
 export type GetWorkspaceAgentSessionResponse =
   GetWorkspaceAgentSessionResponses[keyof GetWorkspaceAgentSessionResponses];
+
+export type ListWorkspaceAgentGeneratedFilesData = {
+  body?: never;
+  path: {
+    workspaceID: string;
+  };
+  query?: {
+    query?: string;
+    sessionCwd?: string;
+    limit?: number;
+  };
+  url: "/v1/workspaces/{workspaceID}/agent-generated-files";
+};
+
+export type ListWorkspaceAgentGeneratedFilesErrors = {
+  /**
+   * Request payload or parameters are invalid
+   */
+  400: ApiErrorResponse;
+  /**
+   * Bearer token is missing or invalid
+   */
+  401: ApiErrorResponse;
+  /**
+   * Workspace id was not found
+   */
+  404: ApiErrorResponse;
+  /**
+   * HTTP method is not supported on this route
+   */
+  405: ApiErrorResponse;
+  /**
+   * Workspace operation failed in an upstream adapter or command
+   */
+  502: ApiErrorResponse;
+  /**
+   * Required daemon service dependency is unavailable
+   */
+  503: ApiErrorResponse;
+};
+
+export type ListWorkspaceAgentGeneratedFilesError =
+  ListWorkspaceAgentGeneratedFilesErrors[keyof ListWorkspaceAgentGeneratedFilesErrors];
+
+export type ListWorkspaceAgentGeneratedFilesResponses = {
+  /**
+   * Workspace agent generated files
+   */
+  200: WorkspaceAgentGeneratedFileListResponse;
+};
+
+export type ListWorkspaceAgentGeneratedFilesResponse =
+  ListWorkspaceAgentGeneratedFilesResponses[keyof ListWorkspaceAgentGeneratedFilesResponses];
 
 export type ListWorkspaceAgentSessionMessagesData = {
   body?: never;
