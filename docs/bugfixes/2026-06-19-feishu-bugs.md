@@ -13,7 +13,7 @@
   - `pnpm --filter @tutti-os/desktop typecheck` failed only on pre-existing `listWorkspaceAgentGeneratedFiles` mock/client mismatch errors outside this fix.
 - Status: fixed locally
 - Commit: this commit
-- Feishu status update: pending
+- Feishu status update: set to `已修复待打包` with fix notes.
 
 ## HI7lrOFMVeKRjKcgK22cKs1dnGf
 
@@ -29,4 +29,4 @@
   - `go build ./...`
 - Status: fixed locally
 - Commit: this commit
-- Feishu status update: pending
+- Feishu status update: set to `已修复待打包` with fix notes.
