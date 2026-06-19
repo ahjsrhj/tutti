@@ -16,10 +16,6 @@ import (
 	"github.com/tutti-os/tutti/services/tuttid/biz/agentprovider"
 )
 
-func (s Service) probeCommand(ctx context.Context, result ProbeResult, command []string, env []string) ProbeResult {
-	return s.probeCommandWithReadyAfter(ctx, result, command, env, s.probeReadyAfter())
-}
-
 func (s Service) probeCommandWithReadyAfter(
 	ctx context.Context,
 	result ProbeResult,

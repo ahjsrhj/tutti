@@ -421,7 +421,7 @@ func TestServiceListReportsInstallActionWhenExternalAdapterCommandFailsAfterRead
 	writeExecutable(
 		t,
 		filepath.Join(runtimeRoot, "node", "bin", npmBinaryNameForTest()),
-		"#!/bin/sh\nsleep 0.1\necho 'sh: claude-agent-acp: command not found' >&2\nexit 127\n",
+		"#!/bin/sh\nsleep 0.2\necho 'sh: claude-agent-acp: command not found' >&2\nexit 127\n",
 	)
 	packageDir := npmPackageInstallDir(prefixDir, "@agentclientprotocol/claude-agent-acp")
 	writePackageManifest(t, packageDir, "@agentclientprotocol/claude-agent-acp", "0.46.0")
@@ -444,7 +444,7 @@ func TestServiceListReportsInstallActionWhenExternalAdapterCommandFailsAfterRead
 			return time.Date(2026, 6, 2, 8, 0, 0, 0, time.UTC)
 		},
 		ProbeReadyAfter: 10 * time.Millisecond,
-		ProbeTimeout:    500 * time.Millisecond,
+		ProbeTimeout:    2 * time.Second,
 		RunAuthStatusCommand: func(context.Context, ProviderSpec, string) (AuthInfo, bool) {
 			return AuthInfo{Status: AuthAuthenticated}, true
 		},
@@ -938,6 +938,42 @@ func TestServiceResolveProviderCommandCreatesExternalRegistryNPMPrefix(t *testin
 		!slices.Contains(result.Command, prefixDir) ||
 		!slices.Contains(result.Command, "exec") {
 		t.Fatalf("Command = %#v, want managed npm exec with prefix", result.Command)
+	}
+}
+
+func TestServiceResolveProviderCommandUsesInstalledExternalRegistryNPMBin(t *testing.T) {
+	home := t.TempDir()
+	registryStore, prefixDir := fakeClaudeExternalRegistry(t)
+	runtimeRoot := fakeManagedRuntimeRoot(t)
+	packageDir := npmPackageInstallDir(prefixDir, "@agentclientprotocol/claude-agent-acp")
+	binPath := filepath.Join(prefixDir, "node_modules", ".bin", "claude-agent-acp")
+	writePackageManifestWithBin(
+		t,
+		packageDir,
+		"@agentclientprotocol/claude-agent-acp",
+		"0.46.0",
+		"claude-agent-acp",
+		"dist/index.js",
+	)
+	writeExecutable(t, binPath, "#!/bin/sh\nexit 0\n")
+
+	service := probeTestService(home)
+	service.ExternalAgentRegistry = registryStore
+	service.IsExecutableFile = func(path string) bool {
+		stat, err := os.Stat(path)
+		return err == nil && !stat.IsDir() && stat.Mode().Perm()&0111 != 0
+	}
+	service.ManagedRuntime = fakeManagedRuntimeResolver(t, runtimeRoot)
+
+	result, err := service.ResolveProviderCommand(context.Background(), "claude-code")
+	if err != nil {
+		t.Fatalf("ResolveProviderCommand() error = %v", err)
+	}
+	if len(result.Command) == 0 || result.Command[0] != binPath {
+		t.Fatalf("Command = %#v, want installed npm bin %q", result.Command, binPath)
+	}
+	if slices.Contains(result.Command, "exec") {
+		t.Fatalf("Command = %#v, want installed bin without npm exec", result.Command)
 	}
 }
 
@@ -1653,6 +1689,19 @@ func writePackageManifest(t *testing.T, dir string, name string, version string)
 		t.Fatalf("create package manifest dir: %v", err)
 	}
 	content := `{"name":` + quoteJSONString(name) + `,"version":` + quoteJSONString(version) + `}`
+	if err := os.WriteFile(filepath.Join(dir, "package.json"), []byte(content), 0o644); err != nil {
+		t.Fatalf("write package manifest: %v", err)
+	}
+}
+
+func writePackageManifestWithBin(t *testing.T, dir string, name string, version string, binName string, binTarget string) {
+	t.Helper()
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		t.Fatalf("create package manifest dir: %v", err)
+	}
+	content := `{"name":` + quoteJSONString(name) +
+		`,"version":` + quoteJSONString(version) +
+		`,"bin":{` + quoteJSONString(binName) + `:` + quoteJSONString(binTarget) + `}}`
 	if err := os.WriteFile(filepath.Join(dir, "package.json"), []byte(content), 0o644); err != nil {
 		t.Fatalf("write package manifest: %v", err)
 	}
