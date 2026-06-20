@@ -100,6 +100,46 @@ func TestServiceImportExternalSessionsOmitsProjectsWithoutValidSessions(t *testi
 	}
 }
 
+func TestServiceExternalImportValidProjectPaths(t *testing.T) {
+	ctx := context.Background()
+	root := t.TempDir()
+	project := filepath.Join(root, "project-a")
+	empty := filepath.Join(root, "empty-project")
+	for _, dir := range []string{project, empty} {
+		if err := os.MkdirAll(dir, 0o755); err != nil {
+			t.Fatalf("create dir error = %v", err)
+		}
+	}
+	if canonical, ok := canonicalExistingDir(project); ok {
+		project = canonical
+	}
+	codexHome := filepath.Join(root, "codex-home")
+	t.Setenv("CODEX_HOME", codexHome)
+	t.Setenv("CLAUDE_CONFIG_DIR", filepath.Join(root, "claude-home"))
+	writeAgentServiceJSONL(t, filepath.Join(codexHome, "sessions", "codex-a.jsonl"),
+		map[string]any{
+			"timestamp": time.Now().Add(-time.Hour).Format(time.RFC3339),
+			"type":      "session_meta",
+			"payload":   map[string]any{"id": "codex-a", "cwd": project},
+		},
+		map[string]any{"timestamp": time.Now().Add(-time.Hour).Format(time.RFC3339), "type": "response_item", "payload": map[string]any{
+			"type": "message", "id": "codex-a-1", "role": "user",
+			"content": []any{map[string]any{"type": "input_text", "text": "A prompt"}},
+		}},
+	)
+
+	service := NewService(newFakeRuntime())
+	paths, err := service.ExternalImportValidProjectPaths(ctx, ExternalImportInput{
+		Projects: []ExternalImportProjectSelection{{Path: project}, {Path: empty}},
+	})
+	if err != nil {
+		t.Fatalf("ExternalImportValidProjectPaths error = %v", err)
+	}
+	if len(paths) != 1 || paths[0] != project {
+		t.Fatalf("valid paths = %#v, want only the project with a session (%s)", paths, project)
+	}
+}
+
 func TestServiceImportsExternalAgentSessionsByProject(t *testing.T) {
 	ctx := context.Background()
 	store := openAgentServiceSQLiteStore(t)

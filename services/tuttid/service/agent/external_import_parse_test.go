@@ -5,6 +5,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"unicode/utf8"
 )
 
 func TestParseCodexJSONLUsesFirstUserEventAsTitle(t *testing.T) {
@@ -219,6 +220,19 @@ func TestParseClaudeCodeJSONLPrefersCustomTitle(t *testing.T) {
 	}
 	if session.Title != "Summarize user persona prompts" {
 		t.Fatalf("title = %q, want custom-title", session.Title)
+	}
+}
+
+func TestTruncateExternalTitleKeepsMultibyteRunesIntact(t *testing.T) {
+	// 120 CJK runes (360 bytes) — must truncate by rune, not byte, so the
+	// result stays valid UTF-8 instead of being cut mid-character.
+	long := strings.Repeat("测", 120)
+	got := truncateExternalTitle(long)
+	if !utf8.ValidString(got) {
+		t.Fatalf("truncated title = %q is not valid UTF-8", got)
+	}
+	if runes := utf8.RuneCountInString(got); runes != 80 {
+		t.Fatalf("truncated rune count = %d, want 80", runes)
 	}
 }
 

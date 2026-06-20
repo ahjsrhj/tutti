@@ -3,6 +3,7 @@ package agent
 import (
 	"context"
 	"database/sql"
+	"net/url"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -32,8 +33,11 @@ func codexThreadTitles(codexHome string) map[string]string {
 	}
 
 	// Open read-only with a short busy timeout so a live Codex process holding
-	// the write lock never blocks the import scan.
-	db, err := sql.Open("sqlite", "file:"+dbPath+"?mode=ro&_pragma=busy_timeout(2000)")
+	// the write lock never blocks the import scan. Build the file: URI via
+	// url.URL so paths containing spaces or other reserved characters are
+	// percent-encoded rather than corrupting the DSN.
+	dsn := (&url.URL{Scheme: "file", Path: dbPath, RawQuery: "mode=ro&_pragma=busy_timeout(2000)"}).String()
+	db, err := sql.Open("sqlite", dsn)
 	if err != nil {
 		return titles
 	}

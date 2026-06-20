@@ -64,6 +64,20 @@ func TestCodexThreadTitlesReadsStateDB(t *testing.T) {
 	}
 }
 
+func TestCodexThreadTitlesReadsFromPathWithSpaces(t *testing.T) {
+	codexHome := filepath.Join(t.TempDir(), "code x home")
+	if err := os.MkdirAll(codexHome, 0o755); err != nil {
+		t.Fatalf("create codex home error = %v", err)
+	}
+	writeCodexThreadsDB(t, filepath.Join(codexHome, "state_5.sqlite"), map[string]string{
+		"thread-a": "Title in spaced dir",
+	})
+	titles := codexThreadTitles(codexHome)
+	if titles["thread-a"] != "Title in spaced dir" {
+		t.Fatalf("title = %q, want title read from a path containing spaces", titles["thread-a"])
+	}
+}
+
 func TestCodexThreadTitlesMissingDB(t *testing.T) {
 	if titles := codexThreadTitles(t.TempDir()); len(titles) != 0 {
 		t.Fatalf("titles = %#v, want empty for missing DB", titles)

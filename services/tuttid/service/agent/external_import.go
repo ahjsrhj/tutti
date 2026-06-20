@@ -177,15 +177,6 @@ func (s *Service) ImportExternalSessions(ctx context.Context, workspaceID string
 	return result, nil
 }
 
-func sortedStringSet(values map[string]struct{}) []string {
-	out := make([]string, 0, len(values))
-	for value := range values {
-		out = append(out, value)
-	}
-	sort.Strings(out)
-	return out
-}
-
 func normalizeExternalImportProviders(input []string) []string {
 	if len(input) == 0 {
 		return []string{agentproviderbiz.Codex, agentproviderbiz.ClaudeCode}
@@ -683,10 +674,12 @@ func externalSessionTitle(messages []externalImportedMessage) string {
 
 func truncateExternalTitle(input string) string {
 	input = strings.Join(strings.Fields(input), " ")
-	if len(input) <= 80 {
+	const maxTitleRunes = 80
+	runes := []rune(input)
+	if len(runes) <= maxTitleRunes {
 		return input
 	}
-	return strings.TrimSpace(input[:80])
+	return strings.TrimSpace(string(runes[:maxTitleRunes]))
 }
 
 func firstExternalMessageUnixMS(messages []externalImportedMessage) int64 {
