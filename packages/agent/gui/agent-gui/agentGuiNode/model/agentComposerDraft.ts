@@ -4,7 +4,10 @@ import type {
   AgentComposerDraftImage,
   AgentGUIProviderSkillOption
 } from "./agentGuiNodeTypes";
-import { promptForProviderSkills } from "./agentSkillOptions";
+import {
+  promptForProviderSkills,
+  skillTriggerForPrefix
+} from "./agentSkillOptions";
 
 export const MAX_AGENT_COMPOSER_DRAFT_IMAGES = 8;
 
@@ -53,6 +56,14 @@ export function normalizeAgentPromptContentBlocks(
         data,
         ...(block.name?.trim() ? { name: block.name.trim() } : {})
       });
+      continue;
+    }
+    if (block.type === "skill" || block.type === "mention") {
+      const name = block.name?.trim();
+      const path = block.path?.trim();
+      if (name && path) {
+        result.push({ type: block.type, name, path });
+      }
     }
   }
   return result;
@@ -105,14 +116,18 @@ export function agentComposerDraftToPromptContent(input: {
   provider: string;
   skills: readonly AgentGUIProviderSkillOption[];
 }): AgentPromptContentBlock[] {
+  const prompt = promptForProviderSkills({
+    prompt: input.draft.prompt,
+    provider: input.provider,
+    skills: input.skills
+  });
   return normalizeAgentPromptContentBlocks([
-    ...textPromptContent(
-      promptForProviderSkills({
-        prompt: input.draft.prompt,
-        provider: input.provider,
-        skills: input.skills
-      })
-    ),
+    ...textPromptContent(prompt),
+    ...promptItemBlocksForProviderSkills({
+      prompt,
+      provider: input.provider,
+      skills: input.skills
+    }),
     ...input.draft.images
       .slice(0, MAX_AGENT_COMPOSER_DRAFT_IMAGES)
       .map((image) => ({
@@ -122,6 +137,41 @@ export function agentComposerDraftToPromptContent(input: {
         name: image.name
       }))
   ]);
+}
+
+function promptItemBlocksForProviderSkills(input: {
+  prompt: string;
+  provider: string;
+  skills: readonly AgentGUIProviderSkillOption[];
+}): AgentPromptContentBlock[] {
+  if (input.provider.trim() !== "codex") {
+    return [];
+  }
+  const result: AgentPromptContentBlock[] = [];
+  for (const skill of input.skills) {
+    const path = skill.path?.trim();
+    if (!path) {
+      continue;
+    }
+    const trigger = skillTriggerForPrefix(skill, "$");
+    if (!trigger || !promptHasTrigger(input.prompt, trigger)) {
+      continue;
+    }
+    result.push({
+      type: skill.kind === "connector" ? "mention" : "skill",
+      name: skill.name,
+      path
+    });
+  }
+  return result;
+}
+
+function promptHasTrigger(prompt: string, trigger: string): boolean {
+  return new RegExp(`(^|\\s)${escapeRegExp(trigger)}(?=$|\\s)`).test(prompt);
+}
+
+function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
 export function textPromptContent(prompt: string): AgentPromptContentBlock[] {

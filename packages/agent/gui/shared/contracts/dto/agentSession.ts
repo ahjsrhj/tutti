@@ -175,12 +175,13 @@ export interface AgentHostExecAgentSessionInput {
 }
 
 export interface AgentPromptContentBlock {
-  type: "text" | "image";
+  type: "text" | "image" | "skill" | "mention";
   text?: string;
   mimeType?: "image/png" | "image/jpeg" | "image/webp";
   data?: string;
   attachmentId?: string;
   name?: string;
+  path?: string;
 }
 
 export interface AgentHostExecAgentSessionResult {

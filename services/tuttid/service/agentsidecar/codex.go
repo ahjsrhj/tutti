@@ -99,7 +99,34 @@ func exposeUserCodexFiles(codexHome string) error {
 			}
 		}
 	}
+	if err := exposeUserCodexPluginState(codexHome, userCodexHome); err != nil {
+		return err
+	}
 	return exposeUserCodexConfig(codexHome, userCodexHome)
+}
+
+func exposeUserCodexPluginState(codexHome string, userCodexHome string) error {
+	for _, rel := range []string{
+		filepath.Join("plugins", "cache"),
+		filepath.Join("plugins", "data"),
+		filepath.Join("plugins", ".plugin-appserver"),
+	} {
+		source := filepath.Join(userCodexHome, rel)
+		if _, err := os.Stat(source); err != nil {
+			continue
+		}
+		target := filepath.Join(codexHome, rel)
+		if _, err := os.Lstat(target); err == nil {
+			continue
+		}
+		if err := os.MkdirAll(filepath.Dir(target), 0o700); err != nil {
+			return fmt.Errorf("create codex plugin state parent: %w", err)
+		}
+		if err := os.Symlink(source, target); err != nil {
+			return fmt.Errorf("expose codex plugin state %s: %w", rel, err)
+		}
+	}
+	return nil
 }
 
 func exposeUserCodexConfig(codexHome string, userCodexHome string) error {

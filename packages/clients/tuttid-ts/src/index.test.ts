@@ -599,7 +599,8 @@ test("shared tuttid client loads agent provider composer options", async () => {
               }
             ]
           },
-          skills: []
+          skills: [],
+          capabilityCatalog: []
         } satisfies AgentProviderComposerOptionsResponse),
         {
           status: 200,
@@ -664,7 +665,8 @@ test("shared tuttid client loads agent provider composer options", async () => {
         }
       ]
     },
-    skills: []
+    skills: [],
+    capabilityCatalog: []
   } satisfies AgentProviderComposerOptionsResponse);
 });
 

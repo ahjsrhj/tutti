@@ -1115,6 +1115,13 @@ func appServerUserInput(content []PromptContentBlock) []map[string]any {
 				"type": "image",
 				"url":  "data:" + firstNonEmpty(block.MimeType, "image/png") + ";base64," + block.Data,
 			})
+		case "skill", "mention":
+			item := map[string]any{
+				"type": block.Type,
+				"name": block.Name,
+				"path": block.Path,
+			}
+			out = append(out, item)
 		}
 	}
 	return out

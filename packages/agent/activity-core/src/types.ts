@@ -102,9 +102,33 @@ export interface AgentActivityComposerSkillOption {
     | "bundled"
     | "plugin"
     | "system"
-    | "tutti-injected";
+    | "tutti-injected"
+    | "connector";
   description?: string;
   pluginName?: string;
+  path?: string;
+  kind?: "skill" | "connector";
+}
+
+export interface AgentActivityComposerCapabilityOption {
+  id: string;
+  kind: "skill" | "plugin" | "connector" | "mcpServer" | "mcpTool";
+  name: string;
+  label: string;
+  status:
+    | "available"
+    | "disabled"
+    | "authRequired"
+    | "setupRequired"
+    | "unsupported";
+  invocation: "promptItem" | "textTrigger" | "none";
+  description?: string;
+  source?: string;
+  pluginName?: string;
+  serverName?: string;
+  toolName?: string;
+  trigger?: string;
+  path?: string;
 }
 
 export interface AgentActivityComposerPermissionModeOption {
@@ -143,6 +167,7 @@ export interface AgentActivityComposerOptions {
   permissionConfig?: AgentActivityComposerPermissionConfig | null;
   runtimeContext?: Record<string, unknown>;
   skills: AgentActivityComposerSkillOption[];
+  capabilityCatalog?: AgentActivityComposerCapabilityOption[];
   loadedAtUnixMs: number;
 }
 
@@ -237,12 +262,13 @@ export interface AgentActivitySendInput {
 }
 
 export interface AgentPromptContentBlock {
-  type: "text" | "image";
+  type: "text" | "image" | "skill" | "mention";
   text?: string;
   mimeType?: "image/png" | "image/jpeg" | "image/webp";
   data?: string;
   attachmentId?: string;
   name?: string;
+  path?: string;
 }
 
 export interface AgentActivityCancelSessionInput {

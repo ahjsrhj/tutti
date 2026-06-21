@@ -35,6 +35,7 @@ export type {
   AgentActivityCancelReason,
   AgentActivityCancelSessionInput,
   AgentActivityCancelSessionResult,
+  AgentActivityComposerCapabilityOption,
   AgentActivityComposerOptions,
   AgentActivityComposerPermissionConfig,
   AgentActivityComposerPermissionModeOption,

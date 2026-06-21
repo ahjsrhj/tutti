@@ -74,6 +74,23 @@ type ComposerSkillOption struct {
 	SourceKind  string
 	Description string
 	PluginName  string
+	Path        string
+}
+
+type ComposerCapabilityOption struct {
+	ID          string
+	Kind        string
+	Name        string
+	Label       string
+	Description string
+	Status      string
+	Source      string
+	PluginName  string
+	ServerName  string
+	ToolName    string
+	Trigger     string
+	Path        string
+	Invocation  string
 }
 
 type ComposerOptions struct {
@@ -85,6 +102,7 @@ type ComposerOptions struct {
 	EffectiveSettings ComposerSettings
 	RuntimeContext    map[string]any
 	Skills            []ComposerSkillOption
+	CapabilityCatalog []ComposerCapabilityOption
 }
 
 func (s *Service) GetComposerOptions(ctx context.Context, input ComposerOptionsInput) (ComposerOptions, error) {
@@ -122,7 +140,12 @@ func (s *Service) GetComposerOptions(ctx context.Context, input ComposerOptionsI
 		"speed":            nullableString(effectiveSettings.Speed),
 	}
 	skills := s.discoverComposerSkillOptions(provider, input.Cwd, nil)
+	capabilityCatalog, capabilityErrors := discoverComposerCapabilityOptions(ctx, provider, input.Cwd, skills)
 	runtimeContext["skills"] = composerSkillOptionsRuntimeContext(skills)
+	runtimeContext["capabilityCatalog"] = composerCapabilityOptionsRuntimeContext(capabilityCatalog)
+	if len(capabilityErrors) > 0 {
+		runtimeContext["capabilityCatalogErrors"] = capabilityErrors
+	}
 	if composerOptionsProviderUsesModelCatalog(provider) {
 		if catalogOptions, source, ok := composerModelOptionsFromCatalog(ctx, s.ModelCatalog, provider, effectiveSettings.Model); ok {
 			modelOptions = catalogOptions
@@ -139,6 +162,7 @@ func (s *Service) GetComposerOptions(ctx context.Context, input ComposerOptionsI
 		EffectiveSettings: effectiveSettings,
 		RuntimeContext:    runtimeContext,
 		Skills:            skills,
+		CapabilityCatalog: capabilityCatalog,
 	}, nil
 }
 

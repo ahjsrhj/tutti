@@ -85,7 +85,37 @@ export function speedSelectionFromComposerOptions(
 export function providerSkillsFromComposerOptions(
   options: AgentActivityComposerOptions | null
 ): AgentGUIProviderSkillOption[] {
-  return options?.skills.map((skill) => ({ ...skill })) ?? [];
+  if (!options) {
+    return [];
+  }
+  return dedupeProviderSkills([
+    ...options.skills.map((skill) => ({ ...skill })),
+    ...(options.capabilityCatalog ?? [])
+      .filter(
+        (capability) =>
+          capability.invocation === "promptItem" &&
+          (capability.kind === "skill" || capability.kind === "connector") &&
+          capability.status === "available" &&
+          Boolean(capability.trigger) &&
+          Boolean(capability.path)
+      )
+      .map((capability): AgentGUIProviderSkillOption => {
+        const isConnector = capability.kind === "connector";
+        return {
+          name: isConnector ? capability.label : capability.name,
+          trigger: capability.trigger!,
+          sourceKind: isConnector ? "connector" : "plugin",
+          kind: isConnector ? "connector" : "skill",
+          ...(capability.description
+            ? { description: capability.description }
+            : {}),
+          ...(capability.pluginName
+            ? { pluginName: capability.pluginName }
+            : {}),
+          ...(capability.path ? { path: capability.path } : {})
+        };
+      })
+  ]);
 }
 
 export function areProviderSkillOptionsEqual(
@@ -97,7 +127,9 @@ export function areProviderSkillOptionsEqual(
     left.trigger === right.trigger &&
     left.sourceKind === right.sourceKind &&
     left.description === right.description &&
-    left.pluginName === right.pluginName
+    left.pluginName === right.pluginName &&
+    left.path === right.path &&
+    left.kind === right.kind
   );
 }
 
@@ -111,6 +143,22 @@ export function areProviderSkillOptionListsEqual(
       areProviderSkillOptionsEqual(skill, right[index]!)
     )
   );
+}
+
+function dedupeProviderSkills(
+  skills: readonly AgentGUIProviderSkillOption[]
+): AgentGUIProviderSkillOption[] {
+  const seen = new Set<string>();
+  const result: AgentGUIProviderSkillOption[] = [];
+  for (const skill of skills) {
+    const key = skill.trigger || `${skill.kind ?? "skill"}:${skill.name}`;
+    if (seen.has(key)) {
+      continue;
+    }
+    seen.add(key);
+    result.push(skill);
+  }
+  return result;
 }
 
 export function permissionConfigFromComposerOptions(

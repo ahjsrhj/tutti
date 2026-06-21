@@ -30,6 +30,17 @@ func normalizeRuntimePromptContent(content []PromptContentBlock) []PromptContent
 				AttachmentID: strings.TrimSpace(block.AttachmentID),
 				Name:         strings.TrimSpace(block.Name),
 			})
+		case "skill", "mention":
+			name := strings.TrimSpace(block.Name)
+			path := strings.TrimSpace(block.Path)
+			if name == "" || path == "" {
+				continue
+			}
+			out = append(out, PromptContentBlock{
+				Type: strings.TrimSpace(block.Type),
+				Name: name,
+				Path: path,
+			})
 		}
 	}
 	return out
@@ -57,6 +68,17 @@ func normalizeRuntimePromptContentForValidation(content []PromptContentBlock) []
 				Data:         strings.TrimSpace(block.Data),
 				AttachmentID: strings.TrimSpace(block.AttachmentID),
 				Name:         strings.TrimSpace(block.Name),
+			})
+		case "skill", "mention":
+			name := strings.TrimSpace(block.Name)
+			path := strings.TrimSpace(block.Path)
+			if name == "" || path == "" {
+				continue
+			}
+			out = append(out, PromptContentBlock{
+				Type: strings.TrimSpace(block.Type),
+				Name: name,
+				Path: path,
 			})
 		}
 	}

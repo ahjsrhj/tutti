@@ -559,6 +559,7 @@ func composerSettingsPatchFromGenerated(settings tuttigenerated.AgentSessionComp
 func generatedAgentProviderComposerOptions(options agentservice.ComposerOptions) tuttigenerated.AgentProviderComposerOptionsResponse {
 	effectiveSettings := generatedAgentSessionComposerSettings(options.EffectiveSettings)
 	return tuttigenerated.AgentProviderComposerOptionsResponse{
+		CapabilityCatalog: generatedAgentProviderCapabilityOptions(options.CapabilityCatalog),
 		EffectiveSettings: effectiveSettings,
 		ModelConfig:       generatedComposerConfigOption(options.ModelConfig),
 		PermissionConfig:  generatedPermissionConfig(options.PermissionConfig),
@@ -568,76 +569,6 @@ func generatedAgentProviderComposerOptions(options agentservice.ComposerOptions)
 		RuntimeContext:    options.RuntimeContext,
 		Skills:            generatedAgentProviderSkillOptions(options.Skills),
 	}
-}
-
-func generatedAgentProviderSkillOptions(options []agentservice.ComposerSkillOption) []tuttigenerated.AgentProviderSkillOption {
-	if len(options) == 0 {
-		return []tuttigenerated.AgentProviderSkillOption{}
-	}
-	result := make([]tuttigenerated.AgentProviderSkillOption, 0, len(options))
-	for _, option := range options {
-		name := strings.TrimSpace(option.Name)
-		trigger := strings.TrimSpace(option.Trigger)
-		sourceKind := strings.TrimSpace(option.SourceKind)
-		if name == "" || trigger == "" || sourceKind == "" {
-			continue
-		}
-		generated := tuttigenerated.AgentProviderSkillOption{
-			Name:       name,
-			Trigger:    trigger,
-			SourceKind: tuttigenerated.AgentProviderSkillOptionSourceKind(sourceKind),
-		}
-		if description := strings.TrimSpace(option.Description); description != "" {
-			generated.Description = optionalStringPointer(description)
-		}
-		if pluginName := strings.TrimSpace(option.PluginName); pluginName != "" {
-			generated.PluginName = optionalStringPointer(pluginName)
-		}
-		result = append(result, generated)
-	}
-	return result
-}
-
-// generatedComposerConfigOptionPointer projects an optional composer config
-// (the orthogonal speed dimension) and omits it entirely for providers that do
-// not expose it, so the GUI hides the control.
-func generatedComposerConfigOptionPointer(config agentservice.ComposerConfigOption) *tuttigenerated.AgentProviderComposerConfig {
-	if !config.Configurable && len(config.Options) == 0 {
-		return nil
-	}
-	generated := generatedComposerConfigOption(config)
-	return &generated
-}
-
-func generatedComposerConfigOption(config agentservice.ComposerConfigOption) tuttigenerated.AgentProviderComposerConfig {
-	result := tuttigenerated.AgentProviderComposerConfig{
-		Configurable: config.Configurable,
-		Options:      make([]tuttigenerated.AgentProviderComposerConfigOptionValue, 0, len(config.Options)),
-	}
-	if strings.TrimSpace(config.CurrentValue) != "" {
-		result.CurrentValue = optionalStringPointer(config.CurrentValue)
-	}
-	if strings.TrimSpace(config.DefaultValue) != "" {
-		result.DefaultValue = optionalStringPointer(config.DefaultValue)
-	}
-	for _, option := range config.Options {
-		value := strings.TrimSpace(option.Value)
-		id := strings.TrimSpace(option.ID)
-		label := strings.TrimSpace(option.Label)
-		if value == "" || id == "" || label == "" {
-			continue
-		}
-		resultOption := tuttigenerated.AgentProviderComposerConfigOptionValue{
-			Id:    id,
-			Label: label,
-			Value: value,
-		}
-		if strings.TrimSpace(option.Description) != "" {
-			resultOption.Description = optionalStringPointer(option.Description)
-		}
-		result.Options = append(result.Options, resultOption)
-	}
-	return result
 }
 
 func generatedAgentSessionComposerSettings(settings agentservice.ComposerSettings) tuttigenerated.AgentSessionComposerSettings {
@@ -769,6 +700,9 @@ func agentPromptContentFromGenerated(content []tuttigenerated.AgentPromptContent
 		}
 		if block.Name != nil {
 			item.Name = *block.Name
+		}
+		if block.Path != nil {
+			item.Path = *block.Path
 		}
 		result = append(result, item)
 	}

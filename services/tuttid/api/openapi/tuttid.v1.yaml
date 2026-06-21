@@ -4616,6 +4616,7 @@ components:
         - effectiveSettings
         - runtimeContext
         - skills
+        - capabilityCatalog
       properties:
         provider:
           $ref: "#/components/schemas/WorkspaceAgentProvider"
@@ -4636,6 +4637,10 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/AgentProviderSkillOption"
+        capabilityCatalog:
+          type: array
+          items:
+            $ref: "#/components/schemas/AgentProviderCapabilityOption"
     AgentProviderSkillOption:
       type: object
       additionalProperties: false
@@ -4661,6 +4666,64 @@ components:
           type: string
         pluginName:
           type: string
+        path:
+          type: string
+    AgentProviderCapabilityOption:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - kind
+        - name
+        - label
+        - status
+        - invocation
+      properties:
+        id:
+          type: string
+          minLength: 1
+        kind:
+          type: string
+          enum:
+            - skill
+            - plugin
+            - connector
+            - mcpServer
+            - mcpTool
+        name:
+          type: string
+          minLength: 1
+        label:
+          type: string
+          minLength: 1
+        description:
+          type: string
+        status:
+          type: string
+          enum:
+            - available
+            - disabled
+            - authRequired
+            - setupRequired
+            - unsupported
+        source:
+          type: string
+        pluginName:
+          type: string
+        serverName:
+          type: string
+        toolName:
+          type: string
+        trigger:
+          type: string
+        path:
+          type: string
+        invocation:
+          type: string
+          enum:
+            - promptItem
+            - textTrigger
+            - none
     AgentProviderAvailabilityStatus:
       type: string
       enum:
@@ -5422,6 +5485,8 @@ components:
           enum:
             - text
             - image
+            - skill
+            - mention
         text:
           type: string
         mimeType:
@@ -5435,6 +5500,8 @@ components:
         attachmentId:
           type: string
         name:
+          type: string
+        path:
           type: string
     WorkspaceAgentSessionAttachmentResponse:
       type: object

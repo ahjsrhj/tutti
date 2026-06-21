@@ -33,6 +33,9 @@ func TestDefaultPreparerCodexWritesInstructionsSkillManifestAndEnv(t *testing.T)
 	if err := os.WriteFile(filepath.Join(userCodexHome, "config.toml"), []byte(userCodexConfig), 0o600); err != nil {
 		t.Fatal(err)
 	}
+	writeSidecarTestFile(t, filepath.Join(userCodexHome, "plugins", "cache", "sample", "plugin.txt"), "plugin cache")
+	writeSidecarTestFile(t, filepath.Join(userCodexHome, "plugins", "data", "sample", "state.txt"), "plugin state")
+	writeSidecarTestFile(t, filepath.Join(userCodexHome, "plugins", ".plugin-appserver", "codex"), "plugin server")
 	writeSidecarTestFile(t, filepath.Join(userCodexHome, "skills", "caveman", "SKILL.md"), "---\nname: caveman\n---\nCaveman mode\n")
 	writeSidecarTestFile(t, filepath.Join(userCodexHome, "skills", "grill-me", "SKILL.md"), "---\nname: grill-me\n---\nGrill me\n")
 	writeSidecarTestFile(t, filepath.Join(userCodexHome, "skills", "broken-frontmatter", "SKILL.md"), "name: broken-frontmatter\n---\nBroken\n")
@@ -99,6 +102,19 @@ func TestDefaultPreparerCodexWritesInstructionsSkillManifestAndEnv(t *testing.T)
 	}
 	if _, err := os.Lstat(filepath.Join(codexHome, "auth.json")); err != nil {
 		t.Fatalf("codex auth not exposed: %v", err)
+	}
+	for _, rel := range []string{
+		filepath.Join("plugins", "cache"),
+		filepath.Join("plugins", "data"),
+		filepath.Join("plugins", ".plugin-appserver"),
+	} {
+		info, err := os.Lstat(filepath.Join(codexHome, rel))
+		if err != nil {
+			t.Fatalf("codex plugin state %s not exposed: %v", rel, err)
+		}
+		if info.Mode()&os.ModeSymlink == 0 {
+			t.Fatalf("codex plugin state %s should be exposed as symlink", rel)
+		}
 	}
 	if _, err := os.Stat(filepath.Join(cwd, ".tutti-codex-root")); !os.IsNotExist(err) {
 		t.Fatalf("codex preparer should not create project root marker in cwd, err = %v", err)

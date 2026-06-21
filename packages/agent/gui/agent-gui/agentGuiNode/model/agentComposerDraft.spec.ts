@@ -31,6 +31,35 @@ describe("agentComposerDraft", () => {
     ).toEqual([{ type: "text", text: "run tests" }]);
   });
 
+  it("adds codex app-server prompt items for referenced skills and connectors", () => {
+    expect(
+      agentComposerDraftToPromptContent({
+        draft: { prompt: "$review $github check this", images: [] },
+        provider: "codex",
+        skills: [
+          {
+            name: "review",
+            trigger: "$review",
+            sourceKind: "plugin",
+            path: "/tmp/review/SKILL.md",
+            kind: "skill"
+          },
+          {
+            name: "GitHub",
+            trigger: "$github",
+            sourceKind: "connector",
+            path: "app://github",
+            kind: "connector"
+          }
+        ]
+      })
+    ).toEqual([
+      { type: "text", text: "$review $github check this" },
+      { type: "skill", name: "review", path: "/tmp/review/SKILL.md" },
+      { type: "mention", name: "GitHub", path: "app://github" }
+    ]);
+  });
+
   it("converts image-only drafts into prompt content", () => {
     expect(
       agentComposerDraftToPromptContent({

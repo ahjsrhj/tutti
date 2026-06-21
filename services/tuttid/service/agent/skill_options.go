@@ -304,6 +304,7 @@ func discoverProviderSkillRoot(
 			SourceKind:  root.sourceKind,
 			Description: metadata.description,
 			PluginName:  root.pluginName,
+			Path:        skillPath,
 		})
 	}
 	return options
@@ -514,6 +515,72 @@ func composerSkillOptionsRuntimeContext(options []ComposerSkillOption) []map[str
 		}
 		if option.PluginName != "" {
 			value["pluginName"] = option.PluginName
+		}
+		if option.Path != "" {
+			value["path"] = option.Path
+		}
+		result = append(result, value)
+	}
+	return result
+}
+
+func composerCapabilityCatalogFromSkills(provider string, skills []ComposerSkillOption) []ComposerCapabilityOption {
+	if len(skills) == 0 {
+		return []ComposerCapabilityOption{}
+	}
+	result := make([]ComposerCapabilityOption, 0, len(skills))
+	for _, skill := range skills {
+		name := strings.TrimSpace(skill.Name)
+		trigger := strings.TrimSpace(skill.Trigger)
+		if name == "" || trigger == "" {
+			continue
+		}
+		invocation := "textTrigger"
+		if agentprovider.Normalize(provider) == agentprovider.Codex && strings.HasPrefix(trigger, "$") {
+			invocation = "promptItem"
+		}
+		result = append(result, ComposerCapabilityOption{
+			ID:          "skill:" + name,
+			Kind:        "skill",
+			Name:        name,
+			Label:       name,
+			Description: strings.TrimSpace(skill.Description),
+			Status:      "available",
+			PluginName:  strings.TrimSpace(skill.PluginName),
+			Trigger:     trigger,
+			Path:        strings.TrimSpace(skill.Path),
+			Invocation:  invocation,
+		})
+	}
+	return result
+}
+
+func composerCapabilityOptionsRuntimeContext(options []ComposerCapabilityOption) []map[string]any {
+	if len(options) == 0 {
+		return []map[string]any{}
+	}
+	result := make([]map[string]any, 0, len(options))
+	for _, option := range options {
+		value := map[string]any{
+			"id":         option.ID,
+			"kind":       option.Kind,
+			"name":       option.Name,
+			"label":      option.Label,
+			"status":     option.Status,
+			"invocation": option.Invocation,
+		}
+		for key, text := range map[string]string{
+			"description": option.Description,
+			"source":      option.Source,
+			"pluginName":  option.PluginName,
+			"serverName":  option.ServerName,
+			"toolName":    option.ToolName,
+			"trigger":     option.Trigger,
+			"path":        option.Path,
+		} {
+			if strings.TrimSpace(text) != "" {
+				value[key] = strings.TrimSpace(text)
+			}
 		}
 		result = append(result, value)
 	}

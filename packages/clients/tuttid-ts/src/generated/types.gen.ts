@@ -735,6 +735,7 @@ export type AgentProviderComposerOptionsResponse = {
     [key: string]: unknown;
   };
   skills: Array<AgentProviderSkillOption>;
+  capabilityCatalog: Array<AgentProviderCapabilityOption>;
 };
 
 export type AgentProviderSkillOption = {
@@ -749,6 +750,28 @@ export type AgentProviderSkillOption = {
     | "tutti-injected";
   description?: string;
   pluginName?: string;
+  path?: string;
+};
+
+export type AgentProviderCapabilityOption = {
+  id: string;
+  kind: "skill" | "plugin" | "connector" | "mcpServer" | "mcpTool";
+  name: string;
+  label: string;
+  description?: string;
+  status:
+    | "available"
+    | "disabled"
+    | "authRequired"
+    | "setupRequired"
+    | "unsupported";
+  source?: string;
+  pluginName?: string;
+  serverName?: string;
+  toolName?: string;
+  trigger?: string;
+  path?: string;
+  invocation: "promptItem" | "textTrigger" | "none";
 };
 
 export type AgentProviderAvailabilityStatus =
@@ -1033,12 +1056,13 @@ export type SendWorkspaceAgentSessionInputRequest = {
 };
 
 export type AgentPromptContentBlock = {
-  type: "text" | "image";
+  type: "text" | "image" | "skill" | "mention";
   text?: string;
   mimeType?: "image/png" | "image/jpeg" | "image/webp";
   data?: string;
   attachmentId?: string;
   name?: string;
+  path?: string;
 };
 
 export type WorkspaceAgentSessionAttachmentResponse = {

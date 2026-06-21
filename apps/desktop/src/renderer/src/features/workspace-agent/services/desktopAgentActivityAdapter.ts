@@ -1,5 +1,6 @@
 import type {
   AgentActivityAdapter,
+  AgentActivityComposerCapabilityOption,
   AgentActivityComposerOptions,
   AgentActivityComposerPermissionConfig,
   AgentActivityComposerSettingOption,
@@ -468,6 +469,16 @@ export function agentActivityComposerOptionsFromTuttidResult(
   );
   const skillsFromResult = skillOptionsFromValue(result.skills);
   const skillsFromRuntimeContext = skillOptionsFromValue(runtimeContext.skills);
+  const capabilitiesFromResult = capabilityOptionsFromValue(
+    result.capabilityCatalog
+  );
+  const capabilitiesFromRuntimeContext = capabilityOptionsFromValue(
+    runtimeContext.capabilityCatalog
+  );
+  const capabilityCatalog =
+    capabilitiesFromResult.length > 0
+      ? capabilitiesFromResult
+      : capabilitiesFromRuntimeContext;
   return {
     provider: normalizeText(result.provider) ?? provider,
     models:
@@ -494,6 +505,7 @@ export function agentActivityComposerOptionsFromTuttidResult(
     runtimeContext,
     skills:
       skillsFromResult.length > 0 ? skillsFromResult : skillsFromRuntimeContext,
+    capabilityCatalog,
     loadedAtUnixMs: Date.now()
   };
 }
@@ -644,12 +656,16 @@ function skillOptionsFromValue(
     seen.add(trigger);
     const description = normalizeText(record.description);
     const pluginName = normalizeText(record.pluginName);
+    const path = normalizeText(record.path);
+    const kind = normalizeSkillKind(record.kind);
     options.push({
       name,
       trigger,
       sourceKind,
       ...(description ? { description } : {}),
-      ...(pluginName ? { pluginName } : {})
+      ...(pluginName ? { pluginName } : {}),
+      ...(path ? { path } : {}),
+      ...(kind ? { kind } : {})
     });
   }
   return options;
@@ -666,6 +682,120 @@ function normalizeSkillSourceKind(
     case "plugin":
     case "system":
     case "tutti-injected":
+    case "connector":
+      return normalized;
+    default:
+      return null;
+  }
+}
+
+function normalizeSkillKind(
+  value: unknown
+): AgentActivityComposerSkillOption["kind"] | null {
+  const normalized = normalizeText(value);
+  switch (normalized) {
+    case "skill":
+    case "connector":
+      return normalized;
+    default:
+      return null;
+  }
+}
+
+function capabilityOptionsFromValue(
+  value: unknown
+): AgentActivityComposerCapabilityOption[] {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+  const options: AgentActivityComposerCapabilityOption[] = [];
+  const seen = new Set<string>();
+  for (const item of value) {
+    const record = recordValue(item);
+    const id = normalizeText(record.id);
+    const kind = normalizeCapabilityKind(record.kind);
+    const name = normalizeText(record.name);
+    const label = normalizeText(record.label) ?? name;
+    const status = normalizeCapabilityStatus(record.status);
+    const invocation = normalizeCapabilityInvocation(record.invocation);
+    if (
+      !id ||
+      !kind ||
+      !name ||
+      !label ||
+      !status ||
+      !invocation ||
+      seen.has(id)
+    ) {
+      continue;
+    }
+    seen.add(id);
+    const description = normalizeText(record.description);
+    const source = normalizeText(record.source);
+    const pluginName = normalizeText(record.pluginName);
+    const serverName = normalizeText(record.serverName);
+    const toolName = normalizeText(record.toolName);
+    const trigger = normalizeText(record.trigger);
+    const path = normalizeText(record.path);
+    options.push({
+      id,
+      kind,
+      name,
+      label,
+      status,
+      invocation,
+      ...(description ? { description } : {}),
+      ...(source ? { source } : {}),
+      ...(pluginName ? { pluginName } : {}),
+      ...(serverName ? { serverName } : {}),
+      ...(toolName ? { toolName } : {}),
+      ...(trigger ? { trigger } : {}),
+      ...(path ? { path } : {})
+    });
+  }
+  return options;
+}
+
+function normalizeCapabilityKind(
+  value: unknown
+): AgentActivityComposerCapabilityOption["kind"] | null {
+  const normalized = normalizeText(value);
+  switch (normalized) {
+    case "skill":
+    case "plugin":
+    case "connector":
+    case "mcpServer":
+    case "mcpTool":
+      return normalized;
+    default:
+      return null;
+  }
+}
+
+function normalizeCapabilityStatus(
+  value: unknown
+): AgentActivityComposerCapabilityOption["status"] | null {
+  const normalized = normalizeText(value);
+  switch (normalized) {
+    case "available":
+    case "disabled":
+    case "authRequired":
+    case "setupRequired":
+    case "unsupported":
+      return normalized;
+    default:
+      return null;
+  }
+}
+
+function normalizeCapabilityInvocation(
+  value: unknown
+): AgentActivityComposerCapabilityOption["invocation"] | null {
+  const normalized = normalizeText(value);
+  switch (normalized) {
+    case "promptItem":
+    case "textTrigger":
+    case "none":
       return normalized;
     default:
       return null;

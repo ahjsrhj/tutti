@@ -54,7 +54,9 @@ test("imageInput resolves from the capabilities list only", () => {
 
 test("vocabulary matches the Go side", () => {
   assert.deepEqual([...AGENT_CAPABILITY_KEYS].sort(), [
+    "browserUse",
     "compact",
+    "computerUse",
     "imageInput",
     "interrupt",
     "planMode",

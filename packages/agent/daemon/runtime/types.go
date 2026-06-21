@@ -148,6 +148,7 @@ type PromptContentBlock struct {
 	Data         string `json:"data,omitempty"`
 	AttachmentID string `json:"attachmentId,omitempty"`
 	Name         string `json:"name,omitempty"`
+	Path         string `json:"path,omitempty"`
 }
 
 type Session struct {

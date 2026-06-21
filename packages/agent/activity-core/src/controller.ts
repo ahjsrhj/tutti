@@ -502,6 +502,9 @@ function cloneAgentActivityComposerOptions(
       : (options.permissionConfig ?? null),
     runtimeContext: cloneJSONRecord(options.runtimeContext),
     skills: options.skills.map((skill) => ({ ...skill })),
+    capabilityCatalog: (options.capabilityCatalog ?? []).map((capability) => ({
+      ...capability
+    })),
     loadedAtUnixMs: options.loadedAtUnixMs
   };
 }

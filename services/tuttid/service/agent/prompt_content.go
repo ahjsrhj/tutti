@@ -69,6 +69,17 @@ func normalizePromptContent(content []PromptContentBlock) ([]PromptContentBlock,
 				AttachmentID: strings.TrimSpace(block.AttachmentID),
 				Name:         strings.TrimSpace(block.Name),
 			})
+		case "skill", "mention":
+			name := strings.TrimSpace(block.Name)
+			path := strings.TrimSpace(block.Path)
+			if name == "" || path == "" {
+				return nil, "", ErrInvalidArgument
+			}
+			normalized = append(normalized, PromptContentBlock{
+				Type: strings.TrimSpace(block.Type),
+				Name: name,
+				Path: path,
+			})
 		default:
 			return nil, "", ErrInvalidArgument
 		}

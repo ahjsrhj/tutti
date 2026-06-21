@@ -110,6 +110,14 @@ export function normalizePromptContentBlocks(
         data,
         ...(block.name?.trim() ? { name: block.name.trim() } : {})
       });
+      continue;
+    }
+    if (block.type === "skill" || block.type === "mention") {
+      const name = block.name?.trim();
+      const path = block.path?.trim();
+      if (name && path) {
+        result.push({ type: block.type, name, path });
+      }
     }
   }
   return result;

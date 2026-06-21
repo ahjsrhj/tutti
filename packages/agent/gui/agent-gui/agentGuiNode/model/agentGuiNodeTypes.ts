@@ -66,9 +66,12 @@ export interface AgentGUIProviderSkillOption {
     | "bundled"
     | "plugin"
     | "system"
-    | "tutti-injected";
+    | "tutti-injected"
+    | "connector";
   description?: string;
   pluginName?: string;
+  path?: string;
+  kind?: "skill" | "connector";
 }
 
 export interface AgentComposerDraftImage {

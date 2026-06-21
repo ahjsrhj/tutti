@@ -293,14 +293,14 @@ func generatedAppCLIIssues(issues []workspacebiz.AppCLIIssue) []tuttigenerated.W
 func generatedAppCLIStatus(status workspacebiz.AppCLIStatus) tuttigenerated.WorkspaceAppCliStatus {
 	switch status {
 	case workspacebiz.AppCLIStatusPending:
-		return tuttigenerated.Pending
+		return tuttigenerated.WorkspaceAppCliStatusPending
 	case workspacebiz.AppCLIStatusActive:
-		return tuttigenerated.Active
+		return tuttigenerated.WorkspaceAppCliStatusActive
 	case workspacebiz.AppCLIStatusWarning:
-		return tuttigenerated.Warning
+		return tuttigenerated.WorkspaceAppCliStatusWarning
 	case workspacebiz.AppCLIStatusError:
-		return tuttigenerated.Error
+		return tuttigenerated.WorkspaceAppCliStatusError
 	default:
-		return tuttigenerated.None
+		return tuttigenerated.WorkspaceAppCliStatusNone
 	}
 }

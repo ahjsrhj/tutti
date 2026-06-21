@@ -975,7 +975,8 @@ test("desktop agent host api loads composer options through tuttid without creat
               }
             ]
           },
-          skills: []
+          skills: [],
+          capabilityCatalog: []
         };
       }
     })
@@ -2840,7 +2841,8 @@ function createTuttidClient(
           reasoningEffort: settings.reasoningEffort ?? null,
           speed: null
         },
-        skills: []
+        skills: [],
+        capabilityCatalog: []
       };
     },
     async listWorkspaceAgentSessions() {

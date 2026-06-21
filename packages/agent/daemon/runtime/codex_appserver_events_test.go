@@ -79,6 +79,24 @@ func TestAppServerUserInputAnswers(t *testing.T) {
 	}
 }
 
+func TestAppServerUserInputIncludesSkillAndMentionItems(t *testing.T) {
+	t.Parallel()
+
+	got := appServerUserInput([]PromptContentBlock{
+		{Type: "text", Text: "use these"},
+		{Type: "skill", Name: "review", Path: "/tmp/review/SKILL.md"},
+		{Type: "mention", Name: "GitHub", Path: "app://github"},
+	})
+	want := []map[string]any{
+		{"type": "text", "text": "use these"},
+		{"type": "skill", "name": "review", "path": "/tmp/review/SKILL.md"},
+		{"type": "mention", "name": "GitHub", "path": "app://github"},
+	}
+	if !reflect.DeepEqual(got, want) {
+		t.Fatalf("appServerUserInput = %#v, want %#v", got, want)
+	}
+}
+
 // TestCodexAppServerAdapterApplyTokenUsagePrefersLastRequest verifies that
 // usedTokens reflects the most-recent request's context size ("last"), not the
 // running sum across all requests in the thread ("total").  The two diverge

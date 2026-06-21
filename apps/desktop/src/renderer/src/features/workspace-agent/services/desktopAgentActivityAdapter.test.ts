@@ -302,7 +302,8 @@ test("desktop agent activity adapter normalizes provider composer options", asyn
               }
             ]
           },
-          skills: []
+          skills: [],
+          capabilityCatalog: []
         };
       }
     }),
@@ -446,7 +447,8 @@ test("desktop agent activity adapter normalizes legacy runtime config options", 
               }
             ]
           },
-          skills: []
+          skills: [],
+          capabilityCatalog: []
         };
       }
     }),
@@ -763,7 +765,8 @@ function createTuttidClient(
           options: []
         },
         runtimeContext: {},
-        skills: []
+        skills: [],
+        capabilityCatalog: []
       };
     },
     async submitWorkspaceAgentInteractive() {

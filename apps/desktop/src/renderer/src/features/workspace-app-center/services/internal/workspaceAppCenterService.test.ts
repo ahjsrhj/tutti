@@ -976,7 +976,8 @@ test("WorkspaceAppCenterService normalizes provider configuration", async () => 
             ]
           },
           runtimeContext: {},
-          skills: []
+          skills: [],
+          capabilityCatalog: []
         };
       }
     })
@@ -1033,7 +1034,8 @@ test("WorkspaceAppCenterService makes effective permission default visible", asy
             options: []
           },
           runtimeContext: {},
-          skills: []
+          skills: [],
+          capabilityCatalog: []
         };
       }
     })
@@ -1331,7 +1333,8 @@ function createTuttidClient(
           options: []
         },
         runtimeContext: {},
-        skills: []
+        skills: [],
+        capabilityCatalog: []
       };
     },
     ...overrides

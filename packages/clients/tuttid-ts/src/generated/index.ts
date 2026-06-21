@@ -142,6 +142,7 @@ export type {
   AgentProviderAuthStatus,
   AgentProviderAvailability,
   AgentProviderAvailabilityStatus,
+  AgentProviderCapabilityOption,
   AgentProviderCliStatus,
   AgentProviderComposerConfig,
   AgentProviderComposerConfigOptionValue,
