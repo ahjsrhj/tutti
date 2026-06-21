@@ -1921,6 +1921,38 @@ describe("AgentGUINode", () => {
     expect(mockSelectConversation).not.toHaveBeenCalled();
   });
 
+  it("opens a conversation in a new window from the rail action without selecting", () => {
+    const onOpenConversationWindow =
+      vi.fn<
+        NonNullable<
+          React.ComponentProps<typeof AgentGUINode>["onOpenConversationWindow"]
+        >
+      >();
+    mockViewModel = createViewModel({
+      conversations: [
+        {
+          id: "session-1",
+          provider: "codex",
+          title: "Session 1",
+          status: "ready",
+          cwd: "/workspace",
+          updatedAtUnixMs: 1
+        }
+      ],
+      activeConversationId: "session-1"
+    });
+    renderAgentGUINode({ onOpenConversationWindow });
+
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: "agentHost.agentGui.openConversationWindow"
+      })
+    );
+
+    expect(onOpenConversationWindow).toHaveBeenCalledWith("session-1");
+    expect(mockSelectConversation).not.toHaveBeenCalled();
+  });
+
   it("renders inline delete confirmation and dispatches confirm without a dialog", () => {
     mockViewModel = createViewModel({
       conversations: [
@@ -6715,6 +6747,7 @@ function renderAgentGUINode({
   onLinkAction,
   onAgentProviderLogin,
   onWorkspaceFileReferencesAdded,
+  onOpenConversationWindow,
   state = {
     provider: "codex",
     lastActiveAgentSessionId: null,
@@ -6748,6 +6781,9 @@ function renderAgentGUINode({
   onWorkspaceFileReferencesAdded?: React.ComponentProps<
     typeof AgentGUINode
   >["onWorkspaceFileReferencesAdded"];
+  onOpenConversationWindow?: React.ComponentProps<
+    typeof AgentGUINode
+  >["onOpenConversationWindow"];
   state?: AgentGUINodeData;
   onUpdateNode?: (
     updater: (current: AgentGUINodeData) => AgentGUINodeData
@@ -6795,6 +6831,7 @@ function renderAgentGUINode({
       onLinkAction={onLinkAction}
       onAgentProviderLogin={onAgentProviderLogin}
       onWorkspaceFileReferencesAdded={onWorkspaceFileReferencesAdded}
+      onOpenConversationWindow={onOpenConversationWindow}
       onClose={vi.fn()}
       onResize={onResize}
       onUpdateNode={onUpdateNode}
