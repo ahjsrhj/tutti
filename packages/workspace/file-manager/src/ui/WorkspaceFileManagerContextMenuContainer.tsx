@@ -39,6 +39,8 @@ export function WorkspaceFileManagerContextMenuContainer({
   useEffect(() => {
     const entry = view.contextMenu?.entry;
     if (!entry || !view.showOpenWithAction) {
+      setOpenWithApplications([]);
+      setOpenWithLoading(false);
       return;
     }
 
@@ -50,6 +52,7 @@ export function WorkspaceFileManagerContextMenuContainer({
     }
 
     let cancelled = false;
+    setOpenWithApplications([]);
     setOpenWithLoading(true);
     void session
       .listOpenWithApplications(entry)
