@@ -256,6 +256,8 @@ func TestServiceListReportsInstallActionWhenCodexAdapterCommandFails(t *testing.
 		Now: func() time.Time {
 			return time.Date(2026, 6, 2, 8, 0, 0, 0, time.UTC)
 		},
+		ProbeReadyAfter: 10 * time.Second,
+		ProbeTimeout:    15 * time.Second,
 		RunAuthStatusCommand: func(context.Context, ProviderSpec, string) (AuthInfo, bool) {
 			return AuthInfo{Status: AuthAuthenticated}, true
 		},
