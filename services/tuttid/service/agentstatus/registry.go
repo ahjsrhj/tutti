@@ -102,12 +102,19 @@ func DefaultRegistry() Registry {
 			LoginArgs: []string{"auth", "login"},
 		},
 		agentprovider.Codex: {
-			Provider:          agentprovider.Codex,
-			BinaryNames:       []string{"codex"},
-			AuthStatusCommand: []string{"login", "status"},
-			AuthMarkerPaths:   []string{"~/.codex/auth.json"},
-			Install:           codexCLIInstallerSpec(),
-			LoginArgs:         []string{"login"},
+			Provider:    agentprovider.Codex,
+			BinaryNames: []string{"codex"},
+			// Codex talks to the local codex binary's built-in app-server; there
+			// is no separate ACP adapter. Resolve/probe that command directly so
+			// availability reflects "codex app-server" rather than bare `codex`
+			// (which is an interactive TUI and fails headless with
+			// "stdin is not a terminal").
+			AdapterBinaryNames: []string{"codex"},
+			AdapterCommand:     []string{"codex", "app-server"},
+			AuthStatusCommand:  []string{"login", "status"},
+			AuthMarkerPaths:    []string{"~/.codex/auth.json"},
+			Install:            codexCLIInstallerSpec(),
+			LoginArgs:          []string{"login"},
 		},
 		agentprovider.Nexight: {
 			Provider:           agentprovider.Nexight,
