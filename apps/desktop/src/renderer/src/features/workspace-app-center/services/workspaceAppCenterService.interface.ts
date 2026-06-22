@@ -66,6 +66,10 @@ export interface IWorkspaceAppCenterService {
   refresh(workspaceId: string): Promise<void>;
   refreshCatalog(workspaceId: string): Promise<void>;
   replaceAppIcon(input: { appId: string; workspaceId: string }): Promise<void>;
+  restartAndOpenApp(input: {
+    appId: string;
+    workspaceId: string;
+  }): Promise<boolean>;
   retryFactoryValidation(input: {
     jobId: string;
     workspaceId: string;

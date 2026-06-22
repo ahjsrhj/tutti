@@ -358,7 +358,15 @@ export const workspaceWorkspaceAppSchema = {
     },
     status: {
       type: "string",
-      enum: ["idle", "preparing", "starting", "running", "failed", "stopping"]
+      enum: [
+        "idle",
+        "preparing",
+        "starting",
+        "running",
+        "installed_pending_restart",
+        "failed",
+        "stopping"
+      ]
     },
     stateRevision: {
       type: "integer",
@@ -1415,6 +1423,7 @@ export const workspaceAppUpdatedPayloadSchema = {
             "preparing",
             "starting",
             "running",
+            "installed_pending_restart",
             "failed",
             "stopping"
           ]

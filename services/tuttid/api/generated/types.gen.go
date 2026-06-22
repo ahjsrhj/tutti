@@ -1089,12 +1089,13 @@ func (e WorkspaceAppMinimizeBehavior) Valid() bool {
 
 // Defines values for WorkspaceAppRuntimeStatus.
 const (
-	WorkspaceAppRuntimeStatusFailed    WorkspaceAppRuntimeStatus = "failed"
-	WorkspaceAppRuntimeStatusIdle      WorkspaceAppRuntimeStatus = "idle"
-	WorkspaceAppRuntimeStatusPreparing WorkspaceAppRuntimeStatus = "preparing"
-	WorkspaceAppRuntimeStatusRunning   WorkspaceAppRuntimeStatus = "running"
-	WorkspaceAppRuntimeStatusStarting  WorkspaceAppRuntimeStatus = "starting"
-	WorkspaceAppRuntimeStatusStopping  WorkspaceAppRuntimeStatus = "stopping"
+	WorkspaceAppRuntimeStatusFailed                  WorkspaceAppRuntimeStatus = "failed"
+	WorkspaceAppRuntimeStatusIdle                    WorkspaceAppRuntimeStatus = "idle"
+	WorkspaceAppRuntimeStatusInstalledPendingRestart WorkspaceAppRuntimeStatus = "installed_pending_restart"
+	WorkspaceAppRuntimeStatusPreparing               WorkspaceAppRuntimeStatus = "preparing"
+	WorkspaceAppRuntimeStatusRunning                 WorkspaceAppRuntimeStatus = "running"
+	WorkspaceAppRuntimeStatusStarting                WorkspaceAppRuntimeStatus = "starting"
+	WorkspaceAppRuntimeStatusStopping                WorkspaceAppRuntimeStatus = "stopping"
 )
 
 // Valid indicates whether the value is a known member of the WorkspaceAppRuntimeStatus enum.
@@ -1103,6 +1104,8 @@ func (e WorkspaceAppRuntimeStatus) Valid() bool {
 	case WorkspaceAppRuntimeStatusFailed:
 		return true
 	case WorkspaceAppRuntimeStatusIdle:
+		return true
+	case WorkspaceAppRuntimeStatusInstalledPendingRestart:
 		return true
 	case WorkspaceAppRuntimeStatusPreparing:
 		return true

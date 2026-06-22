@@ -37,6 +37,7 @@ export const appCenterEn = {
     refreshCatalog: "Refresh catalog",
     replaceIcon: "Replace icon",
     retryApp: "Retry",
+    restartAndOpenApp: "Restart and open",
     updateApp: "Update",
     uninstallAndDeleteApp: "Uninstall and delete",
     uninstallApp: "Uninstall"
@@ -290,6 +291,7 @@ export const appCenterEn = {
       starting: "Starting…"
     },
     installing: "Installing",
+    installedPendingRestart: "New version installed. Restart to apply.",
     preparing: "Preparing",
     running: "Running",
     starting: "Starting",
@@ -317,6 +319,7 @@ export const appCenterZhCN = {
     refreshCatalog: "刷新目录",
     replaceIcon: "替换图标",
     retryApp: "重试",
+    restartAndOpenApp: "重启并打开",
     updateApp: "更新",
     uninstallAndDeleteApp: "卸载并删除",
     uninstallApp: "卸载"
@@ -558,6 +561,7 @@ export const appCenterZhCN = {
       starting: "正在启动…"
     },
     installing: "安装中",
+    installedPendingRestart: "新版已安装，重启后生效",
     preparing: "准备中",
     running: "运行中",
     starting: "启动中",
