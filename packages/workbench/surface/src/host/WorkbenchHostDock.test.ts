@@ -5,23 +5,46 @@ import test from "node:test";
 
 const source = readFileSync(resolve("src/host/WorkbenchHostDock.tsx"), "utf8");
 
-test("dock hover labels avoid tooltip portals while preserving native titles", () => {
+test("dock hover labels use local non-blocking tooltips", () => {
   assert.doesNotMatch(source, /TooltipProvider/);
   assert.doesNotMatch(source, /TooltipTrigger/);
   assert.doesNotMatch(source, /TooltipContent/);
   assert.doesNotMatch(source, /DOCK_MAGNIFIED_TOOLTIP_SIDE_OFFSET/);
-  assert.match(source, /title=\{entry\.label\}/);
-  assert.match(source, /title=\{i18n\.t\("minimizedWindows"\)\}/);
-  assert.match(source, /title=\{node\.title\}/);
+  assert.doesNotMatch(source, /title=\{entry\.label\}/);
+  assert.doesNotMatch(source, /title=\{i18n\.t\("minimizedWindows"\)\}/);
+  assert.doesNotMatch(source, /title=\{node\.title\}/);
   assert.match(source, /const dockHoverPanelOpenDelayMs = 450;/);
   assert.match(source, /const dockHoverPanelCloseDelayMs = 160;/);
   assert.match(source, /const dockHoverPanelBridgeSlopPx = 6;/);
   assert.match(source, /const dockHoverPanelPointerRestTolerancePx = 4;/);
   assert.match(source, /const hoverPanelCloseTimerRef = useRef/);
+  assert.match(source, /const labelTooltipOpenTimerRef = useRef/);
   assert.match(source, /const hoverPanelScheduledPointRef = useRef/);
+  assert.match(source, /const labelTooltipScheduledPointRef = useRef/);
   assert.match(source, /const closeHoverPanelImmediate = useCallback/);
+  assert.match(source, /const closeLabelTooltipImmediate = useCallback/);
   assert.match(source, /const scheduleHoverPanelClose = useCallback/);
+  assert.match(source, /const scheduleLabelTooltipAfterRest = useCallback/);
+  assert.match(
+    source,
+    /const scheduleLabelTooltipAtPointAfterRest = useCallback/
+  );
   assert.match(source, /data-dock-hover-panel-open/);
+  assert.match(source, /data-dock-label-tooltip-key=/);
+  assert.match(source, /data-dock-label-tooltip-label=/);
+  assert.match(source, /desktop-dock__label-tooltip/);
+  assert.match(source, /function dockLabelTooltipTarget/);
+  assert.match(source, /function resolveDockLabelTooltipAnchorRect/);
+  assert.match(source, /DOCK_ICON_BASE_SIZE/);
+  assert.match(
+    source,
+    /left: slotRect\.left \+ \(slotRect\.width - DOCK_ICON_BASE_SIZE\) \/ 2/
+  );
+  assert.match(
+    source,
+    /top: slotRect\.top \+ \(slotRect\.height - DOCK_ICON_BASE_SIZE\) \/ 2/
+  );
+  assert.match(source, /function WorkbenchHostDockLabelTooltip/);
   assert.match(source, /function dockEntryHasHoverPanel/);
   assert.match(
     source,
@@ -30,6 +53,18 @@ test("dock hover labels avoid tooltip portals while preserving native titles", (
   assert.match(source, /resetMagnification: resetDockMagnification/);
   assert.match(source, /pauseMagnification: pauseDockMagnification/);
   assert.match(source, /pauseDockMagnification\(\);/);
+  const showLabelTooltipSource =
+    source.match(
+      /const showLabelTooltip = useCallback\(\s*\([\s\S]*?\n {4}\},/
+    )?.[0] ?? "";
+  assert.notEqual(showLabelTooltipSource, "");
+  assert.match(
+    showLabelTooltipSource,
+    /resolveDockLabelTooltipAnchorRect\(\{\s*dockPlacement,\s*slotElement: anchorElement\s*\}\)/
+  );
+  assert.doesNotMatch(showLabelTooltipSource, /querySelector/);
+  assert.doesNotMatch(showLabelTooltipSource, /pauseDockMagnification/);
+  assert.doesNotMatch(showLabelTooltipSource, /setDockHoverPanelOpen/);
   assert.match(
     source,
     /onPointerEnter=\{\(\) => \{[\s\S]*?if \(hasHoverPanel\) \{[\s\S]*?scheduleHoverPanelAfterRest\(entry\.id, anchorKey\);/
@@ -48,6 +83,10 @@ test("dock hover labels avoid tooltip portals while preserving native titles", (
   );
   assert.match(
     source,
+    /const scheduleLabelTooltipAtPointAfterRest = useCallback\([\s\S]*?activeLabelTooltipRef\.current !== null[\s\S]*?return;/
+  );
+  assert.match(
+    source,
     /hoverPanelOpenTimerRef\.current !== null[\s\S]*?dockHoverPanelPointerRestTolerancePx[\s\S]*?return;/
   );
   assert.match(
@@ -59,7 +98,7 @@ test("dock hover labels avoid tooltip portals while preserving native titles", (
   assert.match(source, /createHoverPanelBridgeRect\(anchorRect, panelRect\)/);
   assert.match(
     source,
-    /handleDockPointerMove\(clientX, clientY\);\s*scheduleHoverPanelAtPointAfterRest\(clientX, clientY\);/
+    /handleDockPointerMove\(clientX, clientY\);\s*scheduleHoverPanelAtPointAfterRest\(clientX, clientY\);\s*scheduleLabelTooltipAtPointAfterRest\(clientX, clientY\);/
   );
   assert.match(
     source,

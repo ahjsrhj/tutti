@@ -31,6 +31,7 @@ import {
   type ResolvedWorkbenchHostDockEntry
 } from "./dockEntries.ts";
 import {
+  DOCK_ICON_BASE_SIZE,
   DOCK_ICON_PEAK_SIZE,
   useDockMagnification
 } from "./dockMagnification.ts";
@@ -157,7 +158,14 @@ export function WorkbenchHostDock({
   const hoverPanelOpenTimerRef = useRef<ReturnType<typeof setTimeout> | null>(
     null
   );
+  const labelTooltipOpenTimerRef = useRef<ReturnType<typeof setTimeout> | null>(
+    null
+  );
   const hoverPanelScheduledPointRef = useRef<{
+    clientX: number;
+    clientY: number;
+  } | null>(null);
+  const labelTooltipScheduledPointRef = useRef<{
     clientX: number;
     clientY: number;
   } | null>(null);
@@ -168,6 +176,8 @@ export function WorkbenchHostDock({
   const activeHoverPanelRef = useRef<WorkbenchHostDockHoverPanelState | null>(
     null
   );
+  const activeLabelTooltipRef =
+    useRef<WorkbenchHostDockLabelTooltipState | null>(null);
   const pendingDockStateRefreshRef = useRef(false);
   const slotRefs = useRef(new Map<string, HTMLElement>());
   const wallpaperToneElementRefs = useRef(new Map<string, HTMLElement>());
@@ -185,6 +195,8 @@ export function WorkbenchHostDock({
     useState<WorkbenchHostDockPopupState | null>(null);
   const [activeHoverPanel, setActiveHoverPanel] =
     useState<WorkbenchHostDockHoverPanelState | null>(null);
+  const [activeLabelTooltip, setActiveLabelTooltip] =
+    useState<WorkbenchHostDockLabelTooltipState | null>(null);
   const [activeMinimizedStackPopup, setActiveMinimizedStackPopup] =
     useState<WorkbenchHostDockPopupAnchorRect | null>(null);
   const [pendingActionKeys, setPendingActionKeys] = useState<Set<string>>(
@@ -225,16 +237,30 @@ export function WorkbenchHostDock({
     hoverPanelScheduledPointRef.current = null;
   }, []);
 
+  const clearLabelTooltipOpenTimer = useCallback(() => {
+    if (labelTooltipOpenTimerRef.current === null) {
+      return;
+    }
+    clearTimeout(labelTooltipOpenTimerRef.current);
+    labelTooltipOpenTimerRef.current = null;
+    labelTooltipScheduledPointRef.current = null;
+  }, []);
+
   useEffect(
     () => () => {
       clearHoverPanelCloseTimer();
       clearHoverPanelOpenTimer();
+      clearLabelTooltipOpenTimer();
       for (const timer of collapsingMinimizedLaunchTimerRef.current.values()) {
         clearTimeout(timer);
       }
       collapsingMinimizedLaunchTimerRef.current.clear();
     },
-    [clearHoverPanelCloseTimer, clearHoverPanelOpenTimer]
+    [
+      clearHoverPanelCloseTimer,
+      clearHoverPanelOpenTimer,
+      clearLabelTooltipOpenTimer
+    ]
   );
 
   const clearCollapsingMinimizedLaunch = useCallback((anchorKey: string) => {
@@ -442,6 +468,28 @@ export function WorkbenchHostDock({
     activeHoverPanelRef.current = activeHoverPanel;
   }, [activeHoverPanel]);
 
+  useEffect(() => {
+    activeLabelTooltipRef.current = activeLabelTooltip;
+  }, [activeLabelTooltip]);
+
+  const closeLabelTooltipImmediate = useCallback(
+    (targetKey?: string) => {
+      clearLabelTooltipOpenTimer();
+      if (
+        targetKey !== undefined &&
+        activeLabelTooltipRef.current?.key !== targetKey
+      ) {
+        return;
+      }
+      if (activeLabelTooltipRef.current === null) {
+        return;
+      }
+      activeLabelTooltipRef.current = null;
+      setActiveLabelTooltip(null);
+    },
+    [clearLabelTooltipOpenTimer]
+  );
+
   const closeHoverPanelImmediate = useCallback(
     (entryId?: string) => {
       clearHoverPanelOpenTimer();
@@ -537,6 +585,57 @@ export function WorkbenchHostDock({
     [clearHoverPanelOpenTimer, showHoverPanel]
   );
 
+  const showLabelTooltip = useCallback(
+    (
+      target: WorkbenchHostDockLabelTooltipTarget,
+      anchorKey: string,
+      anchorElement: HTMLElement
+    ): void => {
+      const dockElement = dockMeasureRef.current;
+      if (!dockElement) {
+        return;
+      }
+
+      const dockRect = dockElement.getBoundingClientRect();
+      const anchorRect = resolveDockLabelTooltipAnchorRect({
+        dockPlacement,
+        slotElement: anchorElement
+      });
+      clearLabelTooltipOpenTimer();
+      const nextTooltip = {
+        anchorKey,
+        anchorRect: {
+          height: anchorRect.height,
+          left: anchorRect.left - dockRect.left,
+          top: anchorRect.top - dockRect.top,
+          width: anchorRect.width
+        },
+        key: target.key,
+        label: target.label
+      };
+      activeLabelTooltipRef.current = nextTooltip;
+      setActiveLabelTooltip(nextTooltip);
+    },
+    [clearLabelTooltipOpenTimer, dockPlacement]
+  );
+
+  const scheduleLabelTooltipAfterRest = useCallback(
+    (target: WorkbenchHostDockLabelTooltipTarget, anchorKey: string) => {
+      clearLabelTooltipOpenTimer();
+      labelTooltipScheduledPointRef.current = null;
+      labelTooltipOpenTimerRef.current = setTimeout(() => {
+        labelTooltipOpenTimerRef.current = null;
+        labelTooltipScheduledPointRef.current = null;
+        const slotElement = slotRefs.current.get(anchorKey);
+        if (!slotElement) {
+          return;
+        }
+        showLabelTooltip(target, anchorKey, slotElement);
+      }, dockHoverPanelOpenDelayMs);
+    },
+    [clearLabelTooltipOpenTimer, showLabelTooltip]
+  );
+
   const resolveHoverPanelTargetAtPoint = useCallback(
     (
       clientX: number,
@@ -560,6 +659,47 @@ export function WorkbenchHostDock({
           clientY <= rect.bottom + dockHoverPanelHitSlopPx
         ) {
           return { anchorKey, entryId, slotElement };
+        }
+      }
+      return null;
+    },
+    []
+  );
+
+  const resolveLabelTooltipTargetAtPoint = useCallback(
+    (
+      clientX: number,
+      clientY: number
+    ): {
+      anchorKey: string;
+      slotElement: HTMLElement;
+      target: WorkbenchHostDockLabelTooltipTarget;
+    } | null => {
+      for (const [anchorKey, slotElement] of slotRefs.current) {
+        if (slotElement.dataset.dockHoverPanelEntryId) {
+          continue;
+        }
+        const key = slotElement.dataset.dockLabelTooltipKey;
+        const label = slotElement.dataset.dockLabelTooltipLabel?.trim() ?? "";
+        if (!key || !label) {
+          continue;
+        }
+
+        const rect = slotElement.getBoundingClientRect();
+        if (
+          clientX >= rect.left - dockHoverPanelHitSlopPx &&
+          clientX <= rect.right + dockHoverPanelHitSlopPx &&
+          clientY >= rect.top - dockHoverPanelHitSlopPx &&
+          clientY <= rect.bottom + dockHoverPanelHitSlopPx
+        ) {
+          return {
+            anchorKey,
+            slotElement,
+            target: {
+              key,
+              label
+            }
+          };
         }
       }
       return null;
@@ -648,20 +788,68 @@ export function WorkbenchHostDock({
     [clearHoverPanelOpenTimer, resolveHoverPanelTargetAtPoint, showHoverPanel]
   );
 
+  const scheduleLabelTooltipAtPointAfterRest = useCallback(
+    (clientX: number, clientY: number) => {
+      if (activeLabelTooltipRef.current !== null) {
+        return;
+      }
+
+      const scheduledPoint = labelTooltipScheduledPointRef.current;
+      if (
+        labelTooltipOpenTimerRef.current !== null &&
+        scheduledPoint &&
+        Math.abs(clientX - scheduledPoint.clientX) <=
+          dockHoverPanelPointerRestTolerancePx &&
+        Math.abs(clientY - scheduledPoint.clientY) <=
+          dockHoverPanelPointerRestTolerancePx
+      ) {
+        return;
+      }
+
+      clearLabelTooltipOpenTimer();
+      labelTooltipScheduledPointRef.current = { clientX, clientY };
+      labelTooltipOpenTimerRef.current = setTimeout(() => {
+        labelTooltipOpenTimerRef.current = null;
+        labelTooltipScheduledPointRef.current = null;
+        if (activeHoverPanelRef.current !== null) {
+          return;
+        }
+        const target = resolveLabelTooltipTargetAtPoint(clientX, clientY);
+        if (!target) {
+          return;
+        }
+        showLabelTooltip(target.target, target.anchorKey, target.slotElement);
+      }, dockHoverPanelOpenDelayMs);
+    },
+    [
+      clearLabelTooltipOpenTimer,
+      resolveLabelTooltipTargetAtPoint,
+      showLabelTooltip
+    ]
+  );
+
   const beginDockIconInteraction = useCallback(
     (anchorKey: string) => {
       hoverPanelRestTargetRef.current = null;
       clearHoverPanelOpenTimer();
+      closeLabelTooltipImmediate();
       closeHoverPanelImmediate();
       triggerDockBounce(anchorKey);
     },
-    [clearHoverPanelOpenTimer, closeHoverPanelImmediate, triggerDockBounce]
+    [
+      clearHoverPanelOpenTimer,
+      closeHoverPanelImmediate,
+      closeLabelTooltipImmediate,
+      triggerDockBounce
+    ]
   );
 
   const beginDockMinimizedInteraction = useCallback(
     (anchorKey?: string): boolean => {
       hoverPanelRestTargetRef.current = null;
       clearHoverPanelOpenTimer();
+      clearLabelTooltipOpenTimer();
+      closeLabelTooltipImmediate();
       closeHoverPanelImmediate();
       pauseDockMagnification();
 
@@ -690,8 +878,10 @@ export function WorkbenchHostDock({
     },
     [
       clearHoverPanelOpenTimer,
+      clearLabelTooltipOpenTimer,
       clearSlotMagnification,
       closeHoverPanelImmediate,
+      closeLabelTooltipImmediate,
       pauseDockMagnification
     ]
   );
@@ -730,6 +920,7 @@ export function WorkbenchHostDock({
   const handleDockPointerTravel = useCallback(
     (clientX: number, clientY: number) => {
       if (activeHoverPanelRef.current !== null) {
+        closeLabelTooltipImmediate();
         if (isPointerInsideActiveHoverPanelRegion(clientX, clientY)) {
           clearHoverPanelCloseTimer();
           return;
@@ -739,16 +930,28 @@ export function WorkbenchHostDock({
         return;
       }
 
+      const activeLabelTooltip = activeLabelTooltipRef.current;
+      if (activeLabelTooltip) {
+        const target = resolveLabelTooltipTargetAtPoint(clientX, clientY);
+        if (target?.target.key !== activeLabelTooltip.key) {
+          closeLabelTooltipImmediate(activeLabelTooltip.key);
+        }
+      }
+
       handleDockPointerMove(clientX, clientY);
       scheduleHoverPanelAtPointAfterRest(clientX, clientY);
+      scheduleLabelTooltipAtPointAfterRest(clientX, clientY);
     },
     [
       clearHoverPanelCloseTimer,
+      closeLabelTooltipImmediate,
       handleDockPointerMove,
       handleDockPointerLeave,
       isPointerInsideActiveHoverPanelRegion,
+      resolveLabelTooltipTargetAtPoint,
       scheduleHoverPanelClose,
-      scheduleHoverPanelAtPointAfterRest
+      scheduleHoverPanelAtPointAfterRest,
+      scheduleLabelTooltipAtPointAfterRest
     ]
   );
 
@@ -954,10 +1157,12 @@ export function WorkbenchHostDock({
   const closePopup = () => {
     clearHoverPanelCloseTimer();
     clearHoverPanelOpenTimer();
+    clearLabelTooltipOpenTimer();
     hoverPanelRestTargetRef.current = null;
     setDockHoverPanelOpen(false);
     setActivePopup(null);
     setActiveHoverPanel(null);
+    closeLabelTooltipImmediate();
     setActiveMinimizedStackPopup(null);
   };
 
@@ -969,6 +1174,7 @@ export function WorkbenchHostDock({
 
     resetDockMagnification();
     closeHoverPanelImmediate();
+    closeLabelTooltipImmediate();
     hoverPanelRestTargetRef.current = null;
 
     const isVertical = dockPlacement === "left";
@@ -1058,6 +1264,8 @@ export function WorkbenchHostDock({
           onPointerLeave={() => {
             hoverPanelRestTargetRef.current = null;
             clearHoverPanelOpenTimer();
+            clearLabelTooltipOpenTimer();
+            closeLabelTooltipImmediate();
             closeHoverPanelImmediate();
             handleDockPointerLeave();
             flushPendingDockStateRefresh();
@@ -1123,6 +1331,9 @@ export function WorkbenchHostDock({
                   matchedNodes: resolvedEntry.matchedNodes
                 });
                 const hasHoverPanel = dockEntryHasHoverPanel(entry);
+                const labelTooltipTarget = hasHoverPanel
+                  ? null
+                  : dockLabelTooltipTarget(`entry:${entry.id}`, entry.label);
                 const dockButton = (
                   <button
                     aria-expanded={currentPopup ? true : undefined}
@@ -1139,7 +1350,6 @@ export function WorkbenchHostDock({
                     data-interactive={
                       clickResolution.kind === "blocked" ? "false" : "true"
                     }
-                    title={entry.label}
                     type="button"
                     onPointerDown={() => {
                       if (clickResolution.kind === "blocked") {
@@ -1281,6 +1491,8 @@ export function WorkbenchHostDock({
                     data-dock-hover-panel-entry-id={
                       hasHoverPanel ? entry.id : undefined
                     }
+                    data-dock-label-tooltip-key={labelTooltipTarget?.key}
+                    data-dock-label-tooltip-label={labelTooltipTarget?.label}
                     data-icon-size={entry.iconSize ?? "default"}
                     data-node-state={resolvedEntry.dockNodeState}
                     data-popup-active={currentPopup ? "true" : undefined}
@@ -1294,6 +1506,12 @@ export function WorkbenchHostDock({
                       ) {
                         closeHoverPanelImmediate(entry.id);
                       }
+                      if (
+                        labelTooltipTarget &&
+                        !event.currentTarget.contains(event.relatedTarget)
+                      ) {
+                        closeLabelTooltipImmediate(labelTooltipTarget.key);
+                      }
                     }}
                     onFocus={(event) => {
                       if (hasHoverPanel) {
@@ -1302,15 +1520,44 @@ export function WorkbenchHostDock({
                           anchorKey,
                           event.currentTarget
                         );
+                        return;
+                      }
+                      if (labelTooltipTarget) {
+                        showLabelTooltip(
+                          labelTooltipTarget,
+                          anchorKey,
+                          event.currentTarget
+                        );
                       }
                     }}
                     onPointerEnter={() => {
                       if (hasHoverPanel) {
                         scheduleHoverPanelAfterRest(entry.id, anchorKey);
+                        return;
+                      }
+                      if (labelTooltipTarget) {
+                        scheduleLabelTooltipAfterRest(
+                          labelTooltipTarget,
+                          anchorKey
+                        );
                       }
                     }}
                     onPointerLeave={(event) => {
                       if (!hasHoverPanel) {
+                        if (labelTooltipTarget) {
+                          clearLabelTooltipOpenTimer();
+                          closeLabelTooltipImmediate(labelTooltipTarget.key);
+                          const relatedTarget = event.relatedTarget;
+                          if (
+                            relatedTarget instanceof Node &&
+                            dockMeasureRef.current?.contains(relatedTarget)
+                          ) {
+                            scheduleLabelTooltipAtPointAfterRest(
+                              event.clientX,
+                              event.clientY
+                            );
+                          }
+                        }
                         return;
                       }
                       const relatedTarget = event.relatedTarget;
@@ -1349,14 +1596,18 @@ export function WorkbenchHostDock({
               if (slot.kind === "stack") {
                 const stackPopupActive =
                   activeMinimizedStackPopup !== null ? true : undefined;
+                const stackLabel = i18n.t("minimizedWindows");
+                const labelTooltipTarget = dockLabelTooltipTarget(
+                  `minimized-stack:${slot.anchorKey}`,
+                  stackLabel
+                );
                 const stackButton = (
                   <button
                     aria-expanded={stackPopupActive}
                     aria-haspopup="dialog"
-                    aria-label={i18n.t("minimizedWindows")}
+                    aria-label={stackLabel}
                     className="desktop-dock__btn desktop-dock__minimized-btn"
                     data-interactive="true"
-                    title={i18n.t("minimizedWindows")}
                     type="button"
                     onPointerDown={() => {
                       beginDockMinimizedInteraction();
@@ -1434,6 +1685,8 @@ export function WorkbenchHostDock({
                     className="desktop-dock__slot desktop-dock__slot--minimized"
                     data-desktop-dock-anchor-key={slot.anchorKey}
                     data-desktop-dock-slot="true"
+                    data-dock-label-tooltip-key={labelTooltipTarget.key}
+                    data-dock-label-tooltip-label={labelTooltipTarget.label}
                     data-node-state="minimized"
                     data-popup-active={stackPopupActive}
                     data-presence={dockItem.presence}
@@ -1441,6 +1694,38 @@ export function WorkbenchHostDock({
                     data-stack-dispatching={
                       stackDispatching ? "true" : undefined
                     }
+                    onBlur={(event) => {
+                      if (!event.currentTarget.contains(event.relatedTarget)) {
+                        closeLabelTooltipImmediate(labelTooltipTarget.key);
+                      }
+                    }}
+                    onFocus={(event) => {
+                      showLabelTooltip(
+                        labelTooltipTarget,
+                        slot.anchorKey,
+                        event.currentTarget
+                      );
+                    }}
+                    onPointerEnter={() => {
+                      scheduleLabelTooltipAfterRest(
+                        labelTooltipTarget,
+                        slot.anchorKey
+                      );
+                    }}
+                    onPointerLeave={(event) => {
+                      clearLabelTooltipOpenTimer();
+                      closeLabelTooltipImmediate(labelTooltipTarget.key);
+                      const relatedTarget = event.relatedTarget;
+                      if (
+                        relatedTarget instanceof Node &&
+                        dockMeasureRef.current?.contains(relatedTarget)
+                      ) {
+                        scheduleLabelTooltipAtPointAfterRest(
+                          event.clientX,
+                          event.clientY
+                        );
+                      }
+                    }}
                   >
                     {stackButton}
                   </span>
@@ -1448,12 +1733,15 @@ export function WorkbenchHostDock({
               }
 
               const node = slot.node;
+              const labelTooltipTarget = dockLabelTooltipTarget(
+                `minimized-node:${node.id}`,
+                node.title
+              );
               const dockButton = (
                 <button
                   aria-label={i18n.t("launch", { title: node.title })}
                   className="desktop-dock__btn desktop-dock__minimized-btn"
                   data-interactive="true"
-                  title={node.title}
                   type="button"
                   onPointerDown={() => {
                     const restoreIntent =
@@ -1521,12 +1809,46 @@ export function WorkbenchHostDock({
                   }
                   data-desktop-dock-anchor-key={slot.anchorKey}
                   data-desktop-dock-slot="true"
+                  data-dock-label-tooltip-key={labelTooltipTarget.key}
+                  data-dock-label-tooltip-label={labelTooltipTarget.label}
                   data-node-state="minimized"
                   data-presence={dockItem.presence}
                   data-promoted-from-stack={
                     promotedNodeId === node.id ? "true" : undefined
                   }
                   data-section-id="minimized"
+                  onBlur={(event) => {
+                    if (!event.currentTarget.contains(event.relatedTarget)) {
+                      closeLabelTooltipImmediate(labelTooltipTarget.key);
+                    }
+                  }}
+                  onFocus={(event) => {
+                    showLabelTooltip(
+                      labelTooltipTarget,
+                      slot.anchorKey,
+                      event.currentTarget
+                    );
+                  }}
+                  onPointerEnter={() => {
+                    scheduleLabelTooltipAfterRest(
+                      labelTooltipTarget,
+                      slot.anchorKey
+                    );
+                  }}
+                  onPointerLeave={(event) => {
+                    clearLabelTooltipOpenTimer();
+                    closeLabelTooltipImmediate(labelTooltipTarget.key);
+                    const relatedTarget = event.relatedTarget;
+                    if (
+                      relatedTarget instanceof Node &&
+                      dockMeasureRef.current?.contains(relatedTarget)
+                    ) {
+                      scheduleLabelTooltipAtPointAfterRest(
+                        event.clientX,
+                        event.clientY
+                      );
+                    }
+                  }}
                 >
                   {dockButton}
                 </span>
@@ -1584,6 +1906,12 @@ export function WorkbenchHostDock({
                 scheduleHoverPanelClose(activeHoverPanel.entryId);
                 handleDockPointerLeave();
               }}
+            />
+          ) : null}
+          {activeLabelTooltip ? (
+            <WorkbenchHostDockLabelTooltip
+              placement={dockPlacement}
+              state={activeLabelTooltip}
             />
           ) : null}
         </div>
@@ -1942,6 +2270,43 @@ function dockEntryHasHoverPanel(entry: WorkbenchHostDockEntry): boolean {
   );
 }
 
+function dockLabelTooltipTarget(
+  key: string,
+  label: string
+): WorkbenchHostDockLabelTooltipTarget {
+  return { key, label: label.trim() };
+}
+
+function resolveDockLabelTooltipAnchorRect({
+  dockPlacement,
+  slotElement
+}: {
+  dockPlacement: WorkbenchHostProps["dockPlacement"];
+  slotElement: HTMLElement;
+}): {
+  height: number;
+  left: number;
+  top: number;
+  width: number;
+} {
+  const slotRect = slotElement.getBoundingClientRect();
+  if (dockPlacement === "left") {
+    return {
+      height: DOCK_ICON_BASE_SIZE,
+      left: slotRect.left,
+      top: slotRect.top + (slotRect.height - DOCK_ICON_BASE_SIZE) / 2,
+      width: DOCK_ICON_BASE_SIZE
+    };
+  }
+
+  return {
+    height: DOCK_ICON_BASE_SIZE,
+    left: slotRect.left + (slotRect.width - DOCK_ICON_BASE_SIZE) / 2,
+    top: slotRect.bottom - DOCK_ICON_BASE_SIZE,
+    width: DOCK_ICON_BASE_SIZE
+  };
+}
+
 function renderDockBadge(
   entry: WorkbenchHostDockEntry,
   matchedNodeCount: number
@@ -1965,6 +2330,32 @@ function renderDockBadge(
   }
   return (
     <span className="desktop-dock__status-badge" data-status={badge.status} />
+  );
+}
+
+function WorkbenchHostDockLabelTooltip({
+  placement,
+  state
+}: {
+  placement: WorkbenchHostProps["dockPlacement"];
+  state: WorkbenchHostDockLabelTooltipState;
+}) {
+  return (
+    <div
+      className="desktop-dock__label-tooltip"
+      data-dock-placement={placement}
+      role="tooltip"
+      style={
+        {
+          "--desktop-dock-label-tooltip-anchor-height": `${state.anchorRect.height}px`,
+          "--desktop-dock-label-tooltip-anchor-left": `${state.anchorRect.left}px`,
+          "--desktop-dock-label-tooltip-anchor-top": `${state.anchorRect.top}px`,
+          "--desktop-dock-label-tooltip-anchor-width": `${state.anchorRect.width}px`
+        } as WorkbenchHostDockLabelTooltipStyle
+      }
+    >
+      {state.label}
+    </div>
   );
 }
 
@@ -2853,8 +3244,30 @@ interface WorkbenchHostDockHoverPanelStyle extends CSSProperties {
   "--desktop-dock-hover-panel-anchor-width"?: string;
 }
 
+interface WorkbenchHostDockLabelTooltipStyle extends CSSProperties {
+  "--desktop-dock-label-tooltip-anchor-height"?: string;
+  "--desktop-dock-label-tooltip-anchor-left"?: string;
+  "--desktop-dock-label-tooltip-anchor-top"?: string;
+  "--desktop-dock-label-tooltip-anchor-width"?: string;
+}
+
 type WorkbenchHostDockPresence = "entering" | "exiting" | "present";
 type WorkbenchHostDockScrollDirection = "backward" | "forward";
+
+interface WorkbenchHostDockLabelTooltipTarget {
+  key: string;
+  label: string;
+}
+
+interface WorkbenchHostDockLabelTooltipState extends WorkbenchHostDockLabelTooltipTarget {
+  anchorKey: string;
+  anchorRect: {
+    height: number;
+    left: number;
+    top: number;
+    width: number;
+  };
+}
 
 interface WorkbenchHostDockHoverPanelState {
   anchorKey: string;
