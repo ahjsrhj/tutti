@@ -244,8 +244,8 @@
   transform: translateY(0);
   pointer-events: auto;
   transition:
-    opacity 0.16s ease 0.5s,
-    transform 0.2s cubic-bezier(0.4, 0, 0.2, 1) 0.5s;
+    opacity 0.16s ease,
+    transform 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .workbench-window[data-display-mode="fullscreen"]:has(
@@ -268,7 +268,7 @@
   right: 0;
   left: 0;
   z-index: 2;
-  height: 8px;
+  height: 16px;
   pointer-events: auto;
 }
 

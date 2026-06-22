@@ -1725,6 +1725,7 @@ function createLabels(): AgentGUIViewLabels {
     slashStatusContextUnavailable: "slashStatusContextUnavailable",
     slashStatusLimitsUnavailable: "slashStatusLimitsUnavailable",
     usageChipLabel: ({ percent }) => `usageChip:${percent}`,
+    usageTooltipLabel: "usageTooltipLabel",
     usagePopoverTitle: "usagePopoverTitle",
     usageContextWindowLabel: "usageContextWindowLabel",
     usageTokensLabel: "usageTokensLabel",
