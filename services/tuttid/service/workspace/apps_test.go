@@ -1440,7 +1440,7 @@ func TestAppCenterServiceStartEnabledWaitsForRemoteCatalogRefresh(t *testing.T) 
 	}
 }
 
-func TestAppCenterServiceStartEnabledPreloadsRuntimeAfterRemoteCatalogRefresh(t *testing.T) {
+func TestAppCenterServiceStartEnabledDoesNotWaitForRemoteCatalogWhenNoAppsAreEnabled(t *testing.T) {
 	ctx := context.Background()
 	t.Setenv("TUTTI_APP_CATALOG_FILE", "")
 
@@ -1483,20 +1483,6 @@ func TestAppCenterServiceStartEnabledPreloadsRuntimeAfterRemoteCatalogRefresh(t 
 	}()
 
 	select {
-	case <-catalogRequested:
-	case err := <-resultCh:
-		t.Fatalf("StartEnabled() returned before catalog request completed: %v", err)
-	case <-time.After(time.Second):
-		t.Fatal("remote catalog was not requested")
-	}
-	select {
-	case <-resolver.called:
-		t.Fatal("runtime preload started before catalog refresh completed")
-	case <-time.After(50 * time.Millisecond):
-	}
-
-	releaseCatalogResponse()
-	select {
 	case err := <-resultCh:
 		if err != nil {
 			t.Fatalf("StartEnabled() error = %v", err)
@@ -1507,8 +1493,14 @@ func TestAppCenterServiceStartEnabledPreloadsRuntimeAfterRemoteCatalogRefresh(t 
 	select {
 	case <-resolver.called:
 	case <-time.After(time.Second):
-		t.Fatal("runtime preload did not start after catalog refresh")
+		t.Fatal("runtime preload did not start")
 	}
+
+	select {
+	case <-catalogRequested:
+	case <-time.After(50 * time.Millisecond):
+	}
+	releaseCatalogResponse()
 	resolver.mu.Lock()
 	preloadedProfile := resolver.profile
 	resolver.mu.Unlock()

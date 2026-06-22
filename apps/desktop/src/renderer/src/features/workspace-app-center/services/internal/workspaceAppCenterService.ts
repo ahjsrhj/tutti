@@ -551,17 +551,45 @@ export class WorkspaceAppCenterService implements IWorkspaceAppCenterService {
     markConnected: () => void,
     markStartupRefreshSettled: () => void
   ): Promise<void> {
+    const startedAt = Date.now();
+    this.logStartupDiagnostic("app_center.start_workspace_updates.started", {
+      workspaceId
+    });
     try {
+      const connectStartedAt = Date.now();
       await this.dependencies.eventStreamClient.connect();
+      this.logStartupDiagnostic(
+        "app_center.start_workspace_updates.event_stream_connected",
+        {
+          durationMs: Date.now() - connectStartedAt,
+          workspaceId
+        }
+      );
       if (isDisposed()) {
         return;
       }
+      const refreshStartedAt = Date.now();
       await this.controller.refresh(workspaceId);
+      this.logStartupDiagnostic(
+        "app_center.start_workspace_updates.initial_refreshed",
+        {
+          durationMs: Date.now() - refreshStartedAt,
+          workspaceId
+        }
+      );
       if (isDisposed()) {
         return;
       }
       markConnected();
+      const startEnabledStartedAt = Date.now();
       await this.controller.startEnabledApps(workspaceId);
+      this.logStartupDiagnostic(
+        "app_center.start_workspace_updates.start_enabled_completed",
+        {
+          durationMs: Date.now() - startEnabledStartedAt,
+          workspaceId
+        }
+      );
     } catch (error) {
       if (isDisposed()) {
         return;
@@ -571,8 +599,30 @@ export class WorkspaceAppCenterService implements IWorkspaceAppCenterService {
         workspaceId
       });
     } finally {
+      this.logStartupDiagnostic("app_center.start_workspace_updates.settled", {
+        durationMs: Date.now() - startedAt,
+        workspaceId
+      });
       markStartupRefreshSettled();
     }
+  }
+
+  private logStartupDiagnostic(
+    event: string,
+    details: Record<string, unknown>
+  ): void {
+    void this.dependencies.runtimeApi
+      ?.logRendererDiagnostic({
+        details,
+        event,
+        level: "debug",
+        source: "workspace-app-center",
+        workspaceId:
+          typeof details.workspaceId === "string"
+            ? details.workspaceId
+            : undefined
+      })
+      .catch(() => undefined);
   }
 
   private recordOperationFailure(
