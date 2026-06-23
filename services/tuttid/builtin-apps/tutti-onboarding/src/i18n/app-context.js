@@ -63,7 +63,9 @@ export function subscribeHostLocale(listener, host = currentHost()) {
 
   if (typeof externalApp?.subscribe === "function") {
     return externalApp.subscribe((context) => {
-      listener(normalizeLocale(context?.locale || context?.language));
+      const rawLocale = context?.locale ?? context?.language;
+      if (!rawLocale) return;
+      listener(normalizeLocale(rawLocale));
     });
   }
 

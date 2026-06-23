@@ -32,6 +32,9 @@ const lockOwnerPath = path.join(lockDir, "owner.json");
 const staleLockMs = 10 * 60 * 1000;
 const requiredPackageFiles = ["tutti.app.json", "AGENTS.md", "bootstrap.sh"];
 const cliSegmentPattern = /^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$/;
+const defaultCliHandlerTimeoutMs = 30000;
+const minCliHandlerTimeoutMs = 1000;
+const maxCliHandlerTimeoutMs = 600000;
 
 const args = parseArgs();
 
@@ -461,6 +464,28 @@ function validateCliHandler(handler, label) {
       `tutti.cli.json ${label}.path must start with /tutti/cli/.`
     );
   }
+  const timeoutMs = normalizeCliHandlerTimeoutMs(
+    handler.timeoutMs,
+    `${label}.timeoutMs`
+  );
+  if (
+    timeoutMs < minCliHandlerTimeoutMs ||
+    timeoutMs > maxCliHandlerTimeoutMs
+  ) {
+    throw new Error(
+      `tutti.cli.json ${label}.timeoutMs must be between ${minCliHandlerTimeoutMs} and ${maxCliHandlerTimeoutMs}.`
+    );
+  }
+}
+
+function normalizeCliHandlerTimeoutMs(value, label) {
+  if (value === undefined || value === null || value === 0) {
+    return defaultCliHandlerTimeoutMs;
+  }
+  if (!Number.isInteger(value)) {
+    throw new Error(`tutti.cli.json ${label} must be an integer.`);
+  }
+  return value;
 }
 
 function validateCliManifest(cliManifest) {

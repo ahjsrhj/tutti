@@ -52,6 +52,7 @@ describe("Tutti onboarding locale", () => {
         app: {
           subscribe: (callback) => {
             callback({ language: "en-US" });
+            callback({ agentBound: true });
             callback({ locale: "zh-CN" });
             return unsubscribe;
           }
@@ -62,5 +63,6 @@ describe("Tutti onboarding locale", () => {
     expect(subscribeHostLocale(listener, host)).toBe(unsubscribe);
     expect(listener).toHaveBeenNthCalledWith(1, "en-US");
     expect(listener).toHaveBeenNthCalledWith(2, "zh-CN");
+    expect(listener).toHaveBeenCalledTimes(2);
   });
 });
