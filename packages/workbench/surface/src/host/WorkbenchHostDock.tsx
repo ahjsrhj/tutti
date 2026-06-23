@@ -1298,15 +1298,16 @@ export function WorkbenchHostDock({
         next.add(actionKey);
         return next;
       });
-      void Promise.resolve(
-        onDockEntryAction?.({
-          actionId,
-          entryId,
-          host
-        })
-      )
-        .catch(() => {})
-        .finally(() => {
+      void (async () => {
+        try {
+          await onDockEntryAction?.({
+            actionId,
+            entryId,
+            host
+          });
+        } catch {
+          // Keep dock action failures contained.
+        } finally {
           setPendingActionKeys((current) => {
             if (!current.has(actionKey)) {
               return current;
@@ -1315,7 +1316,8 @@ export function WorkbenchHostDock({
             next.delete(actionKey);
             return next;
           });
-        });
+        }
+      })();
     },
     [host, onDockEntryAction, pendingActionKeys]
   );
@@ -1530,13 +1532,17 @@ export function WorkbenchHostDock({
                       switch (clickResolution.kind) {
                         case "focus-node":
                           closePopup();
-                          void Promise.resolve(
-                            onDockEntryClick?.({
-                              entryId: entry.id,
-                              host,
-                              nodeId: clickResolution.nodeId
-                            })
-                          ).catch(() => {});
+                          void (async () => {
+                            try {
+                              await onDockEntryClick?.({
+                                entryId: entry.id,
+                                host,
+                                nodeId: clickResolution.nodeId
+                              });
+                            } catch {
+                              // Keep dock click failures contained.
+                            }
+                          })();
                           context.genie.launchNodeFromAnchor(
                             anchorKey,
                             clickResolution.nodeId,
@@ -1579,13 +1585,17 @@ export function WorkbenchHostDock({
                         }
                         case "action":
                           closePopup();
-                          void Promise.resolve(
-                            onDockEntryAction?.({
-                              actionId: clickResolution.actionId,
-                              entryId: entry.id,
-                              host
-                            })
-                          ).catch(() => {});
+                          void (async () => {
+                            try {
+                              await onDockEntryAction?.({
+                                actionId: clickResolution.actionId,
+                                entryId: entry.id,
+                                host
+                              });
+                            } catch {
+                              // Keep dock action failures contained.
+                            }
+                          })();
                           return;
                         case "launch":
                           closePopup();
@@ -2301,13 +2311,17 @@ export function WorkbenchHostDock({
           }
           onSelectNode={(nodeId) => {
             closePopup();
-            void Promise.resolve(
-              onDockEntryClick?.({
-                entryId: popupEntry.entry.id,
-                host,
-                nodeId
-              })
-            ).catch(() => {});
+            void (async () => {
+              try {
+                await onDockEntryClick?.({
+                  entryId: popupEntry.entry.id,
+                  host,
+                  nodeId
+                });
+              } catch {
+                // Keep dock click failures contained.
+              }
+            })();
             context.genie.launchNodeFromAnchor(
               anchorKeyFromPopupEntry(popupEntry),
               nodeId,
@@ -2967,15 +2981,16 @@ function WorkbenchHostDockHoverPanel({
                     next.add(actionKey);
                     return next;
                   });
-                  void Promise.resolve(
-                    onDockEntryAction?.({
-                      actionId: action.id,
-                      entryId: entry.id,
-                      host
-                    })
-                  )
-                    .catch(() => {})
-                    .finally(() => {
+                  void (async () => {
+                    try {
+                      await onDockEntryAction?.({
+                        actionId: action.id,
+                        entryId: entry.id,
+                        host
+                      });
+                    } catch {
+                      // Keep dock action failures contained.
+                    } finally {
                       setPendingActionKeys((current) => {
                         if (!current.has(actionKey)) {
                           return current;
@@ -2984,7 +2999,8 @@ function WorkbenchHostDockHoverPanel({
                         next.delete(actionKey);
                         return next;
                       });
-                    });
+                    }
+                  })();
                 }}
               >
                 {isPending

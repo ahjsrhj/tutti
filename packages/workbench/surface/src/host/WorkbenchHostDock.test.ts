@@ -5,6 +5,15 @@ import test from "node:test";
 
 const source = readFileSync(resolve("src/host/WorkbenchHostDock.tsx"), "utf8");
 
+test("dock action callbacks contain synchronous and async failures", () => {
+  assert.doesNotMatch(source, /Promise\.resolve\(\s*onDockEntryAction\?\.\(/);
+  assert.doesNotMatch(source, /Promise\.resolve\(\s*onDockEntryClick\?\.\(/);
+  assert.match(
+    source,
+    /const runDockEntryAction = useCallback\([\s\S]*?try \{[\s\S]*?await onDockEntryAction\?\.\([\s\S]*?catch \{[\s\S]*?Keep dock action failures contained\.[\s\S]*?finally \{[\s\S]*?setPendingActionKeys/
+  );
+});
+
 test("dock hover labels use local non-blocking tooltips", () => {
   assert.doesNotMatch(source, /TooltipProvider/);
   assert.doesNotMatch(source, /TooltipTrigger/);
