@@ -1,4 +1,5 @@
 import {
+  cancelWorkspaceAppUpload,
   cancelWorkspaceAppFactoryJob,
   createWorkspaceAppFactoryJob,
   deleteWorkspaceApp,
@@ -13,6 +14,8 @@ import {
   listWorkspaceAppReferences,
   listWorkspaceAppFactoryJobs,
   listWorkspaceApps,
+  completeWorkspaceAppUpload,
+  prepareWorkspaceAppUpload,
   prepareWorkspaceAppFactoryJobModification,
   publishWorkspaceAppFactoryJob,
   refreshWorkspaceAppCatalog,
@@ -27,7 +30,7 @@ import {
   uninstallWorkspaceApp
 } from "./generated/index.ts";
 import type { Client } from "./generated/client/index.ts";
-import { unwrapData } from "./tuttidClientResponse.ts";
+import { unwrapAccepted, unwrapData } from "./tuttidClientResponse.ts";
 import type { TuttidClient } from "./tuttidClientTypes.ts";
 
 type WorkspaceAppsClient = Pick<
@@ -45,6 +48,9 @@ type WorkspaceAppsClient = Pick<
   | "loadLocalWorkspaceApp"
   | "listWorkspaceAppReferences"
   | "searchWorkspaceAppReferences"
+  | "prepareWorkspaceAppUpload"
+  | "completeWorkspaceAppUpload"
+  | "cancelWorkspaceAppUpload"
   | "listWorkspaceAppFactoryJobs"
   | "listWorkspaceApps"
   | "prepareWorkspaceAppFactoryJobModification"
@@ -90,6 +96,34 @@ export function createWorkspaceAppsClient(client: Client): WorkspaceAppsClient {
         response,
         "Search workspace app references request failed."
       );
+    },
+    async prepareWorkspaceAppUpload(workspaceID, appID, request) {
+      const response = await prepareWorkspaceAppUpload({
+        client,
+        body: request,
+        path: { appID, workspaceID }
+      });
+      return unwrapData(
+        response,
+        "Prepare workspace app upload request failed."
+      );
+    },
+    async completeWorkspaceAppUpload(workspaceID, appID, uploadID) {
+      const response = await completeWorkspaceAppUpload({
+        client,
+        path: { appID, uploadID, workspaceID }
+      });
+      return unwrapData(
+        response,
+        "Complete workspace app upload request failed."
+      ).file;
+    },
+    async cancelWorkspaceAppUpload(workspaceID, appID, uploadID) {
+      const response = await cancelWorkspaceAppUpload({
+        client,
+        path: { appID, uploadID, workspaceID }
+      });
+      unwrapAccepted(response, "Cancel workspace app upload request failed.");
     },
     async refreshWorkspaceAppCatalog(workspaceID) {
       const response = await refreshWorkspaceAppCatalog({

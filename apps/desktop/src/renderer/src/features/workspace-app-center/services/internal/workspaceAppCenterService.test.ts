@@ -107,6 +107,54 @@ test("WorkspaceAppCenterService tracks app install and forwards app open status"
   ]);
 });
 
+test("WorkspaceAppCenterService refreshes failed runtime state after launch is rejected", async () => {
+  let listCalls = 0;
+  const service = new WorkspaceAppCenterService({
+    eventStreamClient: createEventStreamClient(),
+    gateway: createGateway({
+      listWorkspaceApps: async () => {
+        listCalls += 1;
+        const failed = listCalls > 1;
+        return createSnapshot({
+          apps: [
+            createApp({
+              appId: "app-1",
+              failureReason: failed ? "process_exit" : null,
+              installed: true,
+              lastError: failed ? "exit status 1" : null,
+              runtimeStatus: failed ? "failed" : "idle",
+              source: "local-dev",
+              stateRevision: failed ? 2 : 1
+            })
+          ]
+        });
+      },
+      launchWorkspaceApp: async () => {
+        throw {
+          error: {
+            code: "invalid_request",
+            developerMessage:
+              "invalid workspace app runtime state: failed workspace apps must be retried before launch",
+            reason: "malformed_request"
+          }
+        };
+      }
+    }),
+    hostFilesApi: createHostFilesApi(),
+    hostWorkspaceApi: createHostWorkspaceApi()
+  });
+
+  await service.refresh("workspace-1");
+  await service.openApp({ appId: "app-1", workspaceId: "workspace-1" });
+
+  assert.equal(listCalls, 2);
+  assert.equal(service.store.apps[0]?.runtimeStatus, "failed");
+  assert.equal(
+    service.store.error,
+    "This app failed to start. Click Retry before opening it."
+  );
+});
+
 test("WorkspaceAppCenterService tracks app install when the success snapshot omits the app", async () => {
   const reporterCalls: ReporterEventInput[][] = [];
   let listCalls = 0;

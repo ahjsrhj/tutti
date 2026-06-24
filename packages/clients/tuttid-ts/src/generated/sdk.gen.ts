@@ -22,6 +22,9 @@ import type {
   CancelWorkspaceAppFactoryJobData,
   CancelWorkspaceAppFactoryJobErrors,
   CancelWorkspaceAppFactoryJobResponses,
+  CancelWorkspaceAppUploadData,
+  CancelWorkspaceAppUploadErrors,
+  CancelWorkspaceAppUploadResponses,
   CheckUserProjectPathData,
   CheckUserProjectPathErrors,
   CheckUserProjectPathResponses,
@@ -31,6 +34,9 @@ import type {
   ClearWorkspaceAgentSessionsData,
   ClearWorkspaceAgentSessionsErrors,
   ClearWorkspaceAgentSessionsResponses,
+  CompleteWorkspaceAppUploadData,
+  CompleteWorkspaceAppUploadErrors,
+  CompleteWorkspaceAppUploadResponses,
   CompleteWorkspaceIssueRunData,
   CompleteWorkspaceIssueRunErrors,
   CompleteWorkspaceIssueRunResponses,
@@ -244,6 +250,9 @@ import type {
   PrepareWorkspaceAppFactoryJobModificationData,
   PrepareWorkspaceAppFactoryJobModificationErrors,
   PrepareWorkspaceAppFactoryJobModificationResponses,
+  PrepareWorkspaceAppUploadData,
+  PrepareWorkspaceAppUploadErrors,
+  PrepareWorkspaceAppUploadResponses,
   ProbeAgentProviderData,
   ProbeAgentProviderErrors,
   ProbeAgentProviderResponses,
@@ -253,6 +262,9 @@ import type {
   PutDesktopPreferencesData,
   PutDesktopPreferencesErrors,
   PutDesktopPreferencesResponses,
+  PutWorkspaceAppUploadContentData,
+  PutWorkspaceAppUploadContentErrors,
+  PutWorkspaceAppUploadContentResponses,
   PutWorkspaceWorkbenchData,
   PutWorkspaceWorkbenchErrors,
   PutWorkspaceWorkbenchResponses,
@@ -939,6 +951,89 @@ export const searchWorkspaceAppReferences = <
       "Content-Type": "application/json",
       ...options.headers
     }
+  });
+
+/**
+ * Prepare one managed file upload for a workspace app
+ *
+ * Creates an in-memory upload session scoped to one installed workspace app. The response only identifies the daemon upload session; desktop hosts construct the direct content upload URL and keep storage-provider details out of the app-facing browser bridge.
+ *
+ */
+export const prepareWorkspaceAppUpload = <ThrowOnError extends boolean = false>(
+  options: Options<PrepareWorkspaceAppUploadData, ThrowOnError>
+) =>
+  (options.client ?? client).post<
+    PrepareWorkspaceAppUploadResponses,
+    PrepareWorkspaceAppUploadErrors,
+    ThrowOnError
+  >({
+    security: [{ scheme: "bearer", type: "http" }],
+    url: "/v1/workspaces/{workspaceID}/apps/{appID}/uploads",
+    ...options,
+    headers: {
+      "Content-Type": "application/json",
+      ...options.headers
+    }
+  });
+
+/**
+ * Stream upload bytes into one workspace app upload session
+ */
+export const putWorkspaceAppUploadContent = <
+  ThrowOnError extends boolean = false
+>(
+  options: Options<PutWorkspaceAppUploadContentData, ThrowOnError>
+) =>
+  (options.client ?? client).put<
+    PutWorkspaceAppUploadContentResponses,
+    PutWorkspaceAppUploadContentErrors,
+    ThrowOnError
+  >({
+    bodySerializer: null,
+    security: [{ scheme: "bearer", type: "http" }],
+    url: "/v1/workspaces/{workspaceID}/apps/{appID}/uploads/{uploadID}/content",
+    ...options,
+    headers: {
+      "Content-Type": "application/octet-stream",
+      ...options.headers
+    }
+  });
+
+/**
+ * Cancel one managed file upload session for a workspace app
+ *
+ * Drops the in-memory upload session and removes the temporary upload file when the upload has not been completed. Completed durable files are not deleted by this operation.
+ *
+ */
+export const cancelWorkspaceAppUpload = <ThrowOnError extends boolean = false>(
+  options: Options<CancelWorkspaceAppUploadData, ThrowOnError>
+) =>
+  (options.client ?? client).delete<
+    CancelWorkspaceAppUploadResponses,
+    CancelWorkspaceAppUploadErrors,
+    ThrowOnError
+  >({
+    security: [{ scheme: "bearer", type: "http" }],
+    url: "/v1/workspaces/{workspaceID}/apps/{appID}/uploads/{uploadID}",
+    ...options
+  });
+
+/**
+ * Complete one managed file upload for a workspace app
+ */
+export const completeWorkspaceAppUpload = <
+  ThrowOnError extends boolean = false
+>(
+  options: Options<CompleteWorkspaceAppUploadData, ThrowOnError>
+) =>
+  (options.client ?? client).post<
+    CompleteWorkspaceAppUploadResponses,
+    CompleteWorkspaceAppUploadErrors,
+    ThrowOnError
+  >({
+    security: [{ scheme: "bearer", type: "http" }],
+    url: "/v1/workspaces/{workspaceID}/apps/{appID}/uploads/{uploadID}/complete",
+    ...options
   });
 
 /**

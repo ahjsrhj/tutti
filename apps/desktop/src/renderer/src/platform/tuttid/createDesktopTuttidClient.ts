@@ -230,6 +230,27 @@ export function createDesktopTuttidClient(
         request
       );
     },
+    async prepareWorkspaceAppUpload(workspaceID, appID, request) {
+      return (await resolveClient()).prepareWorkspaceAppUpload(
+        workspaceID,
+        appID,
+        request
+      );
+    },
+    async completeWorkspaceAppUpload(workspaceID, appID, uploadID) {
+      return (await resolveClient()).completeWorkspaceAppUpload(
+        workspaceID,
+        appID,
+        uploadID
+      );
+    },
+    async cancelWorkspaceAppUpload(workspaceID, appID, uploadID) {
+      return (await resolveClient()).cancelWorkspaceAppUpload(
+        workspaceID,
+        appID,
+        uploadID
+      );
+    },
     async refreshWorkspaceAppCatalog(workspaceID) {
       return (await resolveClient()).refreshWorkspaceAppCatalog(workspaceID);
     },

@@ -83,20 +83,19 @@ func (s *AppCenterService) ReloadLocalPackage(ctx context.Context, workspaceID s
 
 func (s *AppCenterService) putLocalDevPackage(ctx context.Context, workspaceID string, appPackage workspacebiz.AppPackage) error {
 	existing, err := s.Store.GetAppPackage(ctx, appPackage.AppID)
-	if err == nil && existing.Source != workspacebiz.AppPackageSourceLocalDev {
+	if err == nil && !canLoadLocalDevPackageOverSource(existing.Source) {
 		return fmt.Errorf("%w: app %q already exists with source %q", ErrAppPackageAlreadyExists, appPackage.AppID, existing.Source)
 	}
 	if err != nil && !errors.Is(err, workspacedata.ErrWorkspaceAppNotFound) {
 		return err
 	}
-	if _, ok, err := s.remoteBuiltinForAppID(ctx, appPackage.AppID); err != nil {
-		return err
-	} else if ok {
-		return fmt.Errorf("%w: app %q already exists with source %q", ErrAppPackageAlreadyExists, appPackage.AppID, workspacebiz.AppPackageSourceBuiltin)
-	}
 	appPackage.Source = workspacebiz.AppPackageSourceLocalDev
 	appPackage.CreatedInWorkspaceID = strings.TrimSpace(workspaceID)
 	return s.Store.PutAppPackage(ctx, appPackage)
+}
+
+func canLoadLocalDevPackageOverSource(source workspacebiz.AppPackageSource) bool {
+	return source == workspacebiz.AppPackageSourceLocalDev || source == workspacebiz.AppPackageSourceBuiltin
 }
 
 func resolveLocalAppPackageDir(sourceDir string) (string, error) {
@@ -116,14 +115,6 @@ func resolveLocalAppPackageDir(sourceDir string) (string, error) {
 	if !info.IsDir() {
 		return "", fmt.Errorf("%w: sourceDir must be a directory", ErrLocalAppPackageInvalid)
 	}
-	if exists, err := appManifestFileExists(absDir); err != nil {
-		if !os.IsNotExist(err) {
-			return "", fmt.Errorf("%w: check sourceDir manifest: %w", ErrLocalAppPackageInvalid, err)
-		}
-	} else if exists {
-		return absDir, nil
-	}
-
 	devAppDir := filepath.Join(absDir, filepath.FromSlash(localDevAppPackageSubdir))
 	if exists, err := appManifestFileExists(devAppDir); err != nil {
 		if !os.IsNotExist(err) {
@@ -131,6 +122,14 @@ func resolveLocalAppPackageDir(sourceDir string) (string, error) {
 		}
 	} else if exists {
 		return devAppDir, nil
+	}
+
+	if exists, err := appManifestFileExists(absDir); err != nil {
+		if !os.IsNotExist(err) {
+			return "", fmt.Errorf("%w: check sourceDir manifest: %w", ErrLocalAppPackageInvalid, err)
+		}
+	} else if exists {
+		return absDir, nil
 	}
 
 	return "", fmt.Errorf("%w: sourceDir must contain tutti.app.json or %s/tutti.app.json", ErrLocalAppPackageInvalid, localDevAppPackageSubdir)

@@ -147,6 +147,9 @@ func (s *AppCenterService) DeletePackage(ctx context.Context, workspaceID string
 	if err != nil {
 		return err
 	}
+	if appPackage.Source == workspacebiz.AppPackageSourceLocalDev {
+		return s.deleteLocalDevPackage(ctx, workspaceID, appPackage, versions)
+	}
 	packageDirs := make(map[string]struct{}, len(versions)+1)
 	if dir := strings.TrimSpace(appPackage.PackageDir); dir != "" && appPackage.Source != workspacebiz.AppPackageSourceLocalDev {
 		packageDirs[dir] = struct{}{}
@@ -177,6 +180,42 @@ func (s *AppCenterService) DeletePackage(ctx context.Context, workspaceID string
 		}
 	}
 	return s.Store.DeleteAppPackage(ctx, appPackage.AppID)
+}
+
+func (s *AppCenterService) deleteLocalDevPackage(ctx context.Context, workspaceID string, appPackage workspacebiz.AppPackage, versions []workspacebiz.AppPackage) error {
+	restorePackage, restore := localDevRestorePackage(versions, appPackage.Version)
+
+	s.runner().StopApp(ctx, appPackage.AppID)
+	s.deactivateAppCLIForApp(appPackage.AppID)
+	if err := s.removeAllWorkspaceAppStateRoots(appPackage.AppID); err != nil {
+		return err
+	}
+
+	if restore {
+		if err := s.Store.DeleteWorkspaceAppInstallation(ctx, workspaceID, appPackage.AppID); err != nil && !errors.Is(err, workspacedata.ErrWorkspaceAppNotFound) {
+			return err
+		}
+		if err := s.Store.SetActiveAppPackageVersion(ctx, restorePackage.AppID, restorePackage.Version); err != nil {
+			return err
+		}
+		return s.Store.DeleteAppPackageVersion(ctx, appPackage.AppID, appPackage.Version)
+	}
+
+	return s.Store.DeleteAppPackage(ctx, appPackage.AppID)
+}
+
+func localDevRestorePackage(versions []workspacebiz.AppPackage, activeVersion string) (workspacebiz.AppPackage, bool) {
+	activeVersion = strings.TrimSpace(activeVersion)
+	for _, versionPackage := range versions {
+		if versionPackage.Source != workspacebiz.AppPackageSourceBuiltin {
+			continue
+		}
+		if strings.TrimSpace(versionPackage.Version) == activeVersion {
+			continue
+		}
+		return versionPackage, true
+	}
+	return workspacebiz.AppPackage{}, false
 }
 
 func (s *AppCenterService) shouldDeleteRemoteBuiltinPackageAfterUninstall(ctx context.Context, workspaceID string, appPackage workspacebiz.AppPackage) (bool, error) {

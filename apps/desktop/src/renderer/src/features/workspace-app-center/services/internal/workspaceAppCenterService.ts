@@ -1280,15 +1280,33 @@ function formatAppCenterError(
   details?: WorkspaceAppCenterOperationDetails
 ): string {
   const locale = getActiveLocale();
+  const desktopErrorCopy = createDesktopErrorI18nRuntime(locale);
+  if (
+    details?.operation === "workspace_app.prepare_launch" &&
+    isFailedWorkspaceAppLaunchError(error)
+  ) {
+    return desktopErrorCopy.t("errors.workspace_app_launch_requires_retry");
+  }
   const overrides =
     details?.operation === "app_factory.publish"
       ? {
-          workspace_operation_failed: createDesktopErrorI18nRuntime(locale).t(
+          workspace_operation_failed: desktopErrorCopy.t(
             "errors.workspace_app_factory_publish_failed"
           )
         }
       : undefined;
   return resolveDesktopErrorMessage(error, locale, overrides);
+}
+
+function isFailedWorkspaceAppLaunchError(error: unknown): boolean {
+  const protocolError = normalizeTuttidError(error);
+  return (
+    protocolError?.code === "invalid_request" &&
+    protocolError.reason === "malformed_request" &&
+    protocolError.developerMessage?.includes(
+      "failed workspace apps must be retried before launch"
+    ) === true
+  );
 }
 
 function summarizeFactoryJobsForDiagnostic(

@@ -520,6 +520,32 @@ export type WorkspaceApp = {
 
 export type WorkspaceAppMinimizeBehavior = "hibernate" | "keep-mounted";
 
+export type WorkspaceAppUploadPurpose = "app-asset";
+
+export type PrepareWorkspaceAppUploadRequest = {
+  purpose: WorkspaceAppUploadPurpose;
+  name: string;
+  mimeType: string;
+  sizeBytes: number;
+};
+
+export type PrepareWorkspaceAppUploadResponse = {
+  uploadId: string;
+  expiresAt: string;
+};
+
+export type CompleteWorkspaceAppUploadResponse = {
+  file: WorkspaceAppUploadedFile;
+};
+
+export type WorkspaceAppUploadedFile = {
+  path: string;
+  name: string;
+  mimeType: string;
+  sizeBytes: number;
+  sha256: string;
+};
+
 export type RollbackWorkspaceAppRequest = {
   version: string;
 };
@@ -3175,6 +3201,209 @@ export type SearchWorkspaceAppReferencesResponses = {
 
 export type SearchWorkspaceAppReferencesResponse =
   SearchWorkspaceAppReferencesResponses[keyof SearchWorkspaceAppReferencesResponses];
+
+export type PrepareWorkspaceAppUploadData = {
+  body: PrepareWorkspaceAppUploadRequest;
+  path: {
+    workspaceID: string;
+    appID: string;
+  };
+  query?: never;
+  url: "/v1/workspaces/{workspaceID}/apps/{appID}/uploads";
+};
+
+export type PrepareWorkspaceAppUploadErrors = {
+  /**
+   * Request payload or parameters are invalid
+   */
+  400: ApiErrorResponse;
+  /**
+   * Bearer token is missing or invalid
+   */
+  401: ApiErrorResponse;
+  /**
+   * Workspace app was not found
+   */
+  404: ApiErrorResponse;
+  /**
+   * HTTP method is not supported on this route
+   */
+  405: ApiErrorResponse;
+  /**
+   * Workspace operation failed in an upstream adapter or command
+   */
+  502: ApiErrorResponse;
+  /**
+   * Required daemon service dependency is unavailable
+   */
+  503: ApiErrorResponse;
+};
+
+export type PrepareWorkspaceAppUploadError =
+  PrepareWorkspaceAppUploadErrors[keyof PrepareWorkspaceAppUploadErrors];
+
+export type PrepareWorkspaceAppUploadResponses = {
+  /**
+   * Workspace app upload session prepared
+   */
+  201: PrepareWorkspaceAppUploadResponse;
+};
+
+export type PrepareWorkspaceAppUploadResponse2 =
+  PrepareWorkspaceAppUploadResponses[keyof PrepareWorkspaceAppUploadResponses];
+
+export type PutWorkspaceAppUploadContentData = {
+  body: Blob | File;
+  path: {
+    workspaceID: string;
+    appID: string;
+    uploadID: string;
+  };
+  query?: never;
+  url: "/v1/workspaces/{workspaceID}/apps/{appID}/uploads/{uploadID}/content";
+};
+
+export type PutWorkspaceAppUploadContentErrors = {
+  /**
+   * Request payload or parameters are invalid
+   */
+  400: ApiErrorResponse;
+  /**
+   * Bearer token is missing or invalid
+   */
+  401: ApiErrorResponse;
+  /**
+   * Workspace app was not found
+   */
+  404: ApiErrorResponse;
+  /**
+   * HTTP method is not supported on this route
+   */
+  405: ApiErrorResponse;
+  /**
+   * Workspace operation failed in an upstream adapter or command
+   */
+  502: ApiErrorResponse;
+  /**
+   * Required daemon service dependency is unavailable
+   */
+  503: ApiErrorResponse;
+};
+
+export type PutWorkspaceAppUploadContentError =
+  PutWorkspaceAppUploadContentErrors[keyof PutWorkspaceAppUploadContentErrors];
+
+export type PutWorkspaceAppUploadContentResponses = {
+  /**
+   * Workspace app upload content accepted
+   */
+  204: void;
+};
+
+export type PutWorkspaceAppUploadContentResponse =
+  PutWorkspaceAppUploadContentResponses[keyof PutWorkspaceAppUploadContentResponses];
+
+export type CancelWorkspaceAppUploadData = {
+  body?: never;
+  path: {
+    workspaceID: string;
+    appID: string;
+    uploadID: string;
+  };
+  query?: never;
+  url: "/v1/workspaces/{workspaceID}/apps/{appID}/uploads/{uploadID}";
+};
+
+export type CancelWorkspaceAppUploadErrors = {
+  /**
+   * Request payload or parameters are invalid
+   */
+  400: ApiErrorResponse;
+  /**
+   * Bearer token is missing or invalid
+   */
+  401: ApiErrorResponse;
+  /**
+   * Workspace app was not found
+   */
+  404: ApiErrorResponse;
+  /**
+   * HTTP method is not supported on this route
+   */
+  405: ApiErrorResponse;
+  /**
+   * Workspace operation failed in an upstream adapter or command
+   */
+  502: ApiErrorResponse;
+  /**
+   * Required daemon service dependency is unavailable
+   */
+  503: ApiErrorResponse;
+};
+
+export type CancelWorkspaceAppUploadError =
+  CancelWorkspaceAppUploadErrors[keyof CancelWorkspaceAppUploadErrors];
+
+export type CancelWorkspaceAppUploadResponses = {
+  /**
+   * Workspace app upload session canceled
+   */
+  204: void;
+};
+
+export type CancelWorkspaceAppUploadResponse =
+  CancelWorkspaceAppUploadResponses[keyof CancelWorkspaceAppUploadResponses];
+
+export type CompleteWorkspaceAppUploadData = {
+  body?: never;
+  path: {
+    workspaceID: string;
+    appID: string;
+    uploadID: string;
+  };
+  query?: never;
+  url: "/v1/workspaces/{workspaceID}/apps/{appID}/uploads/{uploadID}/complete";
+};
+
+export type CompleteWorkspaceAppUploadErrors = {
+  /**
+   * Request payload or parameters are invalid
+   */
+  400: ApiErrorResponse;
+  /**
+   * Bearer token is missing or invalid
+   */
+  401: ApiErrorResponse;
+  /**
+   * Workspace app was not found
+   */
+  404: ApiErrorResponse;
+  /**
+   * HTTP method is not supported on this route
+   */
+  405: ApiErrorResponse;
+  /**
+   * Workspace operation failed in an upstream adapter or command
+   */
+  502: ApiErrorResponse;
+  /**
+   * Required daemon service dependency is unavailable
+   */
+  503: ApiErrorResponse;
+};
+
+export type CompleteWorkspaceAppUploadError =
+  CompleteWorkspaceAppUploadErrors[keyof CompleteWorkspaceAppUploadErrors];
+
+export type CompleteWorkspaceAppUploadResponses = {
+  /**
+   * Workspace app upload completed
+   */
+  200: CompleteWorkspaceAppUploadResponse;
+};
+
+export type CompleteWorkspaceAppUploadResponse2 =
+  CompleteWorkspaceAppUploadResponses[keyof CompleteWorkspaceAppUploadResponses];
 
 export type ExportWorkspaceAppData = {
   body: ExportWorkspaceAppRequest;

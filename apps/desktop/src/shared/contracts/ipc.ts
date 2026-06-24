@@ -32,6 +32,7 @@ import type {
   TuttiExternalFileOpenInput,
   TuttiExternalFileSelectInput,
   TuttiExternalFileSelectResult,
+  TuttiExternalUploadedFile,
   TuttiExternalLogInput,
   TuttiExternalPermissionRequestInput,
   TuttiExternalPermissionRequestResult,
@@ -74,6 +75,9 @@ export const desktopIpcChannels = {
     atQuery: "workspace-app-at:query",
     filesOpen: "workspace-app-files:open",
     filesSelect: "workspace-app-files:select",
+    filesUploadCancel: "workspace-app-files:upload-cancel",
+    filesUploadComplete: "workspace-app-files:upload-complete",
+    filesUploadPrepare: "workspace-app-files:upload-prepare",
     logsWrite: "workspace-app-logs:write",
     permissionsRequest: "workspace-app-permissions:request",
     pdfPrintHtml: "workspace-app-pdf:print-html",
@@ -256,6 +260,29 @@ export interface DesktopWorkspaceAppPayload {
   folderKind: DesktopWorkspaceAppFolderKind;
   workspaceId: string;
   version?: string | null;
+}
+
+export interface DesktopWorkspaceAppFileUploadPrepareInput {
+  purpose: "app-asset";
+  name: string;
+  mimeType: string;
+  sizeBytes: number;
+}
+
+export interface DesktopWorkspaceAppFileUploadPrepareResult {
+  expiresAt: string;
+  headers: Record<string, string>;
+  method: "PUT";
+  uploadId: string;
+  url: string;
+}
+
+export interface DesktopWorkspaceAppFileUploadCompleteInput {
+  uploadId: string;
+}
+
+export interface DesktopWorkspaceAppFileUploadCancelInput {
+  uploadId: string;
 }
 
 export type DesktopWorkspaceAppFolderKind =
@@ -621,6 +648,12 @@ export interface DesktopInvokePayloadByChannel {
   [desktopIpcChannels.appExternal.filesOpen]: TuttiExternalFileOpenInput;
   [desktopIpcChannels.appExternal.filesSelect]: TuttiExternalFileSelectInput;
   [desktopIpcChannels.appExternal
+    .filesUploadCancel]: DesktopWorkspaceAppFileUploadCancelInput;
+  [desktopIpcChannels.appExternal
+    .filesUploadComplete]: DesktopWorkspaceAppFileUploadCompleteInput;
+  [desktopIpcChannels.appExternal
+    .filesUploadPrepare]: DesktopWorkspaceAppFileUploadPrepareInput;
+  [desktopIpcChannels.appExternal
     .permissionsRequest]: TuttiExternalPermissionRequestInput;
   [desktopIpcChannels.appExternal.pdfPrintHtml]: TuttiExternalPdfPrintHtmlInput;
   [desktopIpcChannels.appExternal
@@ -733,6 +766,11 @@ export interface DesktopInvokeResultByChannel {
   [desktopIpcChannels.appExternal.atQuery]: TuttiExternalAtQueryResult[];
   [desktopIpcChannels.appExternal.filesOpen]: void;
   [desktopIpcChannels.appExternal.filesSelect]: TuttiExternalFileSelectResult;
+  [desktopIpcChannels.appExternal.filesUploadCancel]: void;
+  [desktopIpcChannels.appExternal
+    .filesUploadComplete]: TuttiExternalUploadedFile;
+  [desktopIpcChannels.appExternal
+    .filesUploadPrepare]: DesktopWorkspaceAppFileUploadPrepareResult;
   [desktopIpcChannels.appExternal
     .permissionsRequest]: TuttiExternalPermissionRequestResult;
   [desktopIpcChannels.appExternal

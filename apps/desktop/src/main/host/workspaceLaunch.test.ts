@@ -60,6 +60,15 @@ function createTransportClient(
     async searchWorkspaceAppReferences() {
       throw new Error("not used");
     },
+    async prepareWorkspaceAppUpload() {
+      throw new Error("not used");
+    },
+    async completeWorkspaceAppUpload() {
+      throw new Error("not used");
+    },
+    async cancelWorkspaceAppUpload() {
+      throw new Error("not used");
+    },
     async installWorkspaceApp() {
       throw new Error("not used");
     },

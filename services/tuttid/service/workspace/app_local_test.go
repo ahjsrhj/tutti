@@ -42,6 +42,20 @@ func TestAppCenterServiceLoadLocalPackageResolvesSupportedDirectories(t *testing
 				return projectRoot, packageDir
 			},
 		},
+		{
+			name: "project root dev app dir overrides source manifest",
+			sourceDir: func(t *testing.T, manifest workspacebiz.AppManifest) (string, string) {
+				t.Helper()
+				projectRoot := mustMkdirLocalAppTempDir(t)
+				writeLocalAppManifestForTest(t, projectRoot, localAppManifestForTest("source-manifest", "Source Manifest"))
+				packageDir := filepath.Join(projectRoot, ".tutti", "dev-app")
+				if err := os.MkdirAll(packageDir, 0o755); err != nil {
+					t.Fatalf("create dev app dir: %v", err)
+				}
+				createWorkspaceAppPackageForTest(t, packageDir, manifest)
+				return projectRoot, packageDir
+			},
+		},
 	}
 
 	for _, tt := range tests {
@@ -124,7 +138,7 @@ func TestAppCenterServiceLoadLocalPackageValidatesInputsAndConflicts(t *testing.
 		}
 	})
 
-	t.Run("remote builtin app id conflict", func(t *testing.T) {
+	t.Run("remote builtin app id can load local dev", func(t *testing.T) {
 		service := newLocalAppPackageTestService(t)
 		manifest := localAppManifestForTest("remote-builtin", "Remote Builtin")
 		service.BuiltinCatalog = func() ([]builtinapps.App, error) {
@@ -136,10 +150,75 @@ func TestAppCenterServiceLoadLocalPackageValidatesInputsAndConflicts(t *testing.
 			}}, nil
 		}
 		packageDir := createWorkspaceAppPackageForTest(t, t.TempDir(), manifest)
-		if _, err := service.LoadLocalPackage(ctx, "ws-1", packageDir, InstallOptions{}); !errors.Is(err, ErrAppPackageAlreadyExists) {
-			t.Fatalf("LoadLocalPackage() error = %v, want ErrAppPackageAlreadyExists", err)
+		app, err := service.LoadLocalPackage(ctx, "ws-1", packageDir, InstallOptions{})
+		if err != nil {
+			t.Fatalf("LoadLocalPackage() error = %v", err)
+		}
+		if app.Package.Source != workspacebiz.AppPackageSourceLocalDev {
+			t.Fatalf("source = %q, want local-dev", app.Package.Source)
 		}
 	})
+}
+
+func TestAppCenterServiceLoadLocalPackageOverridesBuiltinApp(t *testing.T) {
+	ctx := context.Background()
+	service := newLocalAppPackageTestService(t)
+	localManifest := localAppManifestForTest("builtin-local-dev", "Local Override")
+	builtinManifest := localAppManifestForTest("builtin-local-dev", "Builtin App")
+	builtinManifest.Version = "0.2.0"
+	builtinPackageDir := createWorkspaceAppPackageForTest(t, mustMkdirLocalAppTempDir(t), builtinManifest)
+	localPackageDir := createWorkspaceAppPackageForTest(t, mustMkdirLocalAppTempDir(t), localManifest)
+	defer stopAndWaitLocalAppRunner(ctx, service.Runner)
+
+	if err := service.Store.PutAppPackage(ctx, workspacebiz.AppPackage{
+		AppID:      builtinManifest.AppID,
+		Version:    builtinManifest.Version,
+		PackageDir: builtinPackageDir,
+		Manifest:   builtinManifest,
+		Source:     workspacebiz.AppPackageSourceBuiltin,
+	}); err != nil {
+		t.Fatalf("PutAppPackage(builtin) error = %v", err)
+	}
+
+	app, err := service.LoadLocalPackage(ctx, "ws-1", localPackageDir, InstallOptions{})
+	if err != nil {
+		t.Fatalf("LoadLocalPackage() error = %v", err)
+	}
+	if app.Package.Source != workspacebiz.AppPackageSourceLocalDev {
+		t.Fatalf("source = %q, want local-dev", app.Package.Source)
+	}
+	if app.Package.PackageDir != localPackageDir {
+		t.Fatalf("packageDir = %q, want %q", app.Package.PackageDir, localPackageDir)
+	}
+
+	active, err := service.Store.GetAppPackage(ctx, localManifest.AppID)
+	if err != nil {
+		t.Fatalf("GetAppPackage() error = %v", err)
+	}
+	if active.Source != workspacebiz.AppPackageSourceLocalDev || active.Version != localManifest.Version {
+		t.Fatalf("active package = %#v, want local-dev %q", active, localManifest.Version)
+	}
+
+	if err := service.DeletePackage(ctx, "ws-1", localManifest.AppID); err != nil {
+		t.Fatalf("DeletePackage() error = %v", err)
+	}
+	if info, err := os.Stat(localPackageDir); err != nil || !info.IsDir() {
+		t.Fatalf("local source directory stat = %#v, %v", info, err)
+	}
+	restored, err := service.Store.GetAppPackage(ctx, localManifest.AppID)
+	if err != nil {
+		t.Fatalf("GetAppPackage(restored) error = %v", err)
+	}
+	if restored.Source != workspacebiz.AppPackageSourceBuiltin || restored.Version != builtinManifest.Version {
+		t.Fatalf("restored package = %#v, want builtin %q", restored, builtinManifest.Version)
+	}
+	installations, err := service.Store.ListWorkspaceAppInstallations(ctx, "ws-1")
+	if err != nil {
+		t.Fatalf("ListWorkspaceAppInstallations() error = %v", err)
+	}
+	if len(installations) != 0 {
+		t.Fatalf("installations = %#v, want none", installations)
+	}
 }
 
 func TestAppCenterServiceLoadLocalPackageUpdatesExistingLocalDev(t *testing.T) {

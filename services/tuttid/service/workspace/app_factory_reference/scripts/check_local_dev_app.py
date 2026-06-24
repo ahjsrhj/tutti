@@ -56,14 +56,14 @@ def resolve_dev_app_dir(source_dir: Path, errors: list[str]) -> Path | None:
         errors.append(f"Source directory does not exist: {source_dir}")
         return None
 
-    exact_manifest = source_dir / "tutti.app.json"
-    if exact_manifest.is_file():
-        return source_dir
-
     nested_dev_app = source_dir / ".tutti" / "dev-app"
     nested_manifest = nested_dev_app / "tutti.app.json"
     if nested_manifest.is_file():
         return nested_dev_app
+
+    exact_manifest = source_dir / "tutti.app.json"
+    if exact_manifest.is_file():
+        return source_dir
 
     errors.append(
         "No local debug app manifest found. Expected tutti.app.json in the "

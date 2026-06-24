@@ -41,6 +41,13 @@ type AppCenterService struct {
 	activeInstallTrackers map[string]*installProgressTracker
 
 	remoteBuiltinInstallLocks keyedOperationLocks
+
+	uploadMu       sync.Mutex
+	uploadSessions map[string]*workspaceAppUploadSession
+
+	uploadJanitorOnce     sync.Once
+	uploadJanitorStop     chan struct{}
+	uploadJanitorInterval time.Duration
 }
 
 type workspaceAppInstallJobStatus string

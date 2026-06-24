@@ -235,6 +235,9 @@ test("WorkspaceAppCenterController restores app state when launch preparation fa
     gateway: createGateway({
       async launchWorkspaceApp() {
         throw new Error("launch rejected");
+      },
+      async listWorkspaceApps() {
+        throw new Error("list rejected");
       }
     })
   });
@@ -252,6 +255,49 @@ test("WorkspaceAppCenterController restores app state when launch preparation fa
 
   assert.equal(app, null);
   assert.equal(controller.store.apps[0]?.runtimeStatus, "idle");
+  assert.equal(controller.store.error, "launch rejected");
+});
+
+test("WorkspaceAppCenterController refreshes app state when launch preparation finds a failed runtime", async () => {
+  let listCalls = 0;
+  const controller = createWorkspaceAppCenterController({
+    formatError: formatError,
+    gateway: createGateway({
+      async launchWorkspaceApp() {
+        throw new Error("launch rejected");
+      },
+      async listWorkspaceApps() {
+        listCalls += 1;
+        return createSnapshot({
+          apps: [
+            createApp({
+              appId: "app-1",
+              failureReason: "process_exit",
+              lastError: "exit status 1",
+              runtimeStatus: "failed",
+              stateRevision: 2
+            })
+          ]
+        });
+      }
+    })
+  });
+  controller.applySnapshot(
+    "workspace-1",
+    createSnapshot({
+      apps: [createApp({ appId: "app-1", runtimeStatus: "idle" })]
+    })
+  );
+
+  const app = await controller.prepareAppLaunch({
+    appId: "app-1",
+    workspaceId: "workspace-1"
+  });
+
+  assert.equal(app, null);
+  assert.equal(listCalls, 1);
+  assert.equal(controller.store.apps[0]?.runtimeStatus, "failed");
+  assert.equal(controller.store.apps[0]?.lastError, "exit status 1");
   assert.equal(controller.store.error, "launch rejected");
 });
 

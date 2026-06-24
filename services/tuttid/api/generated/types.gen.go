@@ -1180,6 +1180,21 @@ func (e WorkspaceAppSource) Valid() bool {
 	}
 }
 
+// Defines values for WorkspaceAppUploadPurpose.
+const (
+	AppAsset WorkspaceAppUploadPurpose = "app-asset"
+)
+
+// Valid indicates whether the value is a known member of the WorkspaceAppUploadPurpose enum.
+func (e WorkspaceAppUploadPurpose) Valid() bool {
+	switch e {
+	case AppAsset:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for WorkspaceFileEntryKind.
 const (
 	WorkspaceFileEntryKindDirectory WorkspaceFileEntryKind = "directory"
@@ -1857,6 +1872,11 @@ type CompleteIssueManagerRunRequest struct {
 	Summary      *string                             `json:"summary,omitempty"`
 }
 
+// CompleteWorkspaceAppUploadResponse defines model for CompleteWorkspaceAppUploadResponse.
+type CompleteWorkspaceAppUploadResponse struct {
+	File WorkspaceAppUploadedFile `json:"file"`
+}
+
 // CopyWorkspaceFileEntryRequest defines model for CopyWorkspaceFileEntryRequest.
 type CopyWorkspaceFileEntryRequest struct {
 	Path string `json:"path"`
@@ -2522,6 +2542,20 @@ type PreflightUploadWorkspaceFilesResponse struct {
 	WorkspaceId         string                        `json:"workspaceId"`
 }
 
+// PrepareWorkspaceAppUploadRequest defines model for PrepareWorkspaceAppUploadRequest.
+type PrepareWorkspaceAppUploadRequest struct {
+	MimeType  string                    `json:"mimeType"`
+	Name      string                    `json:"name"`
+	Purpose   WorkspaceAppUploadPurpose `json:"purpose"`
+	SizeBytes int64                     `json:"sizeBytes"`
+}
+
+// PrepareWorkspaceAppUploadResponse defines model for PrepareWorkspaceAppUploadResponse.
+type PrepareWorkspaceAppUploadResponse struct {
+	ExpiresAt time.Time `json:"expiresAt"`
+	UploadId  string    `json:"uploadId"`
+}
+
 // PublishWorkspaceAppFactoryJobResponse defines model for PublishWorkspaceAppFactoryJobResponse.
 type PublishWorkspaceAppFactoryJobResponse struct {
 	App         WorkspaceApp           `json:"app"`
@@ -3028,6 +3062,18 @@ type WorkspaceAppRuntimeStatus string
 
 // WorkspaceAppSource defines model for WorkspaceAppSource.
 type WorkspaceAppSource string
+
+// WorkspaceAppUploadPurpose defines model for WorkspaceAppUploadPurpose.
+type WorkspaceAppUploadPurpose string
+
+// WorkspaceAppUploadedFile defines model for WorkspaceAppUploadedFile.
+type WorkspaceAppUploadedFile struct {
+	MimeType  string `json:"mimeType"`
+	Name      string `json:"name"`
+	Path      string `json:"path"`
+	Sha256    string `json:"sha256"`
+	SizeBytes int64  `json:"sizeBytes"`
+}
 
 // WorkspaceFileDirectoryResponse defines model for WorkspaceFileDirectoryResponse.
 type WorkspaceFileDirectoryResponse struct {
@@ -3544,6 +3590,9 @@ type ReloadLocalWorkspaceAppJSONRequestBody = ReloadLocalWorkspaceAppRequest
 
 // RollbackWorkspaceAppJSONRequestBody defines body for RollbackWorkspaceApp for application/json ContentType.
 type RollbackWorkspaceAppJSONRequestBody = RollbackWorkspaceAppRequest
+
+// PrepareWorkspaceAppUploadJSONRequestBody defines body for PrepareWorkspaceAppUpload for application/json ContentType.
+type PrepareWorkspaceAppUploadJSONRequestBody = PrepareWorkspaceAppUploadRequest
 
 // CreateWorkspaceFileDirectoryJSONRequestBody defines body for CreateWorkspaceFileDirectory for application/json ContentType.
 type CreateWorkspaceFileDirectoryJSONRequestBody = CreateWorkspaceFileDirectoryRequest

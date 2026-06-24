@@ -4,6 +4,7 @@ import {
   normalizeTuttiExternalAtQueryInput,
   normalizeTuttiExternalFileOpenInput,
   normalizeTuttiExternalFileSelectInput,
+  normalizeTuttiExternalFileUploadInput,
   normalizeTuttiExternalLogInput,
   normalizeTuttiExternalPdfPrintHtmlInput,
   normalizeTuttiExternalPermissionRequestInput,
@@ -102,6 +103,60 @@ test("rejects invalid file open input", () => {
   assert.throws(
     () => normalizeTuttiExternalFileOpenInput({ path: "README.md", mode: "x" }),
     /mode is unsupported/
+  );
+});
+
+test("normalizes file upload input defaults", () => {
+  assert.deepEqual(normalizeTuttiExternalFileUploadInput(undefined), {
+    purpose: "app-asset"
+  });
+});
+
+test("normalizes file upload input strings", () => {
+  const controller = new AbortController();
+  const onProgress = () => undefined;
+  assert.deepEqual(
+    normalizeTuttiExternalFileUploadInput({
+      purpose: "app-asset",
+      name: " Image.PNG ",
+      mimeType: " image/png ",
+      onProgress,
+      signal: controller.signal
+    }),
+    {
+      purpose: "app-asset",
+      name: "Image.PNG",
+      mimeType: "image/png",
+      onProgress,
+      signal: controller.signal
+    }
+  );
+});
+
+test("rejects invalid file upload input", () => {
+  assert.throws(
+    () => normalizeTuttiExternalFileUploadInput("bad"),
+    /input must be an object/
+  );
+  assert.throws(
+    () => normalizeTuttiExternalFileUploadInput({ purpose: "avatar" }),
+    /purpose is unsupported/
+  );
+  assert.throws(
+    () => normalizeTuttiExternalFileUploadInput({ name: 1 }),
+    /name must be a string/
+  );
+  assert.throws(
+    () => normalizeTuttiExternalFileUploadInput({ mimeType: 1 }),
+    /mimeType must be a string/
+  );
+  assert.throws(
+    () => normalizeTuttiExternalFileUploadInput({ onProgress: true }),
+    /onProgress must be a function/
+  );
+  assert.throws(
+    () => normalizeTuttiExternalFileUploadInput({ signal: {} }),
+    /signal must be an AbortSignal/
   );
 });
 

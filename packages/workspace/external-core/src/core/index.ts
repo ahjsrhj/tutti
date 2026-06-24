@@ -6,6 +6,7 @@ import {
   type TuttiExternalAtQueryInput,
   type TuttiExternalFileOpenInput,
   type TuttiExternalFileSelectInput,
+  type TuttiExternalFileUploadInput,
   type TuttiExternalLogInput,
   type TuttiExternalLogLevel,
   type TuttiExternalManagedAiModelProviderId,
@@ -132,6 +133,28 @@ export function normalizeTuttiExternalFileOpenInput(
     ...(typeof input.sizeBytes === "number" || input.sizeBytes === null
       ? { sizeBytes: input.sizeBytes }
       : {})
+  };
+}
+
+export function normalizeTuttiExternalFileUploadInput(
+  input: unknown
+): TuttiExternalFileUploadInput & { purpose: "app-asset" } {
+  if (input === undefined || input === null) {
+    return { purpose: "app-asset" };
+  }
+  if (!isRecord(input)) {
+    throw new Error("files.upload input must be an object.");
+  }
+  return {
+    purpose: normalizeFileUploadPurpose(input.purpose),
+    ...normalizeOptionalTrimmedString(input.name, "name", "files.upload name"),
+    ...normalizeOptionalTrimmedString(
+      input.mimeType,
+      "mimeType",
+      "files.upload mimeType"
+    ),
+    ...normalizeFileUploadProgressListener(input.onProgress),
+    ...normalizeFileUploadSignal(input.signal)
   };
 }
 
@@ -552,6 +575,69 @@ function normalizeFileOpenMode(
     return value;
   }
   throw new Error("files.open mode is unsupported.");
+}
+
+function normalizeFileUploadPurpose(value: unknown): "app-asset" {
+  if (value === undefined || value === null || value === "") {
+    return "app-asset";
+  }
+  if (value === "app-asset") {
+    return value;
+  }
+  throw new Error("files.upload purpose is unsupported.");
+}
+
+function normalizeFileUploadProgressListener(
+  value: unknown
+): Pick<TuttiExternalFileUploadInput, "onProgress"> {
+  if (value === undefined || value === null) {
+    return {};
+  }
+  if (typeof value !== "function") {
+    throw new Error("files.upload onProgress must be a function.");
+  }
+  return {
+    onProgress: value as NonNullable<TuttiExternalFileUploadInput["onProgress"]>
+  };
+}
+
+function normalizeFileUploadSignal(
+  value: unknown
+): Pick<TuttiExternalFileUploadInput, "signal"> {
+  if (value === undefined || value === null) {
+    return {};
+  }
+  if (!isFileUploadAbortSignal(value)) {
+    throw new Error("files.upload signal must be an AbortSignal.");
+  }
+  return { signal: value };
+}
+
+function isFileUploadAbortSignal(value: unknown): value is AbortSignal {
+  return (
+    isRecord(value) &&
+    typeof value.aborted === "boolean" &&
+    typeof value.addEventListener === "function" &&
+    typeof value.removeEventListener === "function"
+  );
+}
+
+function normalizeOptionalTrimmedString(
+  value: unknown,
+  key: "mimeType" | "name",
+  field: string
+): Partial<Record<"mimeType" | "name", string>> {
+  if (value === undefined || value === null) {
+    return {};
+  }
+  if (typeof value !== "string") {
+    throw new Error(`${field} must be a string.`);
+  }
+  const trimmed = value.trim();
+  if (!trimmed) {
+    return {};
+  }
+  return { [key]: trimmed };
 }
 
 function normalizeRequiredString(value: unknown, field: string): string {

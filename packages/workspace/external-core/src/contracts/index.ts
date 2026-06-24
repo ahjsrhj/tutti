@@ -91,6 +91,28 @@ export interface TuttiExternalFileOpenInput {
   sizeBytes?: number | null;
 }
 
+export interface TuttiExternalFileUploadInput {
+  purpose?: "app-asset";
+  name?: string;
+  mimeType?: string;
+  onProgress?: (progress: TuttiExternalFileUploadProgress) => void;
+  signal?: AbortSignal;
+}
+
+export interface TuttiExternalUploadedFile {
+  path: string;
+  name: string;
+  mimeType: string;
+  sizeBytes: number;
+  sha256: string;
+}
+
+export interface TuttiExternalFileUploadProgress {
+  loadedBytes: number;
+  ratio: number;
+  totalBytes: number;
+}
+
 export const tuttiExternalManagedAiModelProviderIds = [
   "agnes",
   "openai",
@@ -228,6 +250,10 @@ export interface TuttiExternalBridge {
       input?: TuttiExternalFileSelectInput
     ): Promise<TuttiExternalFileSelectResult>;
     open(input: TuttiExternalFileOpenInput): Promise<void>;
+    upload(
+      file: Blob | File,
+      input?: TuttiExternalFileUploadInput
+    ): Promise<TuttiExternalUploadedFile>;
   };
   permissions: {
     request(

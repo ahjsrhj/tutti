@@ -3,10 +3,15 @@ package api
 import (
 	"context"
 	"encoding/json"
+	"io"
 	"net/http"
+	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 
+	tuttigenerated "github.com/tutti-os/tutti/services/tuttid/api/generated"
+	"github.com/tutti-os/tutti/services/tuttid/apierrors"
 	workspacebiz "github.com/tutti-os/tutti/services/tuttid/biz/workspace"
 	workspaceservice "github.com/tutti-os/tutti/services/tuttid/service/workspace"
 )
@@ -358,13 +363,170 @@ func TestDaemonAPIGeneratedRoutesReloadLocalWorkspaceAppPassesRestartOption(t *t
 	}
 }
 
+func TestDaemonAPIGeneratedRoutesWorkspaceAppUploadLifecycle(t *testing.T) {
+	mux := http.NewServeMux()
+	expiresAt := time.Date(2026, time.June, 24, 12, 15, 0, 0, time.UTC)
+	prepareCalls := 0
+	putCalls := 0
+	completeCalls := 0
+	cancelCalls := 0
+	RegisterRoutes(
+		mux,
+		NewRoutes(DaemonAPI{
+			AppCenterService: stubWorkspaceAppCenterService{
+				prepareWorkspaceAppUploadFn: func(_ context.Context, workspaceID string, appID string, input workspaceservice.PrepareWorkspaceAppUploadInput) (workspaceservice.WorkspaceAppUploadSession, error) {
+					prepareCalls++
+					if workspaceID != "workspace-1" || appID != "canvas" {
+						t.Fatalf("prepare target = %q/%q, want workspace-1/canvas", workspaceID, appID)
+					}
+					if input.Name != "image.png" || input.MimeType != "image/png" || input.SizeBytes != 5 || input.Purpose != workspaceservice.WorkspaceAppUploadPurposeAppAsset {
+						t.Fatalf("prepare input = %#v", input)
+					}
+					return workspaceservice.WorkspaceAppUploadSession{
+						ExpiresAt: expiresAt,
+						UploadID:  "upload-1",
+					}, nil
+				},
+				putWorkspaceAppUploadContentFn: func(_ context.Context, workspaceID string, appID string, uploadID string, input workspaceservice.PutWorkspaceAppUploadContentInput) error {
+					putCalls++
+					if workspaceID != "workspace-1" || appID != "canvas" || uploadID != "upload-1" {
+						t.Fatalf("put target = %q/%q/%q, want workspace-1/canvas/upload-1", workspaceID, appID, uploadID)
+					}
+					data, err := io.ReadAll(input.Body)
+					if err != nil {
+						t.Fatalf("read upload body: %v", err)
+					}
+					if string(data) != "bytes" {
+						t.Fatalf("put body = %q, want bytes", data)
+					}
+					return nil
+				},
+				completeWorkspaceAppUploadFn: func(_ context.Context, workspaceID string, appID string, uploadID string, now time.Time) (workspaceservice.WorkspaceAppUploadedFile, error) {
+					completeCalls++
+					if workspaceID != "workspace-1" || appID != "canvas" || uploadID != "upload-1" {
+						t.Fatalf("complete target = %q/%q/%q, want workspace-1/canvas/upload-1", workspaceID, appID, uploadID)
+					}
+					if now.IsZero() {
+						t.Fatal("complete now is zero")
+					}
+					return workspaceservice.WorkspaceAppUploadedFile{
+						MimeType:  "image/png",
+						Name:      "image.png",
+						Path:      "/state/apps/installations/canvas/data/uploads/2c/hash.png",
+						SHA256:    "2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824",
+						SizeBytes: 5,
+					}, nil
+				},
+				cancelWorkspaceAppUploadFn: func(_ context.Context, workspaceID string, appID string, uploadID string) error {
+					cancelCalls++
+					if workspaceID != "workspace-1" || appID != "canvas" || uploadID != "upload-1" {
+						t.Fatalf("cancel target = %q/%q/%q, want workspace-1/canvas/upload-1", workspaceID, appID, uploadID)
+					}
+					return nil
+				},
+			},
+		}),
+	)
+
+	prepareRecorder := performGeneratedRouteRequest(
+		t,
+		mux,
+		http.MethodPost,
+		"/v1/workspaces/workspace-1/apps/canvas/uploads",
+		map[string]any{
+			"mimeType":  "image/png",
+			"name":      "image.png",
+			"purpose":   "app-asset",
+			"sizeBytes": 5,
+		},
+	)
+	if prepareRecorder.Code != http.StatusCreated {
+		t.Fatalf("prepare status = %d, want %d; body: %s", prepareRecorder.Code, http.StatusCreated, prepareRecorder.Body.String())
+	}
+	var prepareResponse tuttigenerated.PrepareWorkspaceAppUploadResponse
+	decodeGeneratedRouteResponse(t, prepareRecorder, &prepareResponse)
+	if prepareResponse.UploadId != "upload-1" || !prepareResponse.ExpiresAt.Equal(expiresAt) {
+		t.Fatalf("prepare response = %#v", prepareResponse)
+	}
+
+	putRequest := httptest.NewRequest(http.MethodPut, "/v1/workspaces/workspace-1/apps/canvas/uploads/upload-1/content", strings.NewReader("bytes"))
+	putRequest.Header.Set("Content-Type", "application/octet-stream")
+	putRecorder := httptest.NewRecorder()
+	mux.ServeHTTP(putRecorder, putRequest)
+	if putRecorder.Code != http.StatusNoContent {
+		t.Fatalf("put status = %d, want %d; body: %s", putRecorder.Code, http.StatusNoContent, putRecorder.Body.String())
+	}
+
+	completeRecorder := performGeneratedRouteRequest(
+		t,
+		mux,
+		http.MethodPost,
+		"/v1/workspaces/workspace-1/apps/canvas/uploads/upload-1/complete",
+		nil,
+	)
+	if completeRecorder.Code != http.StatusOK {
+		t.Fatalf("complete status = %d, want %d; body: %s", completeRecorder.Code, http.StatusOK, completeRecorder.Body.String())
+	}
+	var completeResponse tuttigenerated.CompleteWorkspaceAppUploadResponse
+	decodeGeneratedRouteResponse(t, completeRecorder, &completeResponse)
+	if completeResponse.File.Path != "/state/apps/installations/canvas/data/uploads/2c/hash.png" || completeResponse.File.SizeBytes != 5 {
+		t.Fatalf("complete response = %#v", completeResponse)
+	}
+
+	cancelRequest := httptest.NewRequest(http.MethodDelete, "/v1/workspaces/workspace-1/apps/canvas/uploads/upload-1", nil)
+	cancelRecorder := httptest.NewRecorder()
+	mux.ServeHTTP(cancelRecorder, cancelRequest)
+	if cancelRecorder.Code != http.StatusNoContent {
+		t.Fatalf("cancel status = %d, want %d; body: %s", cancelRecorder.Code, http.StatusNoContent, cancelRecorder.Body.String())
+	}
+	if prepareCalls != 1 || putCalls != 1 || completeCalls != 1 || cancelCalls != 1 {
+		t.Fatalf("calls = prepare:%d put:%d complete:%d cancel:%d, want 1 each", prepareCalls, putCalls, completeCalls, cancelCalls)
+	}
+}
+
+func TestDaemonAPIGeneratedRoutesCompleteWorkspaceAppUploadMapsNotReady(t *testing.T) {
+	mux := http.NewServeMux()
+	RegisterRoutes(
+		mux,
+		NewRoutes(DaemonAPI{
+			AppCenterService: stubWorkspaceAppCenterService{
+				completeWorkspaceAppUploadFn: func(context.Context, string, string, string, time.Time) (workspaceservice.WorkspaceAppUploadedFile, error) {
+					return workspaceservice.WorkspaceAppUploadedFile{}, workspaceservice.ErrWorkspaceAppUploadNotReady
+				},
+			},
+		}),
+	)
+
+	recorder := performGeneratedRouteRequest(
+		t,
+		mux,
+		http.MethodPost,
+		"/v1/workspaces/workspace-1/apps/canvas/uploads/upload-1/complete",
+		nil,
+	)
+	if recorder.Code != http.StatusBadRequest {
+		t.Fatalf("complete status = %d, want %d; body: %s", recorder.Code, http.StatusBadRequest, recorder.Body.String())
+	}
+	assertGeneratedRouteError(
+		t,
+		recorder,
+		tuttigenerated.InvalidRequest,
+		apierrors.ReasonMalformedRequest,
+		"workspace app upload content is not ready",
+	)
+}
+
 type stubWorkspaceAppCenterService struct {
-	listFn               func(context.Context, string) ([]workspacebiz.WorkspaceApp, error)
-	installWithOptionsFn func(context.Context, string, string, workspaceservice.InstallOptions) (workspacebiz.WorkspaceApp, error)
-	loadLocalPackageFn   func(context.Context, string, string, workspaceservice.InstallOptions) (workspacebiz.WorkspaceApp, error)
-	reloadLocalPackageFn func(context.Context, string, string, workspaceservice.InstallOptions) (workspacebiz.WorkspaceApp, error)
-	listReferencesFn     func(context.Context, string, string, workspacebiz.AppReferenceListInput) (workspacebiz.AppReferenceListResult, error)
-	searchReferencesFn   func(context.Context, string, string, workspacebiz.AppReferenceSearchInput) (workspacebiz.AppReferenceListResult, error)
+	listFn                         func(context.Context, string) ([]workspacebiz.WorkspaceApp, error)
+	installWithOptionsFn           func(context.Context, string, string, workspaceservice.InstallOptions) (workspacebiz.WorkspaceApp, error)
+	loadLocalPackageFn             func(context.Context, string, string, workspaceservice.InstallOptions) (workspacebiz.WorkspaceApp, error)
+	reloadLocalPackageFn           func(context.Context, string, string, workspaceservice.InstallOptions) (workspacebiz.WorkspaceApp, error)
+	listReferencesFn               func(context.Context, string, string, workspacebiz.AppReferenceListInput) (workspacebiz.AppReferenceListResult, error)
+	searchReferencesFn             func(context.Context, string, string, workspacebiz.AppReferenceSearchInput) (workspacebiz.AppReferenceListResult, error)
+	prepareWorkspaceAppUploadFn    func(context.Context, string, string, workspaceservice.PrepareWorkspaceAppUploadInput) (workspaceservice.WorkspaceAppUploadSession, error)
+	putWorkspaceAppUploadContentFn func(context.Context, string, string, string, workspaceservice.PutWorkspaceAppUploadContentInput) error
+	completeWorkspaceAppUploadFn   func(context.Context, string, string, string, time.Time) (workspaceservice.WorkspaceAppUploadedFile, error)
+	cancelWorkspaceAppUploadFn     func(context.Context, string, string, string) error
 }
 
 func (stubWorkspaceAppCenterService) Add(context.Context, string, string) (workspacebiz.WorkspaceApp, error) {
@@ -417,6 +579,34 @@ func (s stubWorkspaceAppCenterService) SearchReferences(ctx context.Context, wor
 		return workspacebiz.AppReferenceListResult{}, nil
 	}
 	return s.searchReferencesFn(ctx, workspaceID, appID, input)
+}
+
+func (s stubWorkspaceAppCenterService) PrepareWorkspaceAppUpload(ctx context.Context, workspaceID string, appID string, input workspaceservice.PrepareWorkspaceAppUploadInput) (workspaceservice.WorkspaceAppUploadSession, error) {
+	if s.prepareWorkspaceAppUploadFn == nil {
+		return workspaceservice.WorkspaceAppUploadSession{}, nil
+	}
+	return s.prepareWorkspaceAppUploadFn(ctx, workspaceID, appID, input)
+}
+
+func (s stubWorkspaceAppCenterService) PutWorkspaceAppUploadContent(ctx context.Context, workspaceID string, appID string, uploadID string, input workspaceservice.PutWorkspaceAppUploadContentInput) error {
+	if s.putWorkspaceAppUploadContentFn == nil {
+		return nil
+	}
+	return s.putWorkspaceAppUploadContentFn(ctx, workspaceID, appID, uploadID, input)
+}
+
+func (s stubWorkspaceAppCenterService) CompleteWorkspaceAppUpload(ctx context.Context, workspaceID string, appID string, uploadID string, now time.Time) (workspaceservice.WorkspaceAppUploadedFile, error) {
+	if s.completeWorkspaceAppUploadFn == nil {
+		return workspaceservice.WorkspaceAppUploadedFile{}, nil
+	}
+	return s.completeWorkspaceAppUploadFn(ctx, workspaceID, appID, uploadID, now)
+}
+
+func (s stubWorkspaceAppCenterService) CancelWorkspaceAppUpload(ctx context.Context, workspaceID string, appID string, uploadID string) error {
+	if s.cancelWorkspaceAppUploadFn == nil {
+		return nil
+	}
+	return s.cancelWorkspaceAppUploadFn(ctx, workspaceID, appID, uploadID)
 }
 
 func (s stubWorkspaceAppCenterService) List(ctx context.Context, workspaceID string) ([]workspacebiz.WorkspaceApp, error) {

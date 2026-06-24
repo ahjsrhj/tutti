@@ -640,6 +640,8 @@ export const en = {
     managed_process_stderr: "The local runtime reported an internal error.",
     node_runtime_broken:
       "The Node.js runtime used by npm is broken. Check your terminal Node/npm setup, then try again.",
+    workspace_app_launch_requires_retry:
+      "This app failed to start. Click Retry before opening it.",
     preview_file_too_large: "This file is too large to preview here.",
     service_unavailable: {
       default: "That service is temporarily unavailable.",

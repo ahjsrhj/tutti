@@ -610,6 +610,7 @@ export const zhCN = {
     managed_process_stderr: "本地运行时报告了内部错误。",
     node_runtime_broken:
       "npm 使用的 Node.js 运行时已损坏。请检查终端中的 Node/npm 配置后重试。",
+    workspace_app_launch_requires_retry: "这个应用启动失败了，请先点击重试。",
     preview_file_too_large: "这个文件太大，暂时无法在这里预览。",
     service_unavailable: {
       default: "对应服务暂时不可用。",

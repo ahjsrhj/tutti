@@ -43,6 +43,32 @@ Use this shape for new entries:
 
 ## Current Entries
 
+### Load unpacked project roots with source manifests
+
+- Symptom:
+  App Center's Load unpacked action rejects an app repository even though
+  `.tutti/dev-app/tutti.app.json` and `.tutti/dev-app/bootstrap.sh` are valid.
+- Quick checks:
+  Run `services/tuttid/service/workspace/app_factory_reference/scripts/check_local_dev_app.py <project-root>`.
+  If the project root also contains a publishable source `tutti.app.json`, make
+  sure the daemon and checker resolve `.tutti/dev-app` before the root manifest.
+- Root cause:
+  App repositories can keep a release source manifest at the project root while
+  using `.tutti/dev-app` as the Chrome-style local debug wrapper. If local app
+  loading treats the root manifest as authoritative first, it may validate the
+  source manifest as a package and fail on package-local files such as
+  `bootstrap.sh`, `icon.png`, or `tutti.cli.json`.
+- Fix:
+  Prefer `.tutti/dev-app/tutti.app.json` when a selected project root contains
+  both a nested dev app and a root source manifest. Directly selected app
+  package directories still load from their own `tutti.app.json`.
+- Validation:
+  Add or run service coverage for a project root with both manifests, then run
+  the local debug checker on that project root.
+- References:
+  [app_local.go](../../services/tuttid/service/workspace/app_local.go)
+  [check_local_dev_app.py](../../services/tuttid/service/workspace/app_factory_reference/scripts/check_local_dev_app.py)
+
 ### External PR review approvals do not refresh gate status
 
 - Symptom:

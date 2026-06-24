@@ -62,6 +62,8 @@ import type {
   CopyWorkspaceFileEntryRequest,
   MoveWorkspaceFileEntryRequest,
   RenameWorkspaceFileEntryRequest,
+  PrepareWorkspaceAppUploadRequest,
+  PrepareWorkspaceAppUploadResponse,
   PreflightUploadWorkspaceFilesResponse,
   PutDesktopPreferencesRequest,
   ImportWorkspaceAppRequest,
@@ -99,6 +101,7 @@ import type {
   WorkspaceAppFactoryJobListResponse,
   WorkspaceAppListResponse,
   WorkspaceAppMentionCandidatesResponse,
+  WorkspaceAppUploadedFile,
   PublishWorkspaceAppFactoryJobResponse,
   RollbackWorkspaceAppRequest,
   WorkspaceSummary,
@@ -303,6 +306,21 @@ export interface TuttidClient {
     appID: string,
     request: AppReferenceSearchRequest
   ): Promise<AppReferenceSearchResponse>;
+  prepareWorkspaceAppUpload(
+    workspaceID: string,
+    appID: string,
+    request: PrepareWorkspaceAppUploadRequest
+  ): Promise<PrepareWorkspaceAppUploadResponse>;
+  completeWorkspaceAppUpload(
+    workspaceID: string,
+    appID: string,
+    uploadID: string
+  ): Promise<WorkspaceAppUploadedFile>;
+  cancelWorkspaceAppUpload(
+    workspaceID: string,
+    appID: string,
+    uploadID: string
+  ): Promise<void>;
   refreshWorkspaceAppCatalog(
     workspaceID: string
   ): Promise<WorkspaceAppListResponse>;

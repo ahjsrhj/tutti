@@ -19,6 +19,7 @@ tags:
   - name: terminal
   - name: agent-session
   - name: agent-context
+  - name: app-center
   - name: app-factory
   - name: user-project
 paths:
@@ -848,6 +849,150 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/AppReferenceSearchResponse"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "400":
+          $ref: "#/components/responses/InvalidRequestError"
+        "404":
+          $ref: "#/components/responses/WorkspaceAppNotFoundError"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowedError"
+        "502":
+          $ref: "#/components/responses/WorkspaceOperationError"
+        "503":
+          $ref: "#/components/responses/ServiceUnavailableError"
+  /v1/workspaces/{workspaceID}/apps/{appID}/uploads:
+    parameters:
+      - $ref: "#/components/parameters/WorkspaceID"
+      - $ref: "#/components/parameters/WorkspaceAppID"
+    post:
+      operationId: prepareWorkspaceAppUpload
+      tags:
+        - app-center
+      summary: Prepare one managed file upload for a workspace app
+      description: >
+        Creates an in-memory upload session scoped to one installed workspace
+        app. The response only identifies the daemon upload session; desktop
+        hosts construct the direct content upload URL and keep storage-provider
+        details out of the app-facing browser bridge.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PrepareWorkspaceAppUploadRequest"
+      responses:
+        "201":
+          description: Workspace app upload session prepared
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PrepareWorkspaceAppUploadResponse"
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "400":
+          $ref: "#/components/responses/InvalidRequestError"
+        "404":
+          $ref: "#/components/responses/WorkspaceAppNotFoundError"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowedError"
+        "502":
+          $ref: "#/components/responses/WorkspaceOperationError"
+        "503":
+          $ref: "#/components/responses/ServiceUnavailableError"
+  /v1/workspaces/{workspaceID}/apps/{appID}/uploads/{uploadID}/content:
+    parameters:
+      - $ref: "#/components/parameters/WorkspaceID"
+      - $ref: "#/components/parameters/WorkspaceAppID"
+      - name: uploadID
+        in: path
+        required: true
+        schema:
+          type: string
+          minLength: 1
+    put:
+      operationId: putWorkspaceAppUploadContent
+      tags:
+        - app-center
+      summary: Stream upload bytes into one workspace app upload session
+      requestBody:
+        required: true
+        content:
+          application/octet-stream:
+            schema:
+              type: string
+              format: binary
+      responses:
+        "204":
+          description: Workspace app upload content accepted
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "400":
+          $ref: "#/components/responses/InvalidRequestError"
+        "404":
+          $ref: "#/components/responses/WorkspaceAppNotFoundError"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowedError"
+        "502":
+          $ref: "#/components/responses/WorkspaceOperationError"
+        "503":
+          $ref: "#/components/responses/ServiceUnavailableError"
+  /v1/workspaces/{workspaceID}/apps/{appID}/uploads/{uploadID}:
+    parameters:
+      - $ref: "#/components/parameters/WorkspaceID"
+      - $ref: "#/components/parameters/WorkspaceAppID"
+      - name: uploadID
+        in: path
+        required: true
+        schema:
+          type: string
+          minLength: 1
+    delete:
+      operationId: cancelWorkspaceAppUpload
+      tags:
+        - app-center
+      summary: Cancel one managed file upload session for a workspace app
+      description: >
+        Drops the in-memory upload session and removes the temporary upload
+        file when the upload has not been completed. Completed durable files are
+        not deleted by this operation.
+      responses:
+        "204":
+          description: Workspace app upload session canceled
+        "401":
+          $ref: "#/components/responses/UnauthorizedError"
+        "400":
+          $ref: "#/components/responses/InvalidRequestError"
+        "404":
+          $ref: "#/components/responses/WorkspaceAppNotFoundError"
+        "405":
+          $ref: "#/components/responses/MethodNotAllowedError"
+        "502":
+          $ref: "#/components/responses/WorkspaceOperationError"
+        "503":
+          $ref: "#/components/responses/ServiceUnavailableError"
+  /v1/workspaces/{workspaceID}/apps/{appID}/uploads/{uploadID}/complete:
+    parameters:
+      - $ref: "#/components/parameters/WorkspaceID"
+      - $ref: "#/components/parameters/WorkspaceAppID"
+      - name: uploadID
+        in: path
+        required: true
+        schema:
+          type: string
+          minLength: 1
+    post:
+      operationId: completeWorkspaceAppUpload
+      tags:
+        - app-center
+      summary: Complete one managed file upload for a workspace app
+      responses:
+        "200":
+          description: Workspace app upload completed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CompleteWorkspaceAppUploadResponse"
         "401":
           $ref: "#/components/responses/UnauthorizedError"
         "400":
@@ -4231,6 +4376,79 @@ components:
       enum:
         - hibernate
         - keep-mounted
+    WorkspaceAppUploadPurpose:
+      type: string
+      enum:
+        - app-asset
+    PrepareWorkspaceAppUploadRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - purpose
+        - name
+        - mimeType
+        - sizeBytes
+      properties:
+        purpose:
+          $ref: "#/components/schemas/WorkspaceAppUploadPurpose"
+        name:
+          type: string
+          minLength: 1
+        mimeType:
+          type: string
+          minLength: 1
+        sizeBytes:
+          type: integer
+          format: int64
+          minimum: 0
+    PrepareWorkspaceAppUploadResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - uploadId
+        - expiresAt
+      properties:
+        uploadId:
+          type: string
+          minLength: 1
+        expiresAt:
+          type: string
+          format: date-time
+    CompleteWorkspaceAppUploadResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - file
+      properties:
+        file:
+          $ref: "#/components/schemas/WorkspaceAppUploadedFile"
+    WorkspaceAppUploadedFile:
+      type: object
+      additionalProperties: false
+      required:
+        - path
+        - name
+        - mimeType
+        - sizeBytes
+        - sha256
+      properties:
+        path:
+          type: string
+          minLength: 1
+        name:
+          type: string
+          minLength: 1
+        mimeType:
+          type: string
+          minLength: 1
+        sizeBytes:
+          type: integer
+          format: int64
+          minimum: 0
+        sha256:
+          type: string
+          minLength: 64
+          maxLength: 64
     RollbackWorkspaceAppRequest:
       type: object
       additionalProperties: false

@@ -214,6 +214,18 @@ type ServerInterface interface {
 	// Uninstall one installed app from a workspace
 	// (POST /v1/workspaces/{workspaceID}/apps/{appID}/uninstall)
 	UninstallWorkspaceApp(w http.ResponseWriter, r *http.Request, workspaceID WorkspaceID, appID WorkspaceAppID)
+	// Prepare one managed file upload for a workspace app
+	// (POST /v1/workspaces/{workspaceID}/apps/{appID}/uploads)
+	PrepareWorkspaceAppUpload(w http.ResponseWriter, r *http.Request, workspaceID WorkspaceID, appID WorkspaceAppID)
+	// Cancel one managed file upload session for a workspace app
+	// (DELETE /v1/workspaces/{workspaceID}/apps/{appID}/uploads/{uploadID})
+	CancelWorkspaceAppUpload(w http.ResponseWriter, r *http.Request, workspaceID WorkspaceID, appID WorkspaceAppID, uploadID string)
+	// Complete one managed file upload for a workspace app
+	// (POST /v1/workspaces/{workspaceID}/apps/{appID}/uploads/{uploadID}/complete)
+	CompleteWorkspaceAppUpload(w http.ResponseWriter, r *http.Request, workspaceID WorkspaceID, appID WorkspaceAppID, uploadID string)
+	// Stream upload bytes into one workspace app upload session
+	// (PUT /v1/workspaces/{workspaceID}/apps/{appID}/uploads/{uploadID}/content)
+	PutWorkspaceAppUploadContent(w http.ResponseWriter, r *http.Request, workspaceID WorkspaceID, appID WorkspaceAppID, uploadID string)
 	// List direct children for one workspace directory
 	// (GET /v1/workspaces/{workspaceID}/files/directory)
 	ListWorkspaceFileDirectory(w http.ResponseWriter, r *http.Request, workspaceID WorkspaceID, params ListWorkspaceFileDirectoryParams)
@@ -2765,6 +2777,197 @@ func (siw *ServerInterfaceWrapper) UninstallWorkspaceApp(w http.ResponseWriter, 
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.UninstallWorkspaceApp(w, r, workspaceID, appID)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// PrepareWorkspaceAppUpload operation middleware
+func (siw *ServerInterfaceWrapper) PrepareWorkspaceAppUpload(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "workspaceID" -------------
+	var workspaceID WorkspaceID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "workspaceID", r.PathValue("workspaceID"), &workspaceID, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "workspaceID", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "appID" -------------
+	var appID WorkspaceAppID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "appID", r.PathValue("appID"), &appID, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "appID", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.PrepareWorkspaceAppUpload(w, r, workspaceID, appID)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// CancelWorkspaceAppUpload operation middleware
+func (siw *ServerInterfaceWrapper) CancelWorkspaceAppUpload(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "workspaceID" -------------
+	var workspaceID WorkspaceID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "workspaceID", r.PathValue("workspaceID"), &workspaceID, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "workspaceID", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "appID" -------------
+	var appID WorkspaceAppID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "appID", r.PathValue("appID"), &appID, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "appID", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "uploadID" -------------
+	var uploadID string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "uploadID", r.PathValue("uploadID"), &uploadID, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "uploadID", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.CancelWorkspaceAppUpload(w, r, workspaceID, appID, uploadID)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// CompleteWorkspaceAppUpload operation middleware
+func (siw *ServerInterfaceWrapper) CompleteWorkspaceAppUpload(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "workspaceID" -------------
+	var workspaceID WorkspaceID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "workspaceID", r.PathValue("workspaceID"), &workspaceID, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "workspaceID", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "appID" -------------
+	var appID WorkspaceAppID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "appID", r.PathValue("appID"), &appID, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "appID", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "uploadID" -------------
+	var uploadID string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "uploadID", r.PathValue("uploadID"), &uploadID, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "uploadID", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.CompleteWorkspaceAppUpload(w, r, workspaceID, appID, uploadID)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// PutWorkspaceAppUploadContent operation middleware
+func (siw *ServerInterfaceWrapper) PutWorkspaceAppUploadContent(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "workspaceID" -------------
+	var workspaceID WorkspaceID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "workspaceID", r.PathValue("workspaceID"), &workspaceID, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "workspaceID", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "appID" -------------
+	var appID WorkspaceAppID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "appID", r.PathValue("appID"), &appID, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "appID", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "uploadID" -------------
+	var uploadID string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "uploadID", r.PathValue("uploadID"), &uploadID, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "uploadID", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.PutWorkspaceAppUploadContent(w, r, workspaceID, appID, uploadID)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -5394,6 +5597,10 @@ func HandlerWithOptions(si ServerInterface, options StdHTTPServerOptions) http.H
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/v1/workspaces/{workspaceID}/apps/{appID}/retry", wrapper.RetryWorkspaceApp)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/v1/workspaces/{workspaceID}/apps/{appID}/rollback", wrapper.RollbackWorkspaceApp)
 	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/v1/workspaces/{workspaceID}/apps/{appID}/uninstall", wrapper.UninstallWorkspaceApp)
+	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/v1/workspaces/{workspaceID}/apps/{appID}/uploads", wrapper.PrepareWorkspaceAppUpload)
+	m.HandleFunc(http.MethodDelete+" "+options.BaseURL+"/v1/workspaces/{workspaceID}/apps/{appID}/uploads/{uploadID}", wrapper.CancelWorkspaceAppUpload)
+	m.HandleFunc(http.MethodPost+" "+options.BaseURL+"/v1/workspaces/{workspaceID}/apps/{appID}/uploads/{uploadID}/complete", wrapper.CompleteWorkspaceAppUpload)
+	m.HandleFunc(http.MethodPut+" "+options.BaseURL+"/v1/workspaces/{workspaceID}/apps/{appID}/uploads/{uploadID}/content", wrapper.PutWorkspaceAppUploadContent)
 	m.HandleFunc(http.MethodGet+" "+options.BaseURL+"/v1/workspaces/{workspaceID}/files/directory", wrapper.ListWorkspaceFileDirectory)
 	m.HandleFunc(http.MethodPut+" "+options.BaseURL+"/v1/workspaces/{workspaceID}/files/directory", wrapper.CreateWorkspaceFileDirectory)
 	m.HandleFunc(http.MethodDelete+" "+options.BaseURL+"/v1/workspaces/{workspaceID}/files/entry", wrapper.DeleteWorkspaceFileEntry)
@@ -12582,6 +12789,467 @@ func (response UninstallWorkspaceApp503JSONResponse) VisitUninstallWorkspaceAppR
 	return err
 }
 
+type PrepareWorkspaceAppUploadRequestObject struct {
+	WorkspaceID WorkspaceID    `json:"workspaceID"`
+	AppID       WorkspaceAppID `json:"appID"`
+	Body        *PrepareWorkspaceAppUploadJSONRequestBody
+}
+
+type PrepareWorkspaceAppUploadResponseObject interface {
+	VisitPrepareWorkspaceAppUploadResponse(w http.ResponseWriter) error
+}
+
+type PrepareWorkspaceAppUpload201JSONResponse PrepareWorkspaceAppUploadResponse
+
+func (response PrepareWorkspaceAppUpload201JSONResponse) VisitPrepareWorkspaceAppUploadResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(201)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type PrepareWorkspaceAppUpload400JSONResponse struct {
+	InvalidRequestErrorJSONResponse
+}
+
+func (response PrepareWorkspaceAppUpload400JSONResponse) VisitPrepareWorkspaceAppUploadResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type PrepareWorkspaceAppUpload401JSONResponse struct{ UnauthorizedErrorJSONResponse }
+
+func (response PrepareWorkspaceAppUpload401JSONResponse) VisitPrepareWorkspaceAppUploadResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type PrepareWorkspaceAppUpload404JSONResponse struct {
+	WorkspaceAppNotFoundErrorJSONResponse
+}
+
+func (response PrepareWorkspaceAppUpload404JSONResponse) VisitPrepareWorkspaceAppUploadResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type PrepareWorkspaceAppUpload405JSONResponse struct {
+	MethodNotAllowedErrorJSONResponse
+}
+
+func (response PrepareWorkspaceAppUpload405JSONResponse) VisitPrepareWorkspaceAppUploadResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(405)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type PrepareWorkspaceAppUpload502JSONResponse struct {
+	WorkspaceOperationErrorJSONResponse
+}
+
+func (response PrepareWorkspaceAppUpload502JSONResponse) VisitPrepareWorkspaceAppUploadResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(502)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type PrepareWorkspaceAppUpload503JSONResponse struct {
+	ServiceUnavailableErrorJSONResponse
+}
+
+func (response PrepareWorkspaceAppUpload503JSONResponse) VisitPrepareWorkspaceAppUploadResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(503)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CancelWorkspaceAppUploadRequestObject struct {
+	WorkspaceID WorkspaceID    `json:"workspaceID"`
+	AppID       WorkspaceAppID `json:"appID"`
+	UploadID    string         `json:"uploadID"`
+}
+
+type CancelWorkspaceAppUploadResponseObject interface {
+	VisitCancelWorkspaceAppUploadResponse(w http.ResponseWriter) error
+}
+
+type CancelWorkspaceAppUpload204Response struct {
+}
+
+func (response CancelWorkspaceAppUpload204Response) VisitCancelWorkspaceAppUploadResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type CancelWorkspaceAppUpload400JSONResponse struct {
+	InvalidRequestErrorJSONResponse
+}
+
+func (response CancelWorkspaceAppUpload400JSONResponse) VisitCancelWorkspaceAppUploadResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CancelWorkspaceAppUpload401JSONResponse struct{ UnauthorizedErrorJSONResponse }
+
+func (response CancelWorkspaceAppUpload401JSONResponse) VisitCancelWorkspaceAppUploadResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CancelWorkspaceAppUpload404JSONResponse struct {
+	WorkspaceAppNotFoundErrorJSONResponse
+}
+
+func (response CancelWorkspaceAppUpload404JSONResponse) VisitCancelWorkspaceAppUploadResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CancelWorkspaceAppUpload405JSONResponse struct {
+	MethodNotAllowedErrorJSONResponse
+}
+
+func (response CancelWorkspaceAppUpload405JSONResponse) VisitCancelWorkspaceAppUploadResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(405)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CancelWorkspaceAppUpload502JSONResponse struct {
+	WorkspaceOperationErrorJSONResponse
+}
+
+func (response CancelWorkspaceAppUpload502JSONResponse) VisitCancelWorkspaceAppUploadResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(502)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CancelWorkspaceAppUpload503JSONResponse struct {
+	ServiceUnavailableErrorJSONResponse
+}
+
+func (response CancelWorkspaceAppUpload503JSONResponse) VisitCancelWorkspaceAppUploadResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(503)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CompleteWorkspaceAppUploadRequestObject struct {
+	WorkspaceID WorkspaceID    `json:"workspaceID"`
+	AppID       WorkspaceAppID `json:"appID"`
+	UploadID    string         `json:"uploadID"`
+}
+
+type CompleteWorkspaceAppUploadResponseObject interface {
+	VisitCompleteWorkspaceAppUploadResponse(w http.ResponseWriter) error
+}
+
+type CompleteWorkspaceAppUpload200JSONResponse CompleteWorkspaceAppUploadResponse
+
+func (response CompleteWorkspaceAppUpload200JSONResponse) VisitCompleteWorkspaceAppUploadResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(200)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CompleteWorkspaceAppUpload400JSONResponse struct {
+	InvalidRequestErrorJSONResponse
+}
+
+func (response CompleteWorkspaceAppUpload400JSONResponse) VisitCompleteWorkspaceAppUploadResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CompleteWorkspaceAppUpload401JSONResponse struct{ UnauthorizedErrorJSONResponse }
+
+func (response CompleteWorkspaceAppUpload401JSONResponse) VisitCompleteWorkspaceAppUploadResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CompleteWorkspaceAppUpload404JSONResponse struct {
+	WorkspaceAppNotFoundErrorJSONResponse
+}
+
+func (response CompleteWorkspaceAppUpload404JSONResponse) VisitCompleteWorkspaceAppUploadResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CompleteWorkspaceAppUpload405JSONResponse struct {
+	MethodNotAllowedErrorJSONResponse
+}
+
+func (response CompleteWorkspaceAppUpload405JSONResponse) VisitCompleteWorkspaceAppUploadResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(405)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CompleteWorkspaceAppUpload502JSONResponse struct {
+	WorkspaceOperationErrorJSONResponse
+}
+
+func (response CompleteWorkspaceAppUpload502JSONResponse) VisitCompleteWorkspaceAppUploadResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(502)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type CompleteWorkspaceAppUpload503JSONResponse struct {
+	ServiceUnavailableErrorJSONResponse
+}
+
+func (response CompleteWorkspaceAppUpload503JSONResponse) VisitCompleteWorkspaceAppUploadResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(503)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type PutWorkspaceAppUploadContentRequestObject struct {
+	WorkspaceID WorkspaceID    `json:"workspaceID"`
+	AppID       WorkspaceAppID `json:"appID"`
+	UploadID    string         `json:"uploadID"`
+	Body        io.Reader
+}
+
+type PutWorkspaceAppUploadContentResponseObject interface {
+	VisitPutWorkspaceAppUploadContentResponse(w http.ResponseWriter) error
+}
+
+type PutWorkspaceAppUploadContent204Response struct {
+}
+
+func (response PutWorkspaceAppUploadContent204Response) VisitPutWorkspaceAppUploadContentResponse(w http.ResponseWriter) error {
+	w.WriteHeader(204)
+	return nil
+}
+
+type PutWorkspaceAppUploadContent400JSONResponse struct {
+	InvalidRequestErrorJSONResponse
+}
+
+func (response PutWorkspaceAppUploadContent400JSONResponse) VisitPutWorkspaceAppUploadContentResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(400)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type PutWorkspaceAppUploadContent401JSONResponse struct{ UnauthorizedErrorJSONResponse }
+
+func (response PutWorkspaceAppUploadContent401JSONResponse) VisitPutWorkspaceAppUploadContentResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(401)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type PutWorkspaceAppUploadContent404JSONResponse struct {
+	WorkspaceAppNotFoundErrorJSONResponse
+}
+
+func (response PutWorkspaceAppUploadContent404JSONResponse) VisitPutWorkspaceAppUploadContentResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(404)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type PutWorkspaceAppUploadContent405JSONResponse struct {
+	MethodNotAllowedErrorJSONResponse
+}
+
+func (response PutWorkspaceAppUploadContent405JSONResponse) VisitPutWorkspaceAppUploadContentResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(405)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type PutWorkspaceAppUploadContent502JSONResponse struct {
+	WorkspaceOperationErrorJSONResponse
+}
+
+func (response PutWorkspaceAppUploadContent502JSONResponse) VisitPutWorkspaceAppUploadContentResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(502)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
+type PutWorkspaceAppUploadContent503JSONResponse struct {
+	ServiceUnavailableErrorJSONResponse
+}
+
+func (response PutWorkspaceAppUploadContent503JSONResponse) VisitPutWorkspaceAppUploadContentResponse(w http.ResponseWriter) error {
+
+	var buf bytes.Buffer
+	if err := json.NewEncoder(&buf).Encode(response); err != nil {
+		return err
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(503)
+	_, err := buf.WriteTo(w)
+	return err
+}
+
 type ListWorkspaceFileDirectoryRequestObject struct {
 	WorkspaceID WorkspaceID `json:"workspaceID"`
 	Params      ListWorkspaceFileDirectoryParams
@@ -19126,6 +19794,18 @@ type StrictServerInterface interface {
 	// Uninstall one installed app from a workspace
 	// (POST /v1/workspaces/{workspaceID}/apps/{appID}/uninstall)
 	UninstallWorkspaceApp(ctx context.Context, request UninstallWorkspaceAppRequestObject) (UninstallWorkspaceAppResponseObject, error)
+	// Prepare one managed file upload for a workspace app
+	// (POST /v1/workspaces/{workspaceID}/apps/{appID}/uploads)
+	PrepareWorkspaceAppUpload(ctx context.Context, request PrepareWorkspaceAppUploadRequestObject) (PrepareWorkspaceAppUploadResponseObject, error)
+	// Cancel one managed file upload session for a workspace app
+	// (DELETE /v1/workspaces/{workspaceID}/apps/{appID}/uploads/{uploadID})
+	CancelWorkspaceAppUpload(ctx context.Context, request CancelWorkspaceAppUploadRequestObject) (CancelWorkspaceAppUploadResponseObject, error)
+	// Complete one managed file upload for a workspace app
+	// (POST /v1/workspaces/{workspaceID}/apps/{appID}/uploads/{uploadID}/complete)
+	CompleteWorkspaceAppUpload(ctx context.Context, request CompleteWorkspaceAppUploadRequestObject) (CompleteWorkspaceAppUploadResponseObject, error)
+	// Stream upload bytes into one workspace app upload session
+	// (PUT /v1/workspaces/{workspaceID}/apps/{appID}/uploads/{uploadID}/content)
+	PutWorkspaceAppUploadContent(ctx context.Context, request PutWorkspaceAppUploadContentRequestObject) (PutWorkspaceAppUploadContentResponseObject, error)
 	// List direct children for one workspace directory
 	// (GET /v1/workspaces/{workspaceID}/files/directory)
 	ListWorkspaceFileDirectory(ctx context.Context, request ListWorkspaceFileDirectoryRequestObject) (ListWorkspaceFileDirectoryResponseObject, error)
@@ -21274,6 +21954,128 @@ func (sh *strictHandler) UninstallWorkspaceApp(w http.ResponseWriter, r *http.Re
 		sh.options.ResponseErrorHandlerFunc(w, r, err)
 	} else if validResponse, ok := response.(UninstallWorkspaceAppResponseObject); ok {
 		if err := validResponse.VisitUninstallWorkspaceAppResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// PrepareWorkspaceAppUpload operation middleware
+func (sh *strictHandler) PrepareWorkspaceAppUpload(w http.ResponseWriter, r *http.Request, workspaceID WorkspaceID, appID WorkspaceAppID) {
+	var request PrepareWorkspaceAppUploadRequestObject
+
+	request.WorkspaceID = workspaceID
+	request.AppID = appID
+
+	var body PrepareWorkspaceAppUploadJSONRequestBody
+	decoder := json.NewDecoder(r.Body)
+	decoder.DisallowUnknownFields()
+	if err := decoder.Decode(&body); err != nil {
+		sh.options.RequestErrorHandlerFunc(w, r, fmt.Errorf("can't decode JSON body: %w", err))
+		return
+	}
+	request.Body = &body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.PrepareWorkspaceAppUpload(ctx, request.(PrepareWorkspaceAppUploadRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "PrepareWorkspaceAppUpload")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(PrepareWorkspaceAppUploadResponseObject); ok {
+		if err := validResponse.VisitPrepareWorkspaceAppUploadResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// CancelWorkspaceAppUpload operation middleware
+func (sh *strictHandler) CancelWorkspaceAppUpload(w http.ResponseWriter, r *http.Request, workspaceID WorkspaceID, appID WorkspaceAppID, uploadID string) {
+	var request CancelWorkspaceAppUploadRequestObject
+
+	request.WorkspaceID = workspaceID
+	request.AppID = appID
+	request.UploadID = uploadID
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.CancelWorkspaceAppUpload(ctx, request.(CancelWorkspaceAppUploadRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "CancelWorkspaceAppUpload")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(CancelWorkspaceAppUploadResponseObject); ok {
+		if err := validResponse.VisitCancelWorkspaceAppUploadResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// CompleteWorkspaceAppUpload operation middleware
+func (sh *strictHandler) CompleteWorkspaceAppUpload(w http.ResponseWriter, r *http.Request, workspaceID WorkspaceID, appID WorkspaceAppID, uploadID string) {
+	var request CompleteWorkspaceAppUploadRequestObject
+
+	request.WorkspaceID = workspaceID
+	request.AppID = appID
+	request.UploadID = uploadID
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.CompleteWorkspaceAppUpload(ctx, request.(CompleteWorkspaceAppUploadRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "CompleteWorkspaceAppUpload")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(CompleteWorkspaceAppUploadResponseObject); ok {
+		if err := validResponse.VisitCompleteWorkspaceAppUploadResponse(w); err != nil {
+			sh.options.ResponseErrorHandlerFunc(w, r, err)
+		}
+	} else if response != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, fmt.Errorf("unexpected response type: %T", response))
+	}
+}
+
+// PutWorkspaceAppUploadContent operation middleware
+func (sh *strictHandler) PutWorkspaceAppUploadContent(w http.ResponseWriter, r *http.Request, workspaceID WorkspaceID, appID WorkspaceAppID, uploadID string) {
+	var request PutWorkspaceAppUploadContentRequestObject
+
+	request.WorkspaceID = workspaceID
+	request.AppID = appID
+	request.UploadID = uploadID
+
+	request.Body = r.Body
+
+	handler := func(ctx context.Context, w http.ResponseWriter, r *http.Request, request interface{}) (interface{}, error) {
+		return sh.ssi.PutWorkspaceAppUploadContent(ctx, request.(PutWorkspaceAppUploadContentRequestObject))
+	}
+	for _, middleware := range sh.middlewares {
+		handler = middleware(handler, "PutWorkspaceAppUploadContent")
+	}
+
+	response, err := handler(r.Context(), w, r, request)
+
+	if err != nil {
+		sh.options.ResponseErrorHandlerFunc(w, r, err)
+	} else if validResponse, ok := response.(PutWorkspaceAppUploadContentResponseObject); ok {
+		if err := validResponse.VisitPutWorkspaceAppUploadContentResponse(w); err != nil {
 			sh.options.ResponseErrorHandlerFunc(w, r, err)
 		}
 	} else if response != nil {

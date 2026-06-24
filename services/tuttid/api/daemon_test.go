@@ -125,6 +125,22 @@ func (stubAppCenterService) SearchReferences(context.Context, string, string, wo
 	return workspacebiz.AppReferenceListResult{}, nil
 }
 
+func (stubAppCenterService) PrepareWorkspaceAppUpload(context.Context, string, string, workspaceservice.PrepareWorkspaceAppUploadInput) (workspaceservice.WorkspaceAppUploadSession, error) {
+	return workspaceservice.WorkspaceAppUploadSession{}, nil
+}
+
+func (stubAppCenterService) PutWorkspaceAppUploadContent(context.Context, string, string, string, workspaceservice.PutWorkspaceAppUploadContentInput) error {
+	return nil
+}
+
+func (stubAppCenterService) CompleteWorkspaceAppUpload(context.Context, string, string, string, time.Time) (workspaceservice.WorkspaceAppUploadedFile, error) {
+	return workspaceservice.WorkspaceAppUploadedFile{}, nil
+}
+
+func (stubAppCenterService) CancelWorkspaceAppUpload(context.Context, string, string, string) error {
+	return nil
+}
+
 func (stubAppCenterService) List(context.Context, string) ([]workspacebiz.WorkspaceApp, error) {
 	return nil, nil
 }
