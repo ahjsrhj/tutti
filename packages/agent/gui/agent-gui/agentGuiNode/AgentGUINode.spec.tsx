@@ -1354,33 +1354,22 @@ describe("AgentGUINode", () => {
     expect(
       screen.getByText("agentHost.agentGui.openclawGatewayStarting")
     ).toBeTruthy();
-    fireEvent.click(
-      screen.getByRole("button", {
-        name: "agentHost.agentGui.newConversation"
-      })
-    );
+    const newConversationButton = getChromeNewConversationButton();
+    fireEvent.click(newConversationButton);
 
     expect(
       screen.queryByRole("button", {
         name: "agentHost.agentGui.startConversation"
       })
     ).toBeNull();
-    expect(
-      screen.getByRole("button", {
-        name: "agentHost.agentGui.newConversation"
-      })
-    ).toBeDisabled();
+    expect(newConversationButton).toBeDisabled();
     expect(mockCreateConversation).not.toHaveBeenCalled();
   });
 
   it("lets the header new-conversation button receive clicks inside the node window", () => {
     renderAgentGUINode();
 
-    fireEvent.click(
-      screen.getByRole("button", {
-        name: "agentHost.agentGui.newConversation"
-      })
-    );
+    fireEvent.click(getChromeNewConversationButton());
 
     expect(mockCreateConversation).toHaveBeenCalledTimes(1);
     expect(mockCreateConversation).toHaveBeenCalledWith();
@@ -1390,9 +1379,7 @@ describe("AgentGUINode", () => {
     renderAgentGUINode();
 
     expect(
-      screen.getAllByRole("button", {
-        name: "agentHost.agentGui.newConversation"
-      })
+      document.querySelectorAll(".agent-gui-node__new-conversation-icon-button")
     ).toHaveLength(1);
   });
 
@@ -6057,9 +6044,15 @@ describe("AgentGUINode", () => {
       "utf8"
     );
 
-    expect(css).toMatch(/--agent-gui-detail-padding-x:\s*24px/);
+    expect(css).toMatch(/--agent-gui-detail-padding-x:\s*28px/);
+    expect(css).toMatch(
+      /\.workspace-agents-status-panel__content--detail\s*{[^}]*padding-inline:\s*28px/s
+    );
     expect(css).toMatch(
       /\.agent-gui-node__timeline\s*{[^}]*padding:\s*32px\s+var\(--agent-gui-detail-padding-x\)\s+24px/s
+    );
+    expect(css).toMatch(
+      /\.workspace-agents-status-panel__conversation-timeline\.agent-gui-node__timeline\s*{[^}]*padding-right:\s*28px[^}]*padding-left:\s*28px/s
     );
     expect(css).toMatch(
       /\.agent-gui-node__bottom-dock\s*{[^}]*width:\s*min\(\s*100%,\s*calc\(\s*var\(--agent-gui-detail-flow-max-width\)\s*\+\s*var\(--agent-gui-detail-padding-x\)\s*\+\s*var\(--agent-gui-detail-padding-x\)\s*\)\s*\)/s
@@ -7004,6 +6997,16 @@ function renderAgentGUINode({
   return render(
     strictMode ? <StrictMode>{wrappedNode}</StrictMode> : wrappedNode
   );
+}
+
+function getChromeNewConversationButton(): HTMLButtonElement {
+  const button = document.querySelector<HTMLButtonElement>(
+    ".agent-gui-node__new-conversation-icon-button"
+  );
+  if (!button) {
+    throw new Error("Expected chrome new conversation button to render.");
+  }
+  return button;
 }
 
 function createWorkspaceFileReferenceAdapter(): WorkspaceFileReferenceAdapter {
