@@ -556,6 +556,80 @@ test("stale search results do not overwrite newer query results", async () => {
   session.dispose();
 });
 
+test("entering directories clears search state and ignores stale results", async () => {
+  const deferredSearch = createDeferred<WorkspaceFileSearchResult>();
+  const srcEntry: WorkspaceFileEntry = {
+    hasChildren: true,
+    kind: "directory",
+    mtimeMs: null,
+    name: "src",
+    path: "/Users/demo/project/src",
+    sizeBytes: null
+  };
+  const appEntry: WorkspaceFileEntry = {
+    hasChildren: false,
+    kind: "file",
+    mtimeMs: null,
+    name: "App.tsx",
+    path: "/Users/demo/project/src/App.tsx",
+    sizeBytes: 5
+  };
+  const session = createWorkspaceFileManagerService().createSession({
+    host: {
+      async listDirectory(input) {
+        const directoryPath = input.path || "/Users/demo/project";
+        return {
+          directoryPath,
+          entries:
+            directoryPath === "/Users/demo/project" ? [srcEntry] : [appEntry],
+          root: "/Users/demo/project",
+          workspaceID: input.workspaceID
+        };
+      },
+      async search() {
+        return deferredSearch.promise;
+      }
+    },
+    i18n: createTestI18nRuntime(),
+    workspaceID: "workspace-1"
+  });
+
+  await session.initialize();
+  const searchPromise = session.search("src");
+  await flushMicrotasks();
+  assert.equal(session.store.searchQuery, "src");
+  assert.equal(session.store.isSearching, true);
+
+  await session.openEntry(srcEntry);
+
+  assert.equal(session.store.currentDirectoryPath, "/Users/demo/project/src");
+  assert.equal(session.store.searchQuery, "");
+  assert.deepEqual(session.store.searchEntries, []);
+  assert.equal(session.store.isSearching, false);
+
+  deferredSearch.resolve({
+    entries: [
+      {
+        directoryPath: "/Users/demo/project",
+        kind: "directory",
+        matchIndices: [0],
+        matchTarget: "basename",
+        name: "src",
+        path: "/Users/demo/project/src",
+        score: 1
+      }
+    ],
+    root: "/Users/demo/project",
+    workspaceID: "workspace-1"
+  });
+  await searchPromise;
+
+  assert.equal(session.store.searchQuery, "");
+  assert.deepEqual(session.store.searchEntries, []);
+  assert.equal(session.store.isSearching, false);
+  session.dispose();
+});
+
 test("location default selection initializes from the preferred directory", async () => {
   const listedPaths: string[] = [];
   const session = createWorkspaceFileManagerService().createSession({

@@ -20,6 +20,7 @@ test("splits root and toolbar view state from the shared store", () => {
   store.navigationForwardStack = ["/Users/demo/project/docs"];
   store.isLoading = true;
   store.isMutating = true;
+  store.isSearching = true;
   store.busyAction = "import";
 
   const rootView = resolveWorkspaceFileManagerRootViewState({
@@ -40,9 +41,12 @@ test("splits root and toolbar view state from the shared store", () => {
   assert.equal(toolbarView.currentDirectoryPath, "/Users/demo/project/src");
   assert.equal(toolbarView.canGoBack, true);
   assert.equal(toolbarView.canGoForward, true);
+  assert.equal(toolbarView.canSearch, true);
   assert.equal(toolbarView.isLoading, true);
   assert.equal(toolbarView.isMutating, true);
+  assert.equal(toolbarView.isSearching, true);
   assert.equal(toolbarView.isImporting, true);
+  assert.equal(toolbarView.searchQuery, "");
   assert.equal(toolbarView.showImportAction, true);
   assert.deepEqual(
     toolbarView.breadcrumbs.map((crumb) => crumb.path),
@@ -125,6 +129,87 @@ test("splits panels and dialog view state from the shared store", () => {
   assert.equal(dialogsView.deleteDialogEntry?.path, fileEntry.path);
   assert.equal(dialogsView.unsupportedDialog?.entry?.path, fileEntry.path);
   assert.equal(dialogsView.isViewing, false);
+});
+
+test("panels view resolves selected search result entries", () => {
+  const store = createStore();
+  store.searchQuery = "notes";
+  store.searchEntries = [
+    {
+      directoryPath: "/Users/demo/project/docs",
+      kind: "file",
+      matchIndices: [0, 1, 2, 3, 4],
+      matchTarget: "basename",
+      name: "notes.md",
+      path: "/Users/demo/project/docs/notes.md",
+      score: 12
+    }
+  ];
+  store.selectedPath = "/Users/demo/project/docs/notes.md";
+
+  const panelsView = resolveWorkspaceFileManagerPanelsViewState({
+    state: store
+  });
+
+  assert.equal(panelsView.isSearchMode, true);
+  assert.equal(panelsView.searchEntries.length, 1);
+  assert.equal(panelsView.selectedEntry?.path, store.selectedPath);
+  assert.equal(panelsView.selectedEntry?.sizeBytes, null);
+});
+
+test("search mode disables mutating file manager actions", () => {
+  const searchResultPath = "/Users/demo/project/docs/notes.md";
+  const store = createStore({
+    canCopy: true,
+    canCreateDirectory: true,
+    canCreateFile: true,
+    canDelete: true,
+    canExport: true,
+    canImportFromDrop: true,
+    canImportFromPicker: true,
+    canMove: true,
+    canOpenInAppBrowser: true,
+    canOpenInDefaultBrowser: true,
+    canOpenWith: true,
+    canPickOtherOpenWithApplication: true,
+    canRevealInFolder: true,
+    canRename: true,
+    canSearch: true
+  });
+  store.searchQuery = "notes";
+  store.searchEntries = [
+    {
+      directoryPath: "/Users/demo/project/docs",
+      kind: "file",
+      matchIndices: [0, 1, 2, 3, 4],
+      matchTarget: "basename",
+      name: "notes.md",
+      path: searchResultPath,
+      score: 12
+    }
+  ];
+  store.contextMenu = {
+    entryPath: searchResultPath,
+    x: 12,
+    y: 24
+  };
+
+  const rootView = resolveWorkspaceFileManagerRootViewState({
+    state: store
+  });
+  const contextMenuView = resolveWorkspaceFileManagerContextMenuViewState({
+    state: store
+  });
+
+  assert.equal(rootView.canImportFromDrop, false);
+  assert.equal(contextMenuView.contextMenu?.entry?.path, searchResultPath);
+  assert.equal(contextMenuView.showCreateAction, false);
+  assert.equal(contextMenuView.showDeleteAction, false);
+  assert.equal(contextMenuView.showImportAction, false);
+  assert.equal(contextMenuView.showMoveAction, false);
+  assert.equal(contextMenuView.showRenameAction, false);
+  assert.equal(contextMenuView.showOpenWithAction, true);
+  assert.equal(contextMenuView.showRevealInFolderAction, true);
 });
 
 test("maps context-menu state without depending on unrelated fields", () => {

@@ -453,6 +453,7 @@ export class DefaultWorkspaceFileManagerSession implements WorkspaceFileManagerS
   }
 
   async loadDirectory(path = this.store.currentDirectoryPath): Promise<void> {
+    this.clearSearchState();
     await this.navigationController.loadDirectory(path);
     this.syncSelectedDirectoryLocation();
   }
@@ -731,9 +732,7 @@ export class DefaultWorkspaceFileManagerSession implements WorkspaceFileManagerS
     this.store.deleteDialog = null;
     this.store.inlineRenameEntryPath = null;
     this.store.inlineRenameValidation = null;
-    this.store.searchEntries = [];
-    this.store.searchError = null;
-    this.store.searchQuery = "";
+    this.clearSearchState();
     if (location.kind === "recent") {
       await this.loadRecentLocation(location);
       return;
@@ -974,6 +973,22 @@ export class DefaultWorkspaceFileManagerSession implements WorkspaceFileManagerS
       }
     }
     return bestLocation?.id ?? null;
+  }
+
+  private clearSearchState(): void {
+    if (
+      this.store.searchQuery === "" &&
+      this.store.searchEntries.length === 0 &&
+      this.store.searchError === null &&
+      !this.store.isSearching
+    ) {
+      return;
+    }
+    this.searchRequestSeq += 1;
+    this.store.searchEntries = [];
+    this.store.searchError = null;
+    this.store.searchQuery = "";
+    this.store.isSearching = false;
   }
 
   private async searchDirectoryEntries(
