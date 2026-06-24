@@ -28,6 +28,7 @@ import remarkGfm from "remark-gfm";
 import {
   resolveWorkspaceFileExtension,
   resolveWorkspaceImageMimeType,
+  resolveWorkspaceVideoMimeType,
   workspaceFileName as basenameWorkspacePath
 } from "@tutti-os/workspace-file-manager/services";
 import {
@@ -256,7 +257,7 @@ export function AgentMessageMarkdown({
         />
       ),
       img: (props: MarkdownDomProps<"img">) => (
-        <MarkdownImage {...props} enableZoom={enableImageZoom} />
+        <MarkdownMedia {...props} enableZoom={enableImageZoom} />
       ),
       p: (props: MarkdownDomProps<"p">) => (
         <MarkdownParagraph {...props} inline={inline} />
@@ -967,42 +968,46 @@ function MarkdownCode({
   );
 }
 
-type MarkdownImageState =
+type MarkdownMediaKind = "image" | "video";
+
+type MarkdownMediaState =
   | { status: "loading" }
-  | { status: "ready"; src: string }
+  | { kind: MarkdownMediaKind; status: "ready"; src: string }
   | {
       status: "error";
       reason: "unsupported" | "read-failed";
       detail?: string;
     };
 
-interface CachedMarkdownImage {
+interface CachedMarkdownMedia {
+  kind: MarkdownMediaKind;
   objectUrl: string;
   refCount: number;
   revokeTimer: ReturnType<typeof setTimeout> | null;
 }
 
-const cachedMarkdownImages = new Map<string, CachedMarkdownImage>();
-const CACHED_MARKDOWN_IMAGE_REVOKE_DELAY_MS = 250;
+const cachedMarkdownMedia = new Map<string, CachedMarkdownMedia>();
+const CACHED_MARKDOWN_MEDIA_REVOKE_DELAY_MS = 250;
 
 export function resetCachedMarkdownImagesForTests(): void {
   if (process.env.NODE_ENV !== "test") {
     return;
   }
-  for (const [path, entry] of cachedMarkdownImages) {
+  for (const [path, entry] of cachedMarkdownMedia) {
     if (entry.revokeTimer) {
       clearTimeout(entry.revokeTimer);
     }
     URL.revokeObjectURL(entry.objectUrl);
-    cachedMarkdownImages.delete(path);
+    cachedMarkdownMedia.delete(path);
   }
 }
 
-function MarkdownImage({
+function MarkdownMedia({
   node: _node,
   src,
   alt,
   className,
+  title,
   enableZoom = false,
   ...props
 }: MarkdownDomProps<"img"> & {
@@ -1019,11 +1024,13 @@ function MarkdownImage({
     : undefined;
   const canReadWorkspaceImage = Boolean(workspacePath && readWorkspaceImage);
   const shouldEnableZoom = enableZoom && !isInsideLink;
+  const fallbackMediaKind =
+    typeof src === "string" ? resolveMarkdownMediaKind(src) : null;
   const resolvedSrc =
-    typeof src === "string" ? resolveRenderableMarkdownImageSrc(src) : src;
-  const [state, setState] = useState<MarkdownImageState | null>(() =>
+    typeof src === "string" ? resolveRenderableMarkdownMediaSrc(src) : src;
+  const [state, setState] = useState<MarkdownMediaState | null>(() =>
     canReadWorkspaceImage && workspacePath
-      ? (peekCachedMarkdownImageState(workspacePath) ?? { status: "loading" })
+      ? (peekCachedMarkdownMediaState(workspacePath) ?? { status: "loading" })
       : null
   );
 
@@ -1035,31 +1042,30 @@ function MarkdownImage({
 
     const resolvedWorkspacePath = workspacePath;
     const resolvedReadWorkspaceImage = readWorkspaceImage;
-    const cachedSrc = retainCachedMarkdownImage(resolvedWorkspacePath);
-    if (cachedSrc) {
-      setState({ status: "ready", src: cachedSrc });
+    const cached = retainCachedMarkdownMedia(resolvedWorkspacePath);
+    if (cached) {
+      setState({ kind: cached.kind, status: "ready", src: cached.src });
       return () => {
-        releaseCachedMarkdownImage(resolvedWorkspacePath, cachedSrc);
+        releaseCachedMarkdownMedia(resolvedWorkspacePath, cached.src);
       };
     }
 
-    const resolvedMimeType = resolveWorkspaceImageMimeType(
-      resolvedWorkspacePath
-    );
-    if (!resolvedMimeType) {
+    const mediaType = resolveMarkdownMediaType(resolvedWorkspacePath);
+    if (!mediaType) {
       setState({
         status: "error",
         reason: "unsupported"
       });
       return;
     }
-    const imageMimeType = resolvedMimeType;
+    const mediaKind = mediaType.kind;
+    const mediaMimeType = mediaType.mimeType;
 
     let canceled = false;
     let objectUrl: string | null = null;
     setState({ status: "loading" });
 
-    async function loadWorkspaceImage(): Promise<void> {
+    async function loadWorkspaceMedia(): Promise<void> {
       try {
         const result = await resolvedReadWorkspaceImage({
           path: resolvedWorkspacePath
@@ -1075,11 +1081,12 @@ function MarkdownImage({
           bytes.byteOffset,
           bytes.byteOffset + bytes.byteLength
         ) as ArrayBuffer;
-        objectUrl = cacheMarkdownImage(
+        objectUrl = cacheMarkdownMedia(
           resolvedWorkspacePath,
-          new Blob([arrayBuffer], { type: imageMimeType })
+          mediaKind,
+          new Blob([arrayBuffer], { type: mediaMimeType })
         );
-        setState({ status: "ready", src: objectUrl });
+        setState({ kind: mediaKind, status: "ready", src: objectUrl });
       } catch (error) {
         if (!canceled) {
           setState({
@@ -1091,20 +1098,43 @@ function MarkdownImage({
       }
     }
 
-    void loadWorkspaceImage();
+    void loadWorkspaceMedia();
 
     return () => {
       canceled = true;
       if (objectUrl) {
-        releaseCachedMarkdownImage(resolvedWorkspacePath, objectUrl);
+        releaseCachedMarkdownMedia(resolvedWorkspacePath, objectUrl);
       }
     };
   }, [canReadWorkspaceImage, workspacePath]);
 
   if (!workspacePath || !readWorkspaceImage) {
+    if (fallbackMediaKind === "video") {
+      return (
+        <video
+          src={resolvedSrc}
+          aria-label={alt || undefined}
+          title={typeof title === "string" ? title : undefined}
+          controls
+          playsInline
+          preload="metadata"
+          className={cn(
+            "block max-h-[360px] max-w-full rounded-[8px] border border-[var(--line-2)] bg-[var(--background-panel)]",
+            className
+          )}
+        />
+      );
+    }
+
     if (!shouldEnableZoom) {
       return (
-        <img {...props} src={resolvedSrc} alt={alt} className={className} />
+        <img
+          {...props}
+          src={resolvedSrc}
+          alt={alt}
+          title={title}
+          className={className}
+        />
       );
     }
 
@@ -1113,6 +1143,7 @@ function MarkdownImage({
         {...props}
         src={resolvedSrc}
         alt={alt}
+        title={title}
         className={className}
         wrapElement="span"
       />
@@ -1120,12 +1151,30 @@ function MarkdownImage({
   }
 
   if (state?.status === "ready") {
+    if (state.kind === "video") {
+      return (
+        <video
+          src={state.src}
+          aria-label={alt || undefined}
+          title={typeof title === "string" ? title : undefined}
+          controls
+          playsInline
+          preload="metadata"
+          className={cn(
+            "block max-h-[360px] max-w-full rounded-[8px] border border-[var(--line-2)] bg-[var(--background-panel)]",
+            className
+          )}
+        />
+      );
+    }
+
     if (!shouldEnableZoom) {
       return (
         <img
           {...props}
           src={state.src}
           alt={alt}
+          title={title}
           className={cn(
             "block max-h-[360px] max-w-full rounded-[8px] border border-[var(--line-2)] bg-[var(--background-panel)] object-contain",
             className
@@ -1139,6 +1188,7 @@ function MarkdownImage({
         {...props}
         src={state.src}
         alt={alt}
+        title={title}
         className={cn(
           "block max-h-[360px] max-w-full rounded-[8px] border border-[var(--line-2)] bg-[var(--background-panel)] object-contain",
           className
@@ -1248,7 +1298,7 @@ function isLocalAbsolutePath(path: string): boolean {
   );
 }
 
-function resolveRenderableMarkdownImageSrc(src: string): string {
+function resolveRenderableMarkdownMediaSrc(src: string): string {
   const trimmed = src.trim();
   if (!trimmed) {
     return src;
@@ -1259,13 +1309,37 @@ function resolveRenderableMarkdownImageSrc(src: string): string {
   return new URL(trimmed, "file://").toString();
 }
 
-function peekCachedMarkdownImageState(path: string): MarkdownImageState | null {
-  const src = cachedMarkdownImages.get(path)?.objectUrl ?? null;
-  return src ? { status: "ready", src } : null;
+function resolveMarkdownMediaKind(
+  pathOrName: string
+): MarkdownMediaKind | null {
+  return resolveMarkdownMediaType(pathOrName)?.kind ?? null;
 }
 
-function retainCachedMarkdownImage(path: string): string | null {
-  const entry = cachedMarkdownImages.get(path);
+function resolveMarkdownMediaType(
+  pathOrName: string
+): { kind: MarkdownMediaKind; mimeType: string } | null {
+  const imageMimeType = resolveWorkspaceImageMimeType(pathOrName);
+  if (imageMimeType) {
+    return { kind: "image", mimeType: imageMimeType };
+  }
+  const videoMimeType = resolveWorkspaceVideoMimeType(pathOrName);
+  if (videoMimeType) {
+    return { kind: "video", mimeType: videoMimeType };
+  }
+  return null;
+}
+
+function peekCachedMarkdownMediaState(path: string): MarkdownMediaState | null {
+  const entry = cachedMarkdownMedia.get(path);
+  return entry
+    ? { kind: entry.kind, status: "ready", src: entry.objectUrl }
+    : null;
+}
+
+function retainCachedMarkdownMedia(
+  path: string
+): { kind: MarkdownMediaKind; src: string } | null {
+  const entry = cachedMarkdownMedia.get(path);
   if (!entry) {
     return null;
   }
@@ -1274,11 +1348,15 @@ function retainCachedMarkdownImage(path: string): string | null {
     clearTimeout(entry.revokeTimer);
     entry.revokeTimer = null;
   }
-  return entry.objectUrl;
+  return { kind: entry.kind, src: entry.objectUrl };
 }
 
-function cacheMarkdownImage(path: string, blob: Blob): string {
-  const entry = cachedMarkdownImages.get(path);
+function cacheMarkdownMedia(
+  path: string,
+  kind: MarkdownMediaKind,
+  blob: Blob
+): string {
+  const entry = cachedMarkdownMedia.get(path);
   if (entry) {
     entry.refCount += 1;
     if (entry.revokeTimer) {
@@ -1288,7 +1366,8 @@ function cacheMarkdownImage(path: string, blob: Blob): string {
     return entry.objectUrl;
   }
   const objectUrl = URL.createObjectURL(blob);
-  cachedMarkdownImages.set(path, {
+  cachedMarkdownMedia.set(path, {
+    kind,
     objectUrl,
     refCount: 1,
     revokeTimer: null
@@ -1296,8 +1375,8 @@ function cacheMarkdownImage(path: string, blob: Blob): string {
   return objectUrl;
 }
 
-function releaseCachedMarkdownImage(path: string, objectUrl: string): void {
-  const entry = cachedMarkdownImages.get(path);
+function releaseCachedMarkdownMedia(path: string, objectUrl: string): void {
+  const entry = cachedMarkdownMedia.get(path);
   if (!entry || entry.objectUrl !== objectUrl) {
     URL.revokeObjectURL(objectUrl);
     return;
@@ -1307,13 +1386,13 @@ function releaseCachedMarkdownImage(path: string, objectUrl: string): void {
     return;
   }
   entry.revokeTimer = setTimeout(() => {
-    const current = cachedMarkdownImages.get(path);
+    const current = cachedMarkdownMedia.get(path);
     if (!current || current.objectUrl !== objectUrl || current.refCount > 0) {
       return;
     }
-    cachedMarkdownImages.delete(path);
+    cachedMarkdownMedia.delete(path);
     URL.revokeObjectURL(objectUrl);
-  }, CACHED_MARKDOWN_IMAGE_REVOKE_DELAY_MS);
+  }, CACHED_MARKDOWN_MEDIA_REVOKE_DELAY_MS);
 }
 
 function isHttpUrl(value: string): boolean {
