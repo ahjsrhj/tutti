@@ -13,7 +13,11 @@ import type { WorkspaceUserProject } from "@tutti-os/workspace-user-project/cont
 import type { ReporterEventInput } from "@renderer/features/analytics/services/reporterService.interface.ts";
 import type { IDesktopRichTextAtService } from "@renderer/features/rich-text-at";
 import type { IWorkspaceUserProjectService } from "@renderer/features/workspace-user-project";
-import { USER_PROJECT_REFERENCE_SOURCE_ID } from "../../agent-reference-sources/userProjectReferenceSource.ts";
+import {
+  USER_PROJECT_REFERENCE_SOURCE_ID,
+  WORKSPACE_FILE_SOURCE_ID
+} from "../../agent-reference-sources/index.ts";
+import { DESKTOP_WORKSPACE_FILE_HOME_LOCATION_ID } from "../../workspace-file-manager/services/desktopWorkspaceFileLocations.ts";
 import { createDesktopAgentGUIWorkbenchHostInput } from "./createDesktopAgentGUIWorkbenchHostInput.ts";
 import type { IWorkspaceAgentActivityService } from "./workspaceAgentActivityService.interface.ts";
 
@@ -164,6 +168,33 @@ test("desktop agent GUI workbench host input prefers active conversation project
       projectPath: "/Users/local/app"
     }
   });
+});
+
+test("desktop agent GUI workbench host input falls back to local home reference target", () => {
+  const hostInput = createDesktopAgentGUIWorkbenchHostInput({
+    hostFilesApi: createHostFilesApi(),
+    tuttidClient: createTuttidClient(),
+    platformApi: createPlatformApi(),
+    richTextAtService: createRichTextAtService(),
+    runtimeApi: createRuntimeApi(),
+    workspaceAgentActivityService: createWorkspaceAgentActivityService([]),
+    workspaceUserProjectService: createWorkspaceUserProjectService([]),
+    workspaceId
+  });
+
+  assert.deepEqual(
+    hostInput.resolveWorkspaceReferenceInitialTarget({
+      activeConversation: null,
+      composerSelectedProjectPath: null,
+      userProjects: []
+    }),
+    {
+      sourceId: WORKSPACE_FILE_SOURCE_ID,
+      params: {
+        locationId: DESKTOP_WORKSPACE_FILE_HOME_LOCATION_ID
+      }
+    }
+  );
 });
 
 test("desktop agent GUI workbench host input passes an activity runtime backed by the workspace service", () => {

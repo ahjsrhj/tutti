@@ -33,7 +33,9 @@ test("splits root and toolbar view state from the shared store", () => {
   assert.deepEqual(rootView, {
     canImportFromDrop: true,
     currentDirectoryPath: "/Users/demo/project/src",
-    isBusy: true
+    isBusy: true,
+    locationSections: [],
+    selectedLocationId: null
   });
   assert.equal(toolbarView.currentDirectoryPath, "/Users/demo/project/src");
   assert.equal(toolbarView.canGoBack, true);

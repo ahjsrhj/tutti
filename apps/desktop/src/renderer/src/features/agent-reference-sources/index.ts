@@ -1,7 +1,9 @@
 export {
   WORKSPACE_FILE_SOURCE_ID,
-  createWorkspaceFileReferenceSource
-} from "./workspaceFileReferenceSource.ts";
+  USER_PROJECT_REFERENCE_SOURCE_ID,
+  createWorkspaceFileLocationReferenceSources
+} from "./workspaceFileLocationReferenceSources.ts";
+export { createWorkspaceFileReferenceSource } from "./workspaceFileReferenceSource.ts";
 export {
   APP_ARTIFACT_SOURCE_ID,
   createAppArtifactReferenceSource
@@ -10,10 +12,6 @@ export {
   ISSUE_SOURCE_ID,
   createIssueReferenceSource
 } from "./issueReferenceSource.ts";
-export {
-  USER_PROJECT_REFERENCE_SOURCE_ID,
-  createUserProjectReferenceSource
-} from "./userProjectReferenceSource.ts";
 export {
   resolveMentionReferenceTarget,
   type MentionReferenceTargetResolver

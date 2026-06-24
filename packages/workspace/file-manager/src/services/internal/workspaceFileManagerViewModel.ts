@@ -3,6 +3,10 @@ import {
   normalizeWorkspaceFilePath,
   resolveWorkspaceFileActivationTarget
 } from "../workspaceFileManagerModel.ts";
+import {
+  findWorkspaceFileLocationById,
+  isWorkspaceFileRecentLocation
+} from "../workspaceFileManagerLocations.ts";
 import type { WorkspaceFileManagerI18nRuntime } from "../../i18n/workspaceFileManagerI18n.ts";
 import type {
   WorkspaceFileEntry,
@@ -14,6 +18,8 @@ export interface WorkspaceFileManagerRootViewState {
   canImportFromDrop: boolean;
   currentDirectoryPath: string;
   isBusy: boolean;
+  locationSections: WorkspaceFileManagerState["locationSections"];
+  selectedLocationId: string | null;
 }
 
 export interface WorkspaceFileManagerToolbarViewState {
@@ -76,7 +82,9 @@ export interface WorkspaceFileManagerContextMenuViewState {
   isBusy: boolean;
   isLoading: boolean;
   isMutating: boolean;
+  showCreateAction: boolean;
   showCopyAction: boolean;
+  showDeleteAction: boolean;
   showExportAction: boolean;
   showImportAction: boolean;
   showMoveAction: boolean;
@@ -93,10 +101,19 @@ export function resolveWorkspaceFileManagerRootViewState(input: {
   state: WorkspaceFileManagerState;
 }): WorkspaceFileManagerRootViewState {
   const { state } = input;
+  const isRecentLocation = isWorkspaceFileRecentLocation(
+    findWorkspaceFileLocationById(
+      state.locationSections,
+      state.selectedLocationId
+    )
+  );
   return {
-    canImportFromDrop: state.capabilities.canImportFromDrop,
+    canImportFromDrop:
+      state.capabilities.canImportFromDrop && !isRecentLocation,
     currentDirectoryPath: state.currentDirectoryPath,
-    isBusy: state.busyAction !== null
+    isBusy: state.busyAction !== null,
+    locationSections: state.locationSections,
+    selectedLocationId: state.selectedLocationId
   };
 }
 
@@ -132,8 +149,14 @@ export function resolveWorkspaceFileManagerPanelsViewState(input: {
   state: WorkspaceFileManagerState;
 }): WorkspaceFileManagerPanelsViewState {
   const { state } = input;
+  const isRecentLocation = isWorkspaceFileRecentLocation(
+    findWorkspaceFileLocationById(
+      state.locationSections,
+      state.selectedLocationId
+    )
+  );
   return {
-    canMove: state.capabilities.canMove,
+    canMove: state.capabilities.canMove && !isRecentLocation,
     contextMenuEntryPath: state.contextMenuEntryPath,
     entries: state.entries,
     error: state.error,
@@ -187,6 +210,12 @@ export function resolveWorkspaceFileManagerContextMenuViewState(input: {
   state: WorkspaceFileManagerState;
 }): WorkspaceFileManagerContextMenuViewState {
   const { state } = input;
+  const isRecentLocation = isWorkspaceFileRecentLocation(
+    findWorkspaceFileLocationById(
+      state.locationSections,
+      state.selectedLocationId
+    )
+  );
   const contextMenuEntry = state.contextMenu?.entryPath
     ? findEntry(state, state.contextMenu.entryPath)
     : null;
@@ -204,10 +233,13 @@ export function resolveWorkspaceFileManagerContextMenuViewState(input: {
     isBusy: state.busyAction !== null,
     isLoading: state.isLoading,
     isMutating: state.isMutating,
+    showCreateAction: !isRecentLocation,
     showCopyAction: state.capabilities.canCopy,
+    showDeleteAction: state.capabilities.canDelete && !isRecentLocation,
     showExportAction: state.capabilities.canExport,
-    showImportAction: state.capabilities.canImportFromPicker,
-    showMoveAction: state.capabilities.canMove,
+    showImportAction:
+      state.capabilities.canImportFromPicker && !isRecentLocation,
+    showMoveAction: state.capabilities.canMove && !isRecentLocation,
     showOpenInAppBrowserAction: state.capabilities.canOpenInAppBrowser,
     showOpenInDefaultBrowserAction: state.capabilities.canOpenInDefaultBrowser,
     showOpenInFileViewerAction:
@@ -218,7 +250,7 @@ export function resolveWorkspaceFileManagerContextMenuViewState(input: {
     showOpenWithOtherAction:
       state.capabilities.canPickOtherOpenWithApplication && isContextMenuFile,
     showRevealInFolderAction: state.capabilities.canRevealInFolder,
-    showRenameAction: state.capabilities.canRename
+    showRenameAction: state.capabilities.canRename && !isRecentLocation
   };
 }
 

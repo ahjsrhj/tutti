@@ -26,6 +26,7 @@ import {
   WorkspaceFileManagerPanels
 } from "./WorkspaceFileManagerPanels.tsx";
 import { WorkspaceFileManagerToolbar } from "./WorkspaceFileManagerToolbar.tsx";
+import { WorkspaceFileManagerSidebar } from "./WorkspaceFileManagerSidebar.tsx";
 import {
   sortWorkspaceFileEntriesForArrangeMode,
   type WorkspaceFileManagerArrangeMode
@@ -310,6 +311,17 @@ export function WorkspaceFileManager({
       onDrop={handleDrop}
       ref={rootRef}
     >
+      <WorkspaceFileManagerSidebar
+        disabled={rootView.isBusy || panelsState.isLoading}
+        locationSections={rootView.locationSections}
+        selectedLocationId={rootView.selectedLocationId}
+        onSelectLocation={(location) => {
+          if (location.kind === "directory") {
+            onDirectoryExpanded?.(location.path);
+          }
+          void session.selectLocation(location.id);
+        }}
+      />
       <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
         <WorkspaceFileManagerToolbarContainer
           i18n={i18n}

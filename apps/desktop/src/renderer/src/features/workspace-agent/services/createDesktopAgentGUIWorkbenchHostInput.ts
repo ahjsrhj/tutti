@@ -24,10 +24,15 @@ import {
   USER_PROJECT_REFERENCE_SOURCE_ID,
   createAppArtifactReferenceSource,
   createIssueReferenceSource,
-  createUserProjectReferenceSource,
-  createWorkspaceFileReferenceSource,
+  WORKSPACE_FILE_SOURCE_ID,
+  createWorkspaceFileLocationReferenceSources,
   resolveMentionReferenceTarget
 } from "../../agent-reference-sources/index.ts";
+import {
+  DESKTOP_WORKSPACE_FILE_HOME_LOCATION_ID,
+  getCurrentDesktopWorkspaceFileLocationSections,
+  resolveDesktopWorkspaceFileDefaultLocationId
+} from "../../workspace-file-manager/services/desktopWorkspaceFileLocations.ts";
 import { createDesktopAgentActivityRuntime } from "./createDesktopAgentActivityRuntime.ts";
 import { createDesktopAgentHostApi } from "./createDesktopAgentHostApi.ts";
 import { createAgentWorkspaceFileReferenceTracker } from "./internal/agentWorkspaceFileReferenceAnalytics.ts";
@@ -135,24 +140,24 @@ export function createDesktopAgentGUIWorkbenchHostInput({
       tuttidClient,
       workspaceId
     });
+  const getLocationSections = () =>
+    getCurrentDesktopWorkspaceFileLocationSections({
+      homeDirectory: platformApi.homeDirectory,
+      workspaceUserProjectService
+    });
   // 多源引用聚合:项目快捷入口 + 本地文件 + 应用产物 + 任务产物。
   // 非本地源的 open/preview 复用本地 adapter 同一条 host 链路。
   const referenceSourceAggregator = createReferenceSourceAggregator(
     createStaticReferenceSourceRegistry([
-      ...(workspaceUserProjectService
-        ? [
-            createUserProjectReferenceSource({
-              adapter: workspaceFileReferenceAdapter,
-              label: translate("workspace.referenceSources.projectSourceLabel"),
-              order: -1,
-              workspaceUserProjectService
-            })
-          ]
-        : []),
-      createWorkspaceFileReferenceSource({
+      ...createWorkspaceFileLocationReferenceSources({
         adapter: workspaceFileReferenceAdapter,
-        label: translate("workspace.referenceSources.localSourceLabel"),
-        order: 0
+        getLocationSections,
+        localLabel: translate("workspace.referenceSources.localSourceLabel"),
+        localOrder: 0,
+        projectLabel: translate(
+          "workspace.referenceSources.projectSourceLabel"
+        ),
+        projectOrder: -1
       }),
       createAppArtifactReferenceSource({
         tuttidClient,
@@ -213,20 +218,30 @@ export function createDesktopAgentGUIWorkbenchHostInput({
 const resolveWorkspaceReferenceInitialTarget: NonNullable<
   AgentGUIProps["resolveWorkspaceReferenceInitialTarget"]
 > = ({ activeConversation, composerSelectedProjectPath, userProjects }) => {
+  const locationId = resolveDesktopWorkspaceFileDefaultLocationId({
+    composerSelectedProjectPath,
+    preferredProject: activeConversation?.project ?? null,
+    projects: userProjects
+  });
+  if (locationId === DESKTOP_WORKSPACE_FILE_HOME_LOCATION_ID) {
+    const params: Record<string, string> = { locationId };
+    return {
+      sourceId: WORKSPACE_FILE_SOURCE_ID,
+      params
+    };
+  }
   const project =
     activeConversation?.project ??
     findUserProjectByPath(userProjects, composerSelectedProjectPath) ??
     userProjects[0] ??
     null;
-  if (!project) {
-    return null;
-  }
+  const params: Record<string, string> = {
+    projectId: project?.id ?? "",
+    projectPath: project?.path ?? ""
+  };
   return {
     sourceId: USER_PROJECT_REFERENCE_SOURCE_ID,
-    params: {
-      projectId: project.id,
-      projectPath: project.path
-    }
+    params
   };
 };
 

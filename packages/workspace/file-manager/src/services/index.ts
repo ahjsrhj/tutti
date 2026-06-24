@@ -50,6 +50,12 @@ export {
   workspaceFileTextMaxBytes,
   type WorkspaceFileVisualKind
 } from "./workspaceFileManagerModel.ts";
+export {
+  findWorkspaceFileLocationById,
+  flattenWorkspaceFileLocations,
+  isWorkspaceFileRecentLocation,
+  resolveWorkspaceFileLocationDefaultId
+} from "./workspaceFileManagerLocations.ts";
 export { workspaceFileName } from "./internal/model/paths.ts";
 export {
   type WorkspaceFileActivationTarget,
@@ -59,6 +65,11 @@ export {
   type WorkspaceFileImportSummary,
   type WorkspaceFileImportSummaryReason,
   type WorkspaceFileImportSummaryReasonCount,
+  type WorkspaceFileLocation,
+  type WorkspaceFileLocationKind,
+  type WorkspaceFileLocationSection,
+  type WorkspaceFileDirectoryLocation,
+  type WorkspaceFileRecentLocation,
   type WorkspaceFileManagerCapabilities,
   type WorkspaceFileManagerFileDefaultOpener,
   type WorkspaceFileManagerPersistedState,
