@@ -175,6 +175,7 @@ export const zhCN = {
       providerUnsupported: "该智能体暂不支持托管环境设置。",
       stageDetect: "检测环境",
       stageInstall: "安装 CLI",
+      stageAdapter: "安装适配器",
       stageLogin: "登录账号",
       stageReady: "就绪",
       stageRetry: "重试"

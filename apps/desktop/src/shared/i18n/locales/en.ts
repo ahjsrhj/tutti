@@ -179,6 +179,7 @@ export const en = {
       providerUnsupported: "This agent has no managed environment setup yet.",
       stageDetect: "Detecting environment",
       stageInstall: "Install CLI",
+      stageAdapter: "Install adapter",
       stageLogin: "Sign in",
       stageReady: "Ready",
       stageRetry: "Retry"

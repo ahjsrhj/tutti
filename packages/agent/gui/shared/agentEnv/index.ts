@@ -27,7 +27,9 @@ export type {
 } from "./codexSetupContract.ts";
 export {
   deriveAgentSetupStages,
-  resolveWizardAutoStartAction
+  projectRevealedStages,
+  resolveWizardAutoStartAction,
+  shouldAdvanceReveal
 } from "./agentEnvWizardFlow.ts";
 export type {
   AgentSetupStage,

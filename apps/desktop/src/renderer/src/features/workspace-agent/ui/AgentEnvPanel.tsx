@@ -32,7 +32,9 @@ import {
   useAgentEnvPanelRequest,
   closeAgentEnvPanel,
   deriveAgentSetupStages,
+  projectRevealedStages,
   resolveWizardAutoStartAction,
+  shouldAdvanceReveal,
   type AgentEnvPanelFocus,
   type AgentSetupStage,
   type AgentSetupStageId,
@@ -51,6 +53,10 @@ interface AgentEnvPanelProps {
   workspaceId: string;
   workbenchHost?: unknown;
 }
+
+// Cadence of the step-by-step reveal — each already-satisfied stage waits this
+// long before checking off, so the track animates instead of flashing complete.
+const REVEAL_STEP_MS = 450;
 
 const PROVIDER_LABELS: Partial<Record<WorkspaceAgentProvider, string>> = {
   codex: "Codex",
@@ -133,6 +139,9 @@ export function AgentEnvPanel({
   const snapshot = useStatusSnapshot(agentProviderStatusService);
   const [copied, setCopied] = useState(false);
   const [logExpanded, setLogExpanded] = useState(false);
+  // Step-by-step reveal cursor: walks the stage track on open so each stage
+  // visibly checks off one at a time instead of all flashing complete at once.
+  const [revealIndex, setRevealIndex] = useState(0);
 
   const provider: WorkspaceAgentProvider = useMemo(() => {
     const requested = request.provider;
@@ -167,6 +176,7 @@ export function AgentEnvPanel({
     }
     setCopied(false);
     setLogExpanded(false);
+    setRevealIndex(0);
     void agentProviderStatusService.refresh([provider]);
   }, [open, provider, request.requestSequence, agentProviderStatusService]);
 
@@ -272,27 +282,52 @@ export function AgentEnvPanel({
     activeAction?.phase === "verify";
   const primaryActionId = focusToActionId(request.focus);
 
-  const versionTooOld = (status?.availability.reasonCode ?? "")
-    .toLowerCase()
-    .includes("version");
+  const reasonCode = (status?.availability.reasonCode ?? "").toLowerCase();
+  const versionTooOld = reasonCode.includes("version");
   const stages: AgentSetupStage[] = deriveAgentSetupStages({
     detected: status !== null,
     cliInstalled: status?.cli.installed ?? false,
     versionTooOld,
+    adapterInstalled: status?.adapter.installed ?? false,
+    adapterVersionMismatch: reasonCode.includes("adapter_version_mismatch"),
     authenticated: status?.auth.status === "authenticated",
     authRequired: status?.auth.status === "required",
     ready,
     activePhase: activeAction?.phase ?? null,
     loginPending,
     cliVersionDetail: status?.cli.version ?? null,
+    adapterDetail:
+      status?.adapter.binaryPath ??
+      (status?.adapter.command?.length
+        ? status.adapter.command.join(" ")
+        : null),
     accountDetail: status?.auth.accountLabel ?? null,
     labels: {
       detect: t("workspace.agentEnv.stageDetect"),
       install: t("workspace.agentEnv.stageInstall"),
+      adapter: t("workspace.agentEnv.stageAdapter"),
       login: t("workspace.agentEnv.stageLogin"),
       ready: t("workspace.agentEnv.stageReady")
     }
   });
+
+  // Advance the reveal cursor once the stage it sits on is really done; it parks
+  // on a still-running install (e.g. the slow ACP adapter), an error, or a
+  // blocked prerequisite, so the animation never races ahead of reality.
+  // canAdvanceReveal is a primitive boolean, so the timer effect re-arms only
+  // when the advance decision actually changes (not on every stages re-derive).
+  const canAdvanceReveal = shouldAdvanceReveal(stages, revealIndex);
+  useEffect(() => {
+    if (!open || !canAdvanceReveal) {
+      return;
+    }
+    const timer = window.setTimeout(() => {
+      setRevealIndex((index) => index + 1);
+    }, REVEAL_STEP_MS);
+    return () => window.clearTimeout(timer);
+  }, [open, canAdvanceReveal, revealIndex]);
+
+  const displayStages = projectRevealedStages(stages, revealIndex);
 
   const manualCommand = MANUAL_INSTALL_COMMANDS[provider] ?? null;
   const registry = activeAction?.registry ?? null;
@@ -330,7 +365,7 @@ export function AgentEnvPanel({
             <WizardBody
               busy={Boolean(busy)}
               providerLabel={providerLabel}
-              stages={stages}
+              stages={displayStages}
               activePhase={activeAction?.phase ?? null}
               log={activeAction?.log ?? []}
               registry={registry}
