@@ -255,7 +255,7 @@ export const AppCard = memo(function AppCard({
           <div className="flex min-w-0 items-center gap-1.5">
             <Button
               className={cn(
-                "min-w-0 max-w-full truncate px-2",
+                "min-w-0 max-w-full shrink truncate px-2",
                 !canExecutePrimaryAction ? "cursor-default" : null,
                 canExecutePrimaryAction
                   ? app.primaryAction === "retry"

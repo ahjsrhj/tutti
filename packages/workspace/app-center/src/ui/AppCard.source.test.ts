@@ -9,6 +9,6 @@ test("App Card primary action label stays inside the card header", () => {
     source,
     /className="flex min-w-0 flex-1 items-center justify-end gap-1"/
   );
-  assert.match(source, /"min-w-0 max-w-full truncate px-2"/);
+  assert.match(source, /"min-w-0 max-w-full shrink truncate px-2"/);
   assert.match(source, /title=\{primaryActionTitle\}/);
 });
