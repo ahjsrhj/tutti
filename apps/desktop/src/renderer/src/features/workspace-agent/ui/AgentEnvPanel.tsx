@@ -200,6 +200,13 @@ export function AgentEnvPanel({
   // Auto-start the focused remediation once detection settles, at most once per
   // open. The dock link / error card opened us with a focus; we run that action
   // for the user (decision A — the wizard takes over).
+  //
+  // The requestSequence ref below is the real re-entry guard: runAction mutates
+  // the status snapshot (pending flag), which re-runs this effect, so the ref
+  // must be set before runAction fires. The loginPending check inside
+  // resolveWizardAutoStartAction is only best-effort — the desktop service does
+  // not track "login" as a pending action, so that flag is effectively always
+  // false here; do not weaken the ref guard on the assumption it covers re-entry.
   useEffect(() => {
     if (!open) {
       autoStartedSeqRef.current = null;
