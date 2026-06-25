@@ -1023,7 +1023,9 @@ export function AgentGUINodeView({
       const workspaceRefs = refs.filter(
         (ref) => ref.path !== hostLocalFileActionPath
       );
-      const selected = await agentHostApi.workspace.selectFiles();
+      const selected = await agentHostApi.workspace.selectFiles({
+        allowDirectories: false
+      });
       const hostAttachments = selected.map((file) => ({
         hostPath: file.path,
         name: file.name || file.path.split("/").pop() || file.path,
