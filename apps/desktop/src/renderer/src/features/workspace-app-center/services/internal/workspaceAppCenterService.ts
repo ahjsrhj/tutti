@@ -40,6 +40,7 @@ import { AppCenterCatalogRefreshedReporter } from "../../../analytics/reporters/
 import { AppCenterFactoryJobCreatedReporter } from "../../../analytics/reporters/app-center-factory-job-created/appCenterFactoryJobCreatedReporter.ts";
 import { ErrorAppRuntimeFailedReporter } from "../../../analytics/reporters/error-app-runtime-failed/errorAppRuntimeFailedReporter.ts";
 import type { IReporterService } from "../../../analytics/services/reporterService.interface.ts";
+import type { TuttiExternalWorkspaceOpenRouteIntent } from "@tutti-os/workspace-external-core/contracts";
 import type { IWorkspaceAppCenterService } from "../workspaceAppCenterService.interface";
 import {
   normalizeWorkspaceAppCenterApp,
@@ -78,6 +79,7 @@ export interface WorkspaceAppCenterServiceDependencies {
 
 type WorkspaceAppLauncher = (input: {
   appId: string;
+  intent?: TuttiExternalWorkspaceOpenRouteIntent;
   prepared: boolean;
   prevStatus?: WorkspaceAppCenterRuntimeStatus;
   workspaceId: string;
@@ -603,6 +605,7 @@ export class WorkspaceAppCenterService implements IWorkspaceAppCenterService {
 
   async restartAndOpenApp(input: {
     appId: string;
+    intent?: TuttiExternalWorkspaceOpenRouteIntent;
     workspaceId: string;
   }): Promise<boolean> {
     const previousApp = this.store.apps.find(
@@ -616,6 +619,7 @@ export class WorkspaceAppCenterService implements IWorkspaceAppCenterService {
     return (
       (await this.workspaceAppLauncher?.({
         appId: launchableApp.appId,
+        ...(input.intent ? { intent: input.intent } : {}),
         prepared: true,
         prevStatus: previousApp?.runtimeStatus ?? launchableApp.runtimeStatus,
         workspaceId: input.workspaceId

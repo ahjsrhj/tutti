@@ -167,6 +167,54 @@ test("workspace app launch request restarts pending app from dock", async () => 
   ]);
 });
 
+test("workspace app launch request preserves open-route intent across pending restart", async () => {
+  const app = createApp({
+    appId: "docs",
+    runtimeStatus: "installed_pending_restart",
+    launchUrl: "http://127.0.0.1:3000"
+  });
+  const restartCalls: Array<
+    Parameters<IWorkspaceAppCenterService["restartAndOpenApp"]>[0]
+  > = [];
+  const result = await resolveWorkspaceAppCenterLaunchRequest({
+    appCenterService: createAppCenterService([app], {
+      restartAndOpenApp: async (input) => {
+        restartCalls.push(input);
+        return true;
+      }
+    }),
+    request: {
+      ...createLaunchRequestContext(),
+      payload: {
+        appId: "docs",
+        intent: {
+          kind: "open-route",
+          params: { mode: "preview" },
+          route: "/files",
+          state: { selectedPath: "/tmp/a.md" }
+        }
+      },
+      reason: "host",
+      typeId: workspaceAppWebviewTypeID,
+      workspaceId: "workspace-1"
+    }
+  });
+
+  assert.equal(result, null);
+  assert.deepEqual(restartCalls, [
+    {
+      appId: "docs",
+      intent: {
+        kind: "open-route",
+        params: { mode: "preview" },
+        route: "/files",
+        state: { selectedPath: "/tmp/a.md" }
+      },
+      workspaceId: "workspace-1"
+    }
+  ]);
+});
+
 test("workspace app webview URL prefers the current launch URL over stale activation ports", () => {
   assert.equal(
     resolveWorkspaceAppWebviewUrl({
@@ -206,6 +254,100 @@ test("workspace app webview URL preserves same-origin activation deep links", ()
     }),
     "http://127.0.0.1:51234/rooms/current"
   );
+});
+
+test("workspace app webview URL supports open-route activation payloads", () => {
+  assert.equal(
+    resolveWorkspaceAppWebviewUrl({
+      activation: {
+        payload: {
+          appId: "docs",
+          intent: {
+            kind: "open-route",
+            params: { mode: "preview" },
+            route: "/files"
+          },
+          url: "http://127.0.0.1:51234/files?mode=preview"
+        },
+        sequence: 1,
+        type: "workspace-app:open"
+      },
+      appCanUseExternalState: true,
+      appLaunchUrl: "http://127.0.0.1:51234/",
+      externalNodeState: null
+    }),
+    "http://127.0.0.1:51234/files?mode=preview"
+  );
+});
+
+test("workspace app open-route resolves from the app origin root", async () => {
+  const app = createApp({
+    appId: "docs",
+    runtimeStatus: "running",
+    launchUrl: "http://127.0.0.1:51234/app-shell/"
+  });
+
+  const result = await resolveWorkspaceAppCenterLaunchRequest({
+    appCenterService: createAppCenterService([app]),
+    request: {
+      ...createLaunchRequestContext(),
+      payload: {
+        appId: "docs",
+        intent: {
+          kind: "open-route",
+          params: { mode: "preview" },
+          route: "/files"
+        }
+      },
+      reason: "host",
+      typeId: workspaceAppWebviewTypeID,
+      workspaceId: "workspace-1"
+    }
+  });
+
+  assert.equal(result?.activation?.type, "workspace-app:open");
+  assert.deepEqual(result?.activation?.payload, {
+    appId: "docs",
+    intent: {
+      kind: "open-route",
+      params: { mode: "preview" },
+      route: "/files"
+    },
+    title: "Ready",
+    url: "http://127.0.0.1:51234/files?mode=preview"
+  });
+});
+
+test("workspace app open-route rejects protocol-relative routes", async () => {
+  const app = createApp({
+    appId: "docs",
+    runtimeStatus: "running",
+    launchUrl: "http://127.0.0.1:51234/app-shell/"
+  });
+
+  const result = await resolveWorkspaceAppCenterLaunchRequest({
+    appCenterService: createAppCenterService([app]),
+    request: {
+      ...createLaunchRequestContext(),
+      payload: {
+        appId: "docs",
+        intent: {
+          kind: "open-route",
+          route: "//example.com/files"
+        }
+      },
+      reason: "host",
+      typeId: workspaceAppWebviewTypeID,
+      workspaceId: "workspace-1"
+    }
+  });
+
+  assert.equal(result?.activation?.type, "open-url");
+  assert.deepEqual(result?.activation?.payload, {
+    appId: "docs",
+    title: "Ready",
+    url: "http://127.0.0.1:51234/app-shell/"
+  });
 });
 
 test("workspace app dock entry focus reports app open from the dock entry id", () => {
