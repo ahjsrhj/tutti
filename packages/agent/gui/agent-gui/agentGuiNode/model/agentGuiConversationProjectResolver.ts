@@ -104,7 +104,14 @@ function resolveAgentGUIConversationProjectFromIndex(
   projectByNormalizedPath: ReadonlyMap<string, AgentGUIConversationUserProject>,
   options: AgentGUIConversationProjectResolutionOptions
 ): AgentGUIConversationProjectSummary | null {
-  if (options.isNoProjectPath?.({ path: normalizedCwd })) {
+  const exactProject = projectByNormalizedPath.get(normalizedCwd);
+  if (exactProject) {
+    return agentGUIConversationProjectSummaryFromProject(exactProject);
+  }
+  if (
+    isGeneratedAgentGUINoProjectCwd(normalizedCwd) ||
+    options.isNoProjectPath?.({ path: normalizedCwd })
+  ) {
     return null;
   }
   const matchedProject = lookupAgentGUIConversationProject(
@@ -114,6 +121,12 @@ function resolveAgentGUIConversationProjectFromIndex(
   if (!matchedProject) {
     return null;
   }
+  return agentGUIConversationProjectSummaryFromProject(matchedProject);
+}
+
+function agentGUIConversationProjectSummaryFromProject(
+  matchedProject: AgentGUIConversationUserProject
+): AgentGUIConversationProjectSummary {
   const summary: AgentGUIConversationProjectSummary = {
     id: matchedProject.id,
     path: matchedProject.path,
@@ -159,6 +172,20 @@ function normalizeAgentGUIProjectPath(path: string | null | undefined): string {
     return "";
   }
   return normalized.replace(/\/+$/, "") || "/";
+}
+
+function isGeneratedAgentGUINoProjectCwd(normalizedCwd: string): boolean {
+  const segments = normalizedCwd.split("/").filter(Boolean);
+  const leaf = segments.at(-1) ?? "";
+  const projectRoot = segments.at(-2) ?? "";
+  const documentsRoot = segments.at(-3) ?? "";
+  return (
+    /^session-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/iu.test(
+      leaf
+    ) &&
+    projectRoot.toLowerCase() === "tutti" &&
+    documentsRoot.toLowerCase() === "documents"
+  );
 }
 
 function cachedAgentGUIConversationProjectSummary(
