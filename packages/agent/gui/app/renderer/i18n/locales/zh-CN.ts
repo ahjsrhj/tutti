@@ -667,6 +667,7 @@ export const zhCN = {
       authRequired: "需要认证",
       authLogin: "登录",
       activatingSession: "正在连接会话...",
+      cancellingSession: "正在取消中...",
       retryActivation: "重试",
       continueInNewConversation: "去新会话",
       goalLabel: "目标",

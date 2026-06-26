@@ -172,6 +172,7 @@ export interface AgentGUINodeViewModel {
   isCreatingConversation: boolean;
   isSubmitting: boolean;
   isInterrupting: boolean;
+  isCancelPending: boolean;
   isRespondingApproval: boolean;
   promptImagesSupported: boolean;
   compactSupported: boolean | null;

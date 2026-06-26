@@ -8012,6 +8012,11 @@ export function useAgentGUINodeController({
   const isInterrupting =
     activeConversationId !== null &&
     Boolean(interruptingSessionIds[activeConversationId]);
+  // A cancel was requested but raced session startup; it will fire once the
+  // session connects. Surfaced so the connecting indicator can read "cancelling".
+  const isCancelPending =
+    activeConversationId !== null &&
+    Boolean(pendingInterruptSessionIds[activeConversationId]);
   const queuedPrompts = useMemo(
     () =>
       activeConversationId !== null
@@ -8508,6 +8513,7 @@ export function useAgentGUINodeController({
         isCreatingConversation,
         isSubmitting,
         isInterrupting,
+        isCancelPending,
         isRespondingApproval,
         promptImagesSupported,
         compactSupported,
@@ -8570,6 +8576,7 @@ export function useAgentGUINodeController({
       usageAlert,
       dismissUsageAlert,
       isInterrupting,
+      isCancelPending,
       isLoadingConversations,
       isLoadingMessages,
       isRespondingApproval,

@@ -288,6 +288,7 @@ export interface AgentGUIViewLabels {
   authRequired: string;
   authLogin: string;
   activatingSession: string;
+  cancellingSession: string;
   retryActivation: string;
   continueInNewConversation: string;
   goalLabel: string;
@@ -1713,16 +1714,22 @@ const AgentGUIDetailPane = memo(function AgentGUIDetailPane({
       approvalRequired: labels.approvalRequired,
       authRequired: labels.authRequired,
       authLogin: labels.authLogin,
-      activatingSession: labels.activatingSession,
+      // While connecting, if the user already requested a cancel that is waiting
+      // for the session to come up, show "cancelling" instead of "connecting".
+      activatingSession: viewModel.isCancelPending
+        ? labels.cancellingSession
+        : labels.activatingSession,
       retryActivation: labels.retryActivation,
       continueInNewConversation: labels.continueInNewConversation
     }),
     [
       labels.activatingSession,
+      labels.cancellingSession,
       labels.approvalRequired,
       labels.authRequired,
       labels.continueInNewConversation,
-      labels.retryActivation
+      labels.retryActivation,
+      viewModel.isCancelPending
     ]
   );
   const goalBannerLabels = useMemo<AgentGoalBannerLabels>(

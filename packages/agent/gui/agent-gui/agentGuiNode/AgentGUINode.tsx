@@ -909,6 +909,7 @@ export const AgentGUINode = memo(function AgentGUINode({
       authRequired: t("agentHost.agentGui.authRequired"),
       authLogin: t("agentHost.agentGui.authLogin"),
       activatingSession: t("agentHost.agentGui.activatingSession"),
+      cancellingSession: t("agentHost.agentGui.cancellingSession"),
       retryActivation: t("agentHost.agentGui.retryActivation"),
       continueInNewConversation: t(
         "agentHost.agentGui.continueInNewConversation"

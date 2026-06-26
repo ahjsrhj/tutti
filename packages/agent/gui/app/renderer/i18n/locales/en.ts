@@ -724,6 +724,7 @@ export const en = {
       authRequired: "Authentication required",
       authLogin: "Sign in",
       activatingSession: "Connecting session...",
+      cancellingSession: "Cancelling...",
       retryActivation: "Retry",
       continueInNewConversation: "New session",
       goalLabel: "Goal",
