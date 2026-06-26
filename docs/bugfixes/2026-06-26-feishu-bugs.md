@@ -44,7 +44,7 @@
   - `corepack pnpm@10.11.0 --filter @tutti-os/agent-gui test -- shared/agentActivitySnapshotProjection.spec.ts`
   - `corepack pnpm@10.11.0 check:agent-activity-runtime-boundaries`
 - Status: fixed locally
-- Commit: pending; final hash recorded after commit.
+- Commit: `95b39cc0`
 - Feishu status update: pending.
 
 ## CQs9rF6GhekdMAcbDhsc1Q9PnWA - Create App session stops early / command detail empty
@@ -60,5 +60,5 @@
   - `corepack pnpm@10.11.0 --filter @tutti-os/agent-gui test -- shared/agentActivitySnapshotProjection.spec.ts`
   - `corepack pnpm@10.11.0 check:agent-activity-runtime-boundaries`
 - Status: fixed locally
-- Commit: pending; final hash recorded after commit.
+- Commit: `95b39cc0`
 - Feishu status update: pending.
