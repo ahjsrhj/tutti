@@ -279,7 +279,7 @@ func parseCLIVersion(output string) string {
 // "" when the binary is absent, errors, or prints nothing version-like. Used for
 // every supported provider (not just codex) so the config panel can show the
 // installed CLI version.
-func (s Service) cliVersion(ctx context.Context, binaryPath string) string {
+func (Service) cliVersion(ctx context.Context, binaryPath string) string {
 	binaryPath = strings.TrimSpace(binaryPath)
 	if binaryPath == "" {
 		return ""

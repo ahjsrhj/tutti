@@ -10,7 +10,7 @@ import (
 func (s Service) runCodexCLILatestInstaller(
 	ctx context.Context,
 	spec InstallerSpec,
-	installDir string,
+	_ string,
 ) (InstallCommandResult, error) {
 	if spec.CodexCLI == nil {
 		return InstallCommandResult{ExitCode: 1, Stderr: "codex CLI latest installer config is required"}, nil
