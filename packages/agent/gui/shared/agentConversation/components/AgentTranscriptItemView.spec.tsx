@@ -293,6 +293,14 @@ describe("AgentTranscriptItemView render stability", () => {
     );
   });
 
+  it("keeps pasted prompt images separated from the message bubble", () => {
+    const css = readFileSync(resolve("app/renderer/agentactivity.css"), "utf8");
+
+    expect(css).toMatch(
+      /\.agent-gui-conversation__user-message-flow\s*{[^}]*row-gap:\s*14px/s
+    );
+  });
+
   it("loads user prompt image attachments from the activity runtime", async () => {
     const readSessionAttachment = vi.fn(async () => ({
       attachmentId: "attachment-1",

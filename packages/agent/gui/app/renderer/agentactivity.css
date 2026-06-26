@@ -3131,6 +3131,7 @@ aside.workspace-agents-status-panel
 }
 
 .agent-gui-conversation__user-message-flow {
+  row-gap: 14px;
   justify-items: end;
 }
 
