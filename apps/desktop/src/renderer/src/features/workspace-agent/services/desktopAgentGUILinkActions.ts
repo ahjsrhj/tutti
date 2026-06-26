@@ -59,6 +59,8 @@ export async function runDesktopAgentGUILinkAction(
         source: "agent_command",
         workspaceId: dependencies.workspaceId
       });
+    case "open-local-asset-preview":
+      return false;
     case "open-url":
       return dependencies.openBrowserUrl({
         source: "agent_command",
