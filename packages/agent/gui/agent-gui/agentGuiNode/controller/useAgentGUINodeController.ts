@@ -681,6 +681,26 @@ function isSessionNotFoundErrorCode(
   return code === AGENT_SESSION_NOT_FOUND_ERROR;
 }
 
+const WORKSPACE_AGENT_SESSION_NOT_READY_REASON =
+  "workspace_agent_session_not_found";
+
+// True when a cancel raced session startup: the workspace agent session is not
+// registered in the runtime yet (its thread/start is still in flight), so the
+// daemon reports "workspace agent session not found". This is transient — the
+// session is connecting — so it must not surface as a hard error.
+function isAgentSessionNotReadyError(error: unknown): boolean {
+  if (error && typeof error === "object") {
+    const reason = (error as { reason?: unknown }).reason;
+    if (reason === WORKSPACE_AGENT_SESSION_NOT_READY_REASON) {
+      return true;
+    }
+  }
+  return (
+    getAgentGUIRawErrorMessage(error)?.trim() ===
+    "workspace agent session not found"
+  );
+}
+
 function isSettingsRequireNewSessionErrorCode(
   code: AppErrorCode | null | undefined
 ): boolean {
@@ -2620,6 +2640,11 @@ export function useAgentGUINodeController({
     setQueuedPromptRetryBlockBySessionId
   ] = useState<Record<string, QueuedPromptRetryBlock | null>>({});
   const [interruptingSessionIds, setInterruptingSessionIds] = useState<
+    Record<string, boolean>
+  >({});
+  // Sessions whose cancel raced startup; the interrupt is retried once the
+  // session connects and its turn goes live.
+  const [pendingInterruptSessionIds, setPendingInterruptSessionIds] = useState<
     Record<string, boolean>
   >({});
   const [
@@ -6343,25 +6368,37 @@ export function useAgentGUINodeController({
           void syncConversationListProjection(agentSessionId);
         })
         .catch((error) => {
-          if (isCurrentConversation(agentSessionId)) {
-            reportAgentGUIRuntimeError({
-              agentSessionId,
-              error,
-              phase: "interrupt_current_turn",
-              provider: dataRef.current.provider,
-              runtime: agentActivityRuntime,
-              workspaceId
-            });
-            setSuppressedPromptRequestIdsBySessionId((current) => {
-              if (current[agentSessionId] !== activePendingPrompt?.requestId) {
-                return current;
-              }
-              const next = { ...current };
-              delete next[agentSessionId];
-              return next;
-            });
-            setDetailError(getAgentGUIErrorMessage(error));
+          if (!isCurrentConversation(agentSessionId)) {
+            return;
           }
+          if (isAgentSessionNotReadyError(error)) {
+            // The session is still connecting (its thread/start is in flight),
+            // so there is no live turn to interrupt yet. Arm a retry for when
+            // the turn goes live and suppress the transient "session not found"
+            // banner instead of surfacing it as a hard error.
+            setPendingInterruptSessionIds((current) => ({
+              ...current,
+              [agentSessionId]: true
+            }));
+            return;
+          }
+          reportAgentGUIRuntimeError({
+            agentSessionId,
+            error,
+            phase: "interrupt_current_turn",
+            provider: dataRef.current.provider,
+            runtime: agentActivityRuntime,
+            workspaceId
+          });
+          setSuppressedPromptRequestIdsBySessionId((current) => {
+            if (current[agentSessionId] !== activePendingPrompt?.requestId) {
+              return current;
+            }
+            const next = { ...current };
+            delete next[agentSessionId];
+            return next;
+          });
+          setDetailError(getAgentGUIErrorMessage(error));
         })
         .finally(() => {
           setInterruptingSessionIds((current) => {
@@ -6387,6 +6424,34 @@ export function useAgentGUINodeController({
       agentActivityRuntime
     ]
   );
+
+  // Retry a cancel that raced session startup: once the (now connected) session
+  // reports a live turn, fire the interrupt the user already requested.
+  useEffect(() => {
+    const agentSessionId = activeConversationId;
+    if (!agentSessionId || !pendingInterruptSessionIds[agentSessionId]) {
+      return;
+    }
+    if (
+      (agentActivityDisplayStatuses.get(agentSessionId) ?? null) !== "working"
+    ) {
+      return;
+    }
+    setPendingInterruptSessionIds((current) => {
+      if (!current[agentSessionId]) {
+        return current;
+      }
+      const next = { ...current };
+      delete next[agentSessionId];
+      return next;
+    });
+    interruptCurrentTurn("");
+  }, [
+    activeConversationId,
+    agentActivityDisplayStatuses,
+    pendingInterruptSessionIds,
+    interruptCurrentTurn
+  ]);
 
   const updateDraftContent = useCallback((draftContent: AgentComposerDraft) => {
     const agentSessionId = activeConversationIdRef.current;
