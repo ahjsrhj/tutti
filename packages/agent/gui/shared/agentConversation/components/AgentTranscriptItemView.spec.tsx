@@ -343,14 +343,14 @@ describe("AgentTranscriptItemView render stability", () => {
     await waitFor(() => {
       const image = screen.getByRole("img", { name: "screen.png" });
       expect(image).toHaveAttribute("src", "data:image/png;base64,aW1hZ2U=");
-      expect(image).toHaveClass("cursor-zoom-in", "size-full", "object-cover");
-      const imageBlock = image.closest(".size-20");
+      expect(image).toHaveClass("cursor-zoom-in", "max-h-20", "object-contain");
+      const imageBlock = image.closest("div");
       expect(imageBlock).toBeInstanceOf(HTMLElement);
-      expect(imageBlock).toHaveClass("size-20", "overflow-hidden");
+      expect(imageBlock).toHaveClass("max-h-20", "overflow-hidden");
       const imageGrid = imageBlock?.parentElement;
       expect(imageGrid).toHaveClass("grid", "justify-self-end");
       expect(imageGrid).toHaveStyle({
-        gridTemplateColumns: "repeat(1, 80px)"
+        gridTemplateColumns: "repeat(1, 160px)"
       });
       const imageGridClasses = imageGrid?.className.split(/\s+/) ?? [];
       expect(
