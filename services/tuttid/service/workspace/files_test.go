@@ -2,6 +2,7 @@ package workspace
 
 import (
 	"context"
+	"errors"
 	"path/filepath"
 	"testing"
 	"time"
@@ -84,6 +85,26 @@ func TestFileServiceListDirectoryAcceptsExternalAbsolutePaths(t *testing.T) {
 	}
 	if !adapter.listIncludeHidden {
 		t.Fatal("include hidden = false, want true")
+	}
+}
+
+func TestFileServiceResolveWorkspaceRootForPathRejectsUnsupportedSpecialPaths(t *testing.T) {
+	homeDir := t.TempDir()
+	t.Setenv("HOME", homeDir)
+	service := FileService{}
+
+	for _, path := range []string{
+		"/dev/null",
+		"/dev/./null",
+		"/dev//null",
+		"NUL",
+		"NUL.txt",
+		"C:\\tmp\\NUL",
+	} {
+		_, err := service.ResolveWorkspaceRootForPath(context.Background(), "ws-1", path)
+		if !errors.Is(err, workspacefiles.ErrInvalidPath) {
+			t.Fatalf("ResolveWorkspaceRootForPath(%q) error = %v, want ErrInvalidPath", path, err)
+		}
 	}
 }
 

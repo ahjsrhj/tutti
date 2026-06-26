@@ -239,7 +239,9 @@ test("workspace files launch coordinator rejects non-local and special paths", a
     "/dev//null",
     "NUL",
     "NUL.txt",
-    "C:\\tmp\\NUL"
+    "C:\\tmp\\NUL",
+    "\\\\server\\share\\file.txt",
+    "//server/share/file.txt"
   ]) {
     assert.equal(
       await requestWorkspaceFilesLaunch({

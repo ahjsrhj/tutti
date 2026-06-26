@@ -102,6 +102,10 @@ func (s Service) MoveEntry(ctx context.Context, workspaceID string, value string
 	if err != nil {
 		return FileEntry{}, err
 	}
+	if defaultLogicalPath, err := NormalizeLogicalPathWithinRoot(value, defaultRoot.LogicalRoot); err == nil &&
+		IsLogicalRoot(defaultLogicalPath, defaultRoot.LogicalRoot) {
+		return FileEntry{}, ErrRootDeleteForbidden
+	}
 	logicalPath, err := NormalizeLogicalPathWithinRoot(pathValueForRoot(value, defaultRoot, root), root.LogicalRoot)
 	if err != nil {
 		return FileEntry{}, err

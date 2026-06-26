@@ -59,7 +59,11 @@ export async function requestWorkspaceFilesLaunch(
 }
 
 function normalizeWorkspaceFilesLaunchPath(path: string): string | null {
-  const normalized = normalizeLocalPath(path);
+  const trimmed = path.trim();
+  if (isUncLocalPath(trimmed)) {
+    return null;
+  }
+  const normalized = normalizeLocalPath(trimmed);
   if (
     !normalized ||
     isUrlLikeLocalPath(normalized) ||
@@ -96,6 +100,10 @@ function isStructuredPayloadPath(path: string): boolean {
 function isUnsupportedSpecialPath(path: string): boolean {
   const comparisonPath = cleanLocalPathForComparison(path);
   return comparisonPath === "/dev/null" || hasWindowsNulSegment(comparisonPath);
+}
+
+function isUncLocalPath(path: string): boolean {
+  return /^(?:\\\\|\/\/)[^/\\]+[/\\][^/\\]+/.test(path);
 }
 
 function isWindowsAbsolutePath(path: string): boolean {

@@ -335,6 +335,42 @@ func TestServiceMoveEntryUsesPathAwareRootWhenTargetIsExternal(t *testing.T) {
 	}
 }
 
+func TestServiceMoveEntryRejectsDefaultRootWhenTargetIsExternal(t *testing.T) {
+	adapter := &fakeAdapter{}
+	service := Service{
+		Resolver: fakePathAwareResolver{
+			fakeResolver: fakeResolver{
+				root: WorkspaceRoot{
+					LogicalRoot:  "/Users/example",
+					PhysicalRoot: "/Users/example",
+				},
+			},
+			rootByPath: map[string]WorkspaceRoot{
+				"/tmp/output": {
+					LogicalRoot:  "/",
+					PhysicalRoot: "/",
+				},
+			},
+		},
+		Adapter: adapter,
+	}
+
+	for _, value := range []string{"/Users/example", ""} {
+		_, err := service.MoveEntry(
+			context.Background(),
+			"ws-1",
+			value,
+			"/tmp/output",
+		)
+		if !errors.Is(err, ErrRootDeleteForbidden) {
+			t.Fatalf("MoveEntry(%q) error = %v, want ErrRootDeleteForbidden", value, err)
+		}
+		if adapter.movePath != "" {
+			t.Fatalf("adapter move path = %q, want no call", adapter.movePath)
+		}
+	}
+}
+
 func TestServiceMoveEntryKeepsRelativeSourceUnderDefaultRootWhenTargetIsExternal(t *testing.T) {
 	adapter := &fakeAdapter{}
 	service := Service{

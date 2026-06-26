@@ -28,7 +28,12 @@ describe("resolveWorkspaceFileLinkAction", () => {
         basePath: "/Users/test/project/tutti",
         source: "agent-markdown"
       })
-    ).toBeNull();
+    ).toMatchObject({
+      type: "open-workspace-file",
+      path: "/workspace/src/App.tsx",
+      directoryPath: "/workspace/src",
+      workspaceRoot: "/Users/test/project/tutti"
+    });
   });
 
   it("allows local absolute paths when the workspace root is the filesystem root", () => {
@@ -77,14 +82,16 @@ describe("resolveWorkspaceFileLinkAction", () => {
     });
   });
 
-  it("rejects special local device paths before launch", () => {
+  it("rejects special local device and network share paths before launch", () => {
     for (const path of [
       "/dev/null",
       "/dev/./null",
       "/dev//null",
       "NUL",
       "NUL.txt",
-      "C:\\tmp\\NUL"
+      "C:\\tmp\\NUL",
+      "\\\\server\\share\\file.txt",
+      "//server/share/file.txt"
     ]) {
       expect(
         resolveWorkspaceFileLinkAction({

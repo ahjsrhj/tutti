@@ -161,6 +161,34 @@ test("revealPath loads external absolute parent directories outside the current 
   assert.equal(store.isLoading, false);
 });
 
+test("revealPath handles Windows drive paths outside the current root", async () => {
+  const store = createTestStore();
+  store.root = "C:/Users/demo";
+  store.currentDirectoryPath = "C:/Users/demo";
+  const controller = new WorkspaceFileManagerNavigationController({
+    host: {
+      async listDirectory(input) {
+        assert.equal(input.path, "C:/tmp");
+        return {
+          directoryPath: input.path,
+          entries: [createFileEntry("C:/tmp/hello_world.md")],
+          root: "C:/",
+          workspaceID: input.workspaceID
+        };
+      }
+    },
+    resolveErrorMessage: defaultResolveErrorMessage,
+    store
+  });
+
+  await controller.revealPath("C:\\tmp\\hello_world.md");
+
+  assert.equal(store.root, "C:/");
+  assert.equal(store.currentDirectoryPath, "C:/tmp");
+  assert.equal(store.selectedPath, "C:/tmp/hello_world.md");
+  assert.equal(store.isLoading, false);
+});
+
 test("revealPath includes hidden entries when parent path contains a hidden segment", async () => {
   const store = createTestStore();
   store.root = "/Users/demo";

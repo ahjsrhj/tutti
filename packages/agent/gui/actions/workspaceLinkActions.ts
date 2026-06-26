@@ -120,7 +120,11 @@ export function resolveWorkspaceFilePathCandidate({
   basePath
 }: ResolveWorkspaceFilePathCandidateInput): ResolvedWorkspaceFilePathCandidate | null {
   const rawPath = decodeWorkspaceLinkPath(path.trim());
-  if (!rawPath || isUrlLikeWorkspaceFilePath(rawPath)) {
+  if (
+    !rawPath ||
+    isUrlLikeWorkspaceFilePath(rawPath) ||
+    isUncWorkspaceFilePath(rawPath)
+  ) {
     return null;
   }
 
@@ -146,10 +150,7 @@ export function resolveWorkspaceFilePathCandidate({
   if (!root) {
     return null;
   }
-  if (
-    isAbsoluteLocalPath(normalizedPath) &&
-    !isSyntheticWorkspacePathOutsideRoot(normalizedPath, root)
-  ) {
+  if (isAbsoluteLocalPath(normalizedPath)) {
     const directoryPath = dirname(normalizedPath);
     return {
       path: normalizedPath,
@@ -352,13 +353,8 @@ function isWindowsAbsolutePath(path: string): boolean {
   return /^[A-Za-z]:\//.test(path);
 }
 
-function isSyntheticWorkspacePathOutsideRoot(
-  path: string,
-  root: string
-): boolean {
-  return (
-    root !== "/" && (path === "/workspace" || path.startsWith("/workspace/"))
-  );
+function isUncWorkspaceFilePath(path: string): boolean {
+  return /^(?:\\\\|\/\/)[^/\\]+[/\\][^/\\]+/.test(path);
 }
 
 function isUnsupportedSpecialWorkspaceFilePath(path: string): boolean {
