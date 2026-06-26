@@ -1524,6 +1524,9 @@ func (a *standardACPAdapter) ApplySessionSettings(
 	if patch.Speed != nil {
 		speed := strings.TrimSpace(*patch.Speed)
 		if speed != "" {
+			if !a.sessionConfigOptionAdvertisesValue(session.AgentSessionID, "fast", speed) {
+				return nil
+			}
 			if !a.sessionConfigOptionMatches(session.AgentSessionID, "fast", speed) {
 				if err := a.setSessionConfigOption(ctx, acpSession.client, session, "fast", speed); err != nil {
 					return fmt.Errorf("agent session ACP fast configuration failed: %w", err)
