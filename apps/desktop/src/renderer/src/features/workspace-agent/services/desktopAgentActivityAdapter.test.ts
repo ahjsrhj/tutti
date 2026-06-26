@@ -264,6 +264,39 @@ test("desktop agent activity adapter refreshes provider status and localizes ada
   assert.deepEqual(refreshCalls, [["claude-code"]]);
 });
 
+test("desktop agent activity adapter does not refresh provider status for unrelated create failures", async () => {
+  const refreshCalls: unknown[] = [];
+  const adapter = createDesktopAgentActivityAdapter({
+    agentProviderStatusService: {
+      async refresh(providers) {
+        refreshCalls.push(providers);
+      }
+    },
+    tuttidClient: createTuttidClient({
+      async createWorkspaceAgentSession() {
+        throw new TuttidProtocolError({
+          code: "service_unavailable",
+          developerMessage: "tuttid unavailable",
+          reason: "service_unavailable",
+          statusCode: 503
+        });
+      }
+    }),
+    runtimeApi: createRuntimeApi()
+  });
+
+  await assert.rejects(
+    adapter.createSession({
+      agentSessionId: "agent-session-1",
+      provider: "claude-code",
+      workspaceId
+    }),
+    /service_unavailable|TuttidProtocolError|tuttid unavailable/
+  );
+
+  assert.deepEqual(refreshCalls, []);
+});
+
 test("desktop agent activity adapter requires an injected session event subscription", async () => {
   const diagnostics: unknown[] = [];
   const adapter = createDesktopAgentActivityAdapter({

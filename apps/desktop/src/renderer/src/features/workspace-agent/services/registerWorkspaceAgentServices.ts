@@ -9,6 +9,7 @@ import type { IWorkspaceUserProjectService } from "../../workspace-user-project/
 import type { NotificationService } from "@tutti-os/ui-notifications";
 import { IAgentProviderStatusService } from "./agentProviderStatusService.interface";
 import type { AgentProviderTerminalCommandRunner } from "./agentProviderStatusService.interface";
+import { bindDesktopManagedAgentProviderVisibilityRefresh } from "./internal/desktopAgentProviderVisibilityRefresh.ts";
 import { DesktopAgentProviderStatusService } from "./internal/desktopAgentProviderStatusService";
 import { WorkspaceAgentActivityService } from "./internal/workspaceAgentActivityService";
 import { WorkspaceAgentPromptSessionService } from "./internal/workspaceAgentPromptSessionService";
@@ -49,6 +50,7 @@ export function registerWorkspaceAgentServices(
     IAgentProviderStatusService,
     agentProviderStatusService
   );
+  bindDesktopManagedAgentProviderVisibilityRefresh(agentProviderStatusService);
   const workspaceAgentActivityService = new WorkspaceAgentActivityService({
     ...input,
     agentProviderStatusService

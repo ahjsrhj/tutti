@@ -16,11 +16,11 @@ import type {
   WorkspaceAgentSession,
   WorkspaceAgentSessionMessage
 } from "@tutti-os/client-tuttid-ts";
-import { normalizeTuttidError } from "@tutti-os/client-tuttid-ts";
 import type { DesktopRuntimeApi } from "@preload/types";
 import type { IAgentProviderStatusService } from "./agentProviderStatusService.interface";
 import { getActiveLocale } from "../../../i18n/runtime.ts";
-import { resolveDesktopErrorMessage } from "../../../lib/desktopErrors.ts";
+import { wrapLocalizedTuttidErrorIfSpecific } from "../../../lib/desktopErrors.ts";
+import { shouldRefreshProviderStatusAfterSessionError } from "./internal/desktopAgentProviderStatusSync.ts";
 
 export interface CreateDesktopAgentActivityAdapterInput {
   agentProviderStatusService?: Pick<IAgentProviderStatusService, "refresh">;
@@ -351,8 +351,10 @@ export function createDesktopAgentActivityAdapter({
         );
       } catch (error) {
         const provider = workspaceAgentProvider(input.provider);
-        void agentProviderStatusService?.refresh([provider]).catch(() => {});
-        throw createAgentSessionCreateError(error);
+        if (shouldRefreshProviderStatusAfterSessionError(error)) {
+          void agentProviderStatusService?.refresh([provider]).catch(() => {});
+        }
+        throw wrapLocalizedTuttidErrorIfSpecific(error, getActiveLocale());
       }
     },
     async sendInput(input) {
@@ -476,29 +478,6 @@ function reportDesktopAgentSubmitTrace(
   } catch {
     // Diagnostic logging must not affect agent submission.
   }
-}
-
-function createAgentSessionCreateError(error: unknown): unknown {
-  const normalized = normalizeTuttidError(error);
-  if (
-    normalized?.code !== "workspace_operation_failed" ||
-    normalized.reason !== "acp_adapter_version_mismatch"
-  ) {
-    return error;
-  }
-  const message = resolveDesktopErrorMessage(error, getActiveLocale());
-  const wrapped = new Error(message);
-  wrapped.name = error instanceof Error ? error.name : "TuttidProtocolError";
-  Object.assign(wrapped, {
-    code: normalized.code,
-    correlationId: normalized.correlationId,
-    developerMessage: normalized.developerMessage,
-    params: normalized.params,
-    reason: normalized.reason,
-    retryable: normalized.retryable,
-    statusCode: normalized.statusCode
-  });
-  return wrapped;
 }
 
 function stringMetadata(
