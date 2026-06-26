@@ -49,6 +49,11 @@ export interface IAgentProviderStatusService {
   ): Promise<void>;
   refresh(providers?: WorkspaceAgentProvider[]): Promise<void>;
   subscribe(listener: () => void): () => void;
+  /** Whether the user agreed to send fuller diagnostics via "report problem". */
+  getDiagnosticsConsent(): boolean;
+  setDiagnosticsConsent(value: boolean): void;
+  /** Send the consent-gated diagnostic report for a provider (no-op without consent). */
+  reportEnvIssue(provider: WorkspaceAgentProvider): Promise<void>;
 }
 
 export const IAgentProviderStatusService =

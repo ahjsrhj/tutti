@@ -208,7 +208,13 @@ export const en = {
       stageDoInstall: "Install",
       stageDoUpgrade: "Upgrade",
       stageDoLogin: "Sign in",
-      stageDoRedetect: "Re-check"
+      stageDoRedetect: "Re-check",
+      actionReportIssue: "Report problem",
+      reportConsentBody:
+        "This sends fuller diagnostics (CLI paths, endpoints, proxy address, error details) to help us debug. Send it?",
+      reportConsentAgree: "Agree & send",
+      reportConsentCancel: "Cancel",
+      reportDone: "Reported — thanks"
     },
     referenceSources: {
       appSourceLabel: "Apps",

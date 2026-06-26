@@ -543,7 +543,10 @@ function createAgentProviderStatusService(input: {
       return () => {
         listeners.delete(listener);
       };
-    }
+    },
+    getDiagnosticsConsent: () => false,
+    setDiagnosticsConsent: () => {},
+    reportEnvIssue: async () => {}
   };
 }
 

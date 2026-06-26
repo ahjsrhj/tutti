@@ -203,7 +203,13 @@ export const zhCN = {
       stageDoInstall: "进行安装",
       stageDoUpgrade: "进行升级",
       stageDoLogin: "进行登录",
-      stageDoRedetect: "重新检测"
+      stageDoRedetect: "重新检测",
+      actionReportIssue: "上报异常",
+      reportConsentBody:
+        "将上报更完整的诊断信息（CLI 路径、端点、代理地址、错误详情）以帮助排查。是否上报？",
+      reportConsentAgree: "同意并上报",
+      reportConsentCancel: "取消",
+      reportDone: "已上报，感谢反馈"
     },
     referenceSources: {
       appSourceLabel: "应用",

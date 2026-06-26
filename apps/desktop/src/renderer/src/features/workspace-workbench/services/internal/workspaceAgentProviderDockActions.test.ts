@@ -95,6 +95,9 @@ function stubService(
     runAction: async (_provider, actionId) => {
       onRun(actionId);
     },
-    subscribe: () => () => {}
+    subscribe: () => () => {},
+    getDiagnosticsConsent: () => false,
+    setDiagnosticsConsent: () => {},
+    reportEnvIssue: async () => {}
   };
 }

@@ -31,6 +31,8 @@ const expectedAnalyticsEvents = [
   "agent.provider_login_result",
   "agent.provider_ready",
   "agent.chat_ready",
+  "agent.env_detected",
+  "agent.env_issue_reported",
   "agent.conversation_pinned",
   "agent.conversation_unpinned",
   "agent.settings.model_changed",

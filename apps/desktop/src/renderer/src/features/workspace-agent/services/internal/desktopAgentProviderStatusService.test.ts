@@ -98,7 +98,11 @@ test("runAction tracks provider login initiation and successful status result", 
     reporterNow: () => 1749124800000,
     reporterService: {
       async trackEvents(nextEvents) {
-        events.push(...nextEvents);
+        // These tests focus on the login/ready funnel; the always-on
+        // env_detected event is verified separately.
+        events.push(
+          ...nextEvents.filter((event) => event.name !== "agent.env_detected")
+        );
       }
     },
     terminalCommandRunner: {
@@ -155,7 +159,11 @@ test("requestStatuses reports an already-ready provider as an activation signal"
     reporterNow: () => 1749124800000,
     reporterService: {
       async trackEvents(nextEvents) {
-        events.push(...nextEvents);
+        // These tests focus on the login/ready funnel; the always-on
+        // env_detected event is verified separately.
+        events.push(
+          ...nextEvents.filter((event) => event.name !== "agent.env_detected")
+        );
       }
     },
     terminalCommandRunner: {
@@ -195,7 +203,11 @@ test("requestStatuses does not re-report a provider that was already ready", asy
     reporterNow: () => 1749124800000,
     reporterService: {
       async trackEvents(nextEvents) {
-        events.push(...nextEvents);
+        // These tests focus on the login/ready funnel; the always-on
+        // env_detected event is verified separately.
+        events.push(
+          ...nextEvents.filter((event) => event.name !== "agent.env_detected")
+        );
       }
     },
     terminalCommandRunner: {
@@ -218,6 +230,42 @@ test("requestStatuses does not re-report a provider that was already ready", asy
       }
     }
   ]);
+});
+
+test("requestStatuses fires agent.env_detected once per detection outcome", async () => {
+  const events: ReporterEventInput[] = [];
+  const service = new DesktopAgentProviderStatusService({
+    tuttidClient: createTuttidClient({
+      snapshots: [
+        createStatusResponse([
+          createProviderStatus({ actions: [], availability: "ready" })
+        ]),
+        createStatusResponse([
+          createProviderStatus({ actions: [], availability: "ready" })
+        ])
+      ]
+    }),
+    reporterNow: () => 1749124800000,
+    reporterService: {
+      async trackEvents(nextEvents) {
+        events.push(
+          ...nextEvents.filter((event) => event.name === "agent.env_detected")
+        );
+      }
+    },
+    terminalCommandRunner: {
+      async runTerminalCommand() {}
+    }
+  });
+
+  await service.refresh();
+  await service.refresh();
+  await flushAsyncWork();
+
+  // Two identical refreshes resolve to the same outcome → one event.
+  assert.equal(events.length, 1);
+  assert.equal(events[0]?.params?.provider, "codex");
+  assert.equal(events[0]?.params?.availability_status, "ready");
 });
 
 test("runAction short-polls login status after sign-in and coalesces repeated login attempts", async () => {
@@ -575,7 +623,9 @@ test("runAction reports login launch failures and clears pending state", async (
       reporterNow: () => 1749124800000,
       reporterService: {
         async trackEvents(nextEvents) {
-          events.push(...nextEvents);
+          events.push(
+            ...nextEvents.filter((event) => event.name !== "agent.env_detected")
+          );
         }
       },
       terminalCommandRunner: {

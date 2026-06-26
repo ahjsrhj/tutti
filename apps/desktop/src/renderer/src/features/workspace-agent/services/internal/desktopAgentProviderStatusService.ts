@@ -8,7 +8,14 @@ import type {
 import { AgentProviderLoginInitiatedReporter } from "../../../analytics/reporters/agent-provider-login-initiated/agentProviderLoginInitiatedReporter.ts";
 import { AgentProviderLoginResultReporter } from "../../../analytics/reporters/agent-provider-login-result/agentProviderLoginResultReporter.ts";
 import { AgentProviderReadyReporter } from "../../../analytics/reporters/agent-provider-ready/agentProviderReadyReporter.ts";
+import { AgentEnvDetectedReporter } from "../../../analytics/reporters/agent-env-detected/agentEnvDetectedReporter.ts";
+import { AgentEnvIssueReportedReporter } from "../../../analytics/reporters/agent-env-issue-reported/agentEnvIssueReportedReporter.ts";
 import type { IReporterService } from "../../../analytics/services/reporterService.interface.ts";
+import {
+  buildEnvDetectedParams,
+  buildEnvIssueParams,
+  envDetectedSignature
+} from "./agentEnvTelemetry.ts";
 import type {
   AgentProviderStatusActionContext,
   AgentProviderStatusSnapshot,
@@ -30,8 +37,15 @@ export interface DesktopAgentProviderStatusServiceDependencies {
   tuttidClient: TuttidClient;
   reporterNow?: () => number;
   reporterService?: Pick<IReporterService, "trackEvents">;
+  diagnosticsConsentStore?: DiagnosticsConsentStore;
   requestTimeoutMs?: number;
   terminalCommandRunner: AgentProviderTerminalCommandRunner;
+}
+
+/** Persists whether the user agreed to send fuller diagnostics via "上报异常". */
+export interface DiagnosticsConsentStore {
+  get(): boolean;
+  set(value: boolean): void;
 }
 
 interface AgentProviderStatusPollScheduler {
@@ -81,6 +95,13 @@ export class DesktopAgentProviderStatusService implements IAgentProviderStatusSe
   private revision = 0;
   private snapshot: AgentProviderStatusSnapshot = emptySnapshot;
   private readonly transientDowngradeCounts = new Map<string, number>();
+  // Last env-detection fingerprint per provider, so `agent.env_detected` fires
+  // only when the outcome changes instead of on every status poll.
+  private readonly lastEnvSignatures = new Map<
+    WorkspaceAgentProvider,
+    string
+  >();
+  private readonly consentStore: DiagnosticsConsentStore;
 
   constructor(
     dependencies: DesktopAgentProviderStatusServiceDependencies,
@@ -88,6 +109,8 @@ export class DesktopAgentProviderStatusService implements IAgentProviderStatusSe
   ) {
     this.dependencies = dependencies;
     this.notifications = notifications;
+    this.consentStore =
+      dependencies.diagnosticsConsentStore ?? createLocalStorageConsentStore();
   }
 
   getRevision(): number {
@@ -174,6 +197,7 @@ export class DesktopAgentProviderStatusService implements IAgentProviderStatusSe
             previousStatuses,
             reconciledStatuses
           );
+          this.reportEnvDetectedChanges(reconciledStatuses);
           void this.reportCompletedLoginResults(response.providers);
         }
         return response;
@@ -585,6 +609,65 @@ export class DesktopAgentProviderStatusService implements IAgentProviderStatusSe
     }
   }
 
+  // Always-on, privacy-safe: fire `agent.env_detected` once per provider per
+  // distinct detection outcome, so we can see how users' environments resolve
+  // without spamming on routine polls.
+  private reportEnvDetectedChanges(
+    statuses: readonly AgentProviderStatus[]
+  ): void {
+    for (const status of statuses) {
+      const signature = envDetectedSignature(status);
+      if (this.lastEnvSignatures.get(status.provider) === signature) {
+        continue;
+      }
+      this.lastEnvSignatures.set(status.provider, signature);
+      void this.reportEnvDetected(status);
+    }
+  }
+
+  private async reportEnvDetected(status: AgentProviderStatus): Promise<void> {
+    try {
+      await new AgentEnvDetectedReporter(buildEnvDetectedParams(status), {
+        now: this.dependencies.reporterNow,
+        reporterService: createOptionalReporterService(
+          this.dependencies.reporterService
+        )
+      }).report();
+    } catch {
+      // Analytics must not block agent provider actions.
+    }
+  }
+
+  getDiagnosticsConsent(): boolean {
+    return this.consentStore.get();
+  }
+
+  setDiagnosticsConsent(value: boolean): void {
+    this.consentStore.set(value);
+  }
+
+  // The consent-gated "report problem" action: sends the fuller diagnostic
+  // payload, but only when the user has agreed.
+  async reportEnvIssue(provider: WorkspaceAgentProvider): Promise<void> {
+    if (!this.consentStore.get()) {
+      return;
+    }
+    const status = this.getStatus(provider);
+    if (!status) {
+      return;
+    }
+    try {
+      await new AgentEnvIssueReportedReporter(buildEnvIssueParams(status), {
+        now: this.dependencies.reporterNow,
+        reporterService: createOptionalReporterService(
+          this.dependencies.reporterService
+        )
+      }).report();
+    } catch {
+      // Analytics must not block agent provider actions.
+    }
+  }
+
   private async reportLoginInitiated(
     provider: WorkspaceAgentProvider
   ): Promise<void> {
@@ -632,6 +715,32 @@ function createOptionalReporterService(
       async trackEvents() {}
     }
   );
+}
+
+const DIAGNOSTICS_CONSENT_KEY = "tutti.agentDiagnosticsConsent";
+
+function createLocalStorageConsentStore(): DiagnosticsConsentStore {
+  return {
+    get() {
+      try {
+        return (
+          globalThis.localStorage?.getItem(DIAGNOSTICS_CONSENT_KEY) === "true"
+        );
+      } catch {
+        return false;
+      }
+    },
+    set(value: boolean) {
+      try {
+        globalThis.localStorage?.setItem(
+          DIAGNOSTICS_CONSENT_KEY,
+          value ? "true" : "false"
+        );
+      } catch {
+        // Best-effort persistence; consent simply won't stick if unavailable.
+      }
+    }
+  };
 }
 
 function unrefPollTimer(timer: AgentProviderStatusPollTimer): void {

@@ -222,6 +222,10 @@ export function AgentEnvPanel({
   const snapshot = useStatusSnapshot(agentProviderStatusService);
   const [copied, setCopied] = useState(false);
   const [logExpanded, setLogExpanded] = useState(false);
+  // "上报异常" flow: idle → (no prior consent) confirming → reported.
+  const [reportState, setReportState] = useState<
+    "idle" | "confirming" | "reported"
+  >("idle");
   // Step-by-step reveal cursor: walks the stage track on open so each stage
   // visibly checks off one at a time instead of all flashing complete at once.
   const [revealIndex, setRevealIndex] = useState(0);
@@ -263,6 +267,7 @@ export function AgentEnvPanel({
     }
     setCopied(false);
     setLogExpanded(false);
+    setReportState("idle");
     if (request.focus === "detect") {
       setRevealIndex(0);
       void agentProviderStatusService.refresh([provider]);
@@ -293,6 +298,22 @@ export function AgentEnvPanel({
     setLogExpanded(false);
     setRevealIndex(0);
     void agentProviderStatusService.refresh([provider]);
+  }, [agentProviderStatusService, provider]);
+
+  // "上报异常": with prior consent, report immediately; otherwise ask first.
+  const handleReportIssue = useCallback(() => {
+    if (agentProviderStatusService.getDiagnosticsConsent()) {
+      void agentProviderStatusService.reportEnvIssue(provider);
+      setReportState("reported");
+    } else {
+      setReportState("confirming");
+    }
+  }, [agentProviderStatusService, provider]);
+
+  const handleConfirmReport = useCallback(() => {
+    agentProviderStatusService.setDiagnosticsConsent(true);
+    void agentProviderStatusService.reportEnvIssue(provider);
+    setReportState("reported");
   }, [agentProviderStatusService, provider]);
 
   const runAction = useCallback(
@@ -570,20 +591,56 @@ export function AgentEnvPanel({
           )}
         </div>
 
-        {/* Re-detect (rewinds the whole flow) sits on the left; the right holds
-            the single confirm/dismiss. All per-step actions — install, sign in,
-            re-login — live inline on their step, never in the footer. */}
+        {/* Consent ask for "上报异常": shown only the first time, before any
+            fuller diagnostics are sent. Once agreed it is remembered. */}
+        {reportState === "confirming" ? (
+          <div className="shrink-0 border-t border-[var(--border-1)] bg-[var(--transparency-block)] px-5 py-3">
+            <p className="m-0 text-[12px] text-[var(--text-secondary)]">
+              {t("workspace.agentEnv.reportConsentBody")}
+            </p>
+            <div className="mt-2 flex justify-end gap-2">
+              <Button
+                size="sm"
+                type="button"
+                variant="ghost"
+                onClick={() => setReportState("idle")}
+              >
+                {t("workspace.agentEnv.reportConsentCancel")}
+              </Button>
+              <Button size="sm" type="button" onClick={handleConfirmReport}>
+                {t("workspace.agentEnv.reportConsentAgree")}
+              </Button>
+            </div>
+          </div>
+        ) : null}
+
+        {/* Re-detect (rewinds the flow) and "report problem" sit on the left;
+            the right holds the single confirm/dismiss. All per-step actions —
+            install, sign in, re-login — live inline on their step. */}
         <DialogFooter className="flex shrink-0 items-center justify-between gap-2 border-t border-[var(--border-1)] px-5 py-4">
-          <Button
-            size="dialog"
-            type="button"
-            variant="ghost"
-            disabled={snapshot.isLoading}
-            onClick={handleRedetect}
-          >
-            <RefreshIcon className="size-4" />
-            {t("workspace.agentEnv.actionDetect")}
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button
+              size="dialog"
+              type="button"
+              variant="ghost"
+              disabled={snapshot.isLoading}
+              onClick={handleRedetect}
+            >
+              <RefreshIcon className="size-4" />
+              {t("workspace.agentEnv.actionDetect")}
+            </Button>
+            <Button
+              size="dialog"
+              type="button"
+              variant="ghost"
+              disabled={reportState === "reported"}
+              onClick={handleReportIssue}
+            >
+              {reportState === "reported"
+                ? t("workspace.agentEnv.reportDone")
+                : t("workspace.agentEnv.actionReportIssue")}
+            </Button>
+          </div>
           <Button
             size="dialog"
             type="button"
