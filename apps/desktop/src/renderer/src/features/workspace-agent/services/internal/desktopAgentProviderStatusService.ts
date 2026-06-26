@@ -19,6 +19,7 @@ import {
 import type {
   AgentProviderStatusActionContext,
   AgentProviderStatusSnapshot,
+  AgentProviderTerminalCommandHandle,
   AgentProviderTerminalCommandRunner,
   IAgentProviderStatusService
 } from "../agentProviderStatusService.interface";
@@ -96,6 +97,12 @@ export class DesktopAgentProviderStatusService implements IAgentProviderStatusSe
   private requestSequence = 0;
   private readonly listeners = new Set<() => void>();
   private readonly pendingLoginResults = new Set<WorkspaceAgentProvider>();
+  // The login terminal we opened per provider, so we can auto-close it once login
+  // succeeds. Kept open on failure/timeout so the user can read the error.
+  private readonly pendingLoginTerminals = new Map<
+    WorkspaceAgentProvider,
+    AgentProviderTerminalCommandHandle
+  >();
   private revision = 0;
   private snapshot: AgentProviderStatusSnapshot = emptySnapshot;
   private readonly transientDowngradeCounts = new Map<string, number>();
@@ -277,11 +284,15 @@ export class DesktopAgentProviderStatusService implements IAgentProviderStatusSe
         return;
       }
 
-      await this.dependencies.terminalCommandRunner.runTerminalCommand(
-        action.command,
-        context
-      );
+      const terminal =
+        await this.dependencies.terminalCommandRunner.runTerminalCommand(
+          action.command,
+          context
+        );
       if (isLoginAction) {
+        if (terminal) {
+          this.pendingLoginTerminals.set(provider, terminal);
+        }
         this.pendingLoginResults.add(provider);
         this.startLoginStatusPolling(provider);
       }
@@ -296,6 +307,7 @@ export class DesktopAgentProviderStatusService implements IAgentProviderStatusSe
         });
       }
       if (action.id === "login") {
+        this.pendingLoginTerminals.delete(provider);
         this.notifications.error({
           description: resolveDesktopErrorMessage(error, getActiveLocale()),
           title: translate(
@@ -558,8 +570,19 @@ export class DesktopAgentProviderStatusService implements IAgentProviderStatusSe
       }
       this.pendingLoginResults.delete(status.provider);
       this.stopLoginStatusPolling(status.provider);
+      // Login succeeded — dismiss the terminal we opened for it.
+      this.closePendingLoginTerminal(status.provider);
       await this.reportLoginResult(status.provider, true, null);
     }
+  }
+
+  private closePendingLoginTerminal(provider: WorkspaceAgentProvider): void {
+    const terminal = this.pendingLoginTerminals.get(provider);
+    if (!terminal) {
+      return;
+    }
+    this.pendingLoginTerminals.delete(provider);
+    terminal.close();
   }
 
   private reportProviderReadyTransitions(

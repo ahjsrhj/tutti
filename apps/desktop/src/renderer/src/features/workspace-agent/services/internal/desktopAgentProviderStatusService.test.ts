@@ -143,6 +143,88 @@ test("runAction tracks provider login initiation and successful status result", 
   ]);
 });
 
+test("runAction auto-closes the login terminal once login succeeds", async () => {
+  let closed = 0;
+  const service = new DesktopAgentProviderStatusService({
+    tuttidClient: createTuttidClient({
+      snapshots: [
+        createStatusResponse([
+          createProviderStatus({
+            actions: [
+              {
+                command: { cwd: "/workspace", input: "codex login\n" },
+                id: "login",
+                kind: "terminal_command"
+              }
+            ],
+            availability: "auth_required"
+          })
+        ]),
+        createStatusResponse([
+          createProviderStatus({ actions: [], availability: "ready" })
+        ])
+      ]
+    }),
+    reporterNow: () => 1749124800000,
+    reporterService: { async trackEvents() {} },
+    terminalCommandRunner: {
+      async runTerminalCommand() {
+        return {
+          close: () => {
+            closed += 1;
+          }
+        };
+      }
+    }
+  });
+
+  await service.refresh();
+  await service.runAction("codex", "login", { workspaceId: "workspace-1" });
+  await flushAsyncWork();
+
+  assert.equal(closed, 1);
+});
+
+test("runAction keeps the login terminal open when login never completes", async () => {
+  let closed = 0;
+  const authRequired = createProviderStatus({
+    actions: [
+      {
+        command: { cwd: "/workspace", input: "codex login\n" },
+        id: "login",
+        kind: "terminal_command"
+      }
+    ],
+    availability: "auth_required"
+  });
+  const service = new DesktopAgentProviderStatusService({
+    loginStatusPollScheduler: createManualPollScheduler().scheduler,
+    tuttidClient: createTuttidClient({
+      snapshots: [
+        createStatusResponse([authRequired]),
+        createStatusResponse([authRequired])
+      ]
+    }),
+    reporterNow: () => 1749124800000,
+    reporterService: { async trackEvents() {} },
+    terminalCommandRunner: {
+      async runTerminalCommand() {
+        return {
+          close: () => {
+            closed += 1;
+          }
+        };
+      }
+    }
+  });
+
+  await service.refresh();
+  await service.runAction("codex", "login", { workspaceId: "workspace-1" });
+  await flushAsyncWork();
+
+  assert.equal(closed, 0);
+});
+
 test("requestStatuses reports an already-ready provider as an activation signal", async () => {
   const events: ReporterEventInput[] = [];
   const service = new DesktopAgentProviderStatusService({

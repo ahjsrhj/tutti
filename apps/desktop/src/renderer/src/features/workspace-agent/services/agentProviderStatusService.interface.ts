@@ -11,11 +11,18 @@ export interface AgentProviderStatusActionContext {
   workspaceId?: string;
 }
 
+// A closable handle to the terminal a command opened, so the caller can dismiss
+// it once the command's purpose is fulfilled (e.g. close the login terminal after
+// authentication succeeds).
+export interface AgentProviderTerminalCommandHandle {
+  close(): void;
+}
+
 export interface AgentProviderTerminalCommandRunner {
   runTerminalCommand(
     command: AgentProviderTerminalCommand,
     context?: AgentProviderStatusActionContext
-  ): Promise<void>;
+  ): Promise<AgentProviderTerminalCommandHandle | void>;
 }
 
 export interface AgentProviderStatusPendingAction {
