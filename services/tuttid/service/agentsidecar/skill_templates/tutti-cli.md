@@ -44,7 +44,7 @@ Use this protocol for every Tutti CLI command:
 App window opening:
 
 - `app open --app-id <app-id> --json` is allowed only when the user explicitly asks to open or show an app window, or confirms an app window should be opened.
-- Do not use `app open` as the default way to inspect, query, update, or execute app work. Prefer the app-specific CLI command for the requested operation.
+- Do not use `app open` or app-specific open commands such as `<scope> open` as the default way to inspect, query, update, execute app work, or show generated media. Prefer the app-specific CLI command for the requested operation, then render generated images inline with Markdown.
 - Use `app open --app-id <app-id> --json` for any app window the user explicitly asks to open. Built-in app ids include `agent-codex`, `agent-claude-code`, `issue-manager`, and `tutti-onboarding`. Use `agent open --session-id <session-id> --json` when the user asks to open an existing agent session.
 
 Output rules:

@@ -24,6 +24,9 @@ They are not implemented through the builtin framework.
 Builtin summary/detail JSON view rules do not apply to workspace app commands.
 External app commands follow their own manifest-declared output and response
 contract.
+Workspace app `appId` and CLI `scope` are separate identifiers. Discovery and
+agent app mentions match commands by app id metadata, then invoke the listed
+CLI scope; callers must not assume `scope == appId`.
 
 ## Frozen App CLI Contract
 

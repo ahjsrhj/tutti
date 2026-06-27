@@ -1,9 +1,9 @@
+import { normalizeAgentActivityDisplayStatus } from "@tutti-os/agent-activity-core";
 import type { AgentHostUserInfo } from "./contracts/dto";
 import { translate } from "../i18n/index";
 import { fileChangePathsFromChanges } from "./workspaceAgentFileChangePayload";
 import { normalizeAgentTitleText } from "./utils/agentTitleText";
 import { workspaceAgentProviderLabel } from "./workspaceAgentProviderLabel";
-import { normalizeWorkspaceAgentStatus } from "./workspaceAgentStatusNormalizer";
 import type { RoomShareMemberView } from "./roomShare";
 import { resolveDisplayableWorkspaceAgentSessionTitle } from "./workspaceAgentSessionTitle";
 import type { WorkspaceAgentToolCallDisplay } from "./workspaceAgentToolCallDisplay";
@@ -385,7 +385,11 @@ function normalizeProvider(provider: string | undefined): string | null {
 export function resolveWorkspaceAgentActivityStatus(
   session: WorkspaceAgentActivitySession
 ): WorkspaceAgentActivityStatus {
-  const normalized = normalizeWorkspaceAgentStatus(session).kind;
+  const normalized = normalizeAgentActivityDisplayStatus(session.status, {
+    currentPhase: session.currentPhase,
+    turnLifecycleOutcome: session.turnLifecycle?.outcome,
+    turnLifecyclePhase: session.turnLifecycle?.phase ?? session.turnPhase
+  });
   switch (normalized) {
     case "failed":
       return "failed";
@@ -397,7 +401,6 @@ export function resolveWorkspaceAgentActivityStatus(
       return "waiting";
     case "working":
       return "working";
-    case "ready":
     default:
       return "idle";
   }

@@ -811,8 +811,8 @@ func (a *standardACPAdapter) Exec(
 	session.ProviderSessionID = acpSession.providerSessionID
 	a.rememberSessionTurn(session.AgentSessionID, turnID)
 	explicitDisplayPrompt, visibleText := explicitAndVisiblePromptText(content, displayPrompt)
-	routedContent, mentionRoutingApplied, mentionRoutingSkills := claudeCodePromptContentWithMentionRouting(a.config.provider, content, visibleText)
-	acpPromptContent := promptContentForACP(routedContent)
+	mentionRoutingApplied, mentionRoutingSkills := claudeCodeMentionRoutingSkills(a.config.provider, visibleText)
+	acpPromptContent := promptContentForACP(content)
 	normalizer := newACPTurnNormalizer()
 	var events []activityshared.Event
 	emitEvents := func(next []activityshared.Event) {
@@ -1024,37 +1024,13 @@ func claudeGoalSlashPromptUpdate(prompt string) (map[string]any, string, bool) {
 	}
 }
 
-func claudeCodePromptContentWithMentionRouting(provider string, content []PromptContentBlock, visibleText string) ([]PromptContentBlock, bool, []string) {
+func claudeCodeMentionRoutingSkills(provider string, visibleText string) (bool, []string) {
 	if strings.TrimSpace(provider) != ProviderClaudeCode {
-		return content, false, nil
-	}
-	directive, skills := claudeCodeMentionRoutingDirective(visibleText)
-	if directive == "" {
-		return content, false, nil
-	}
-	out := append([]PromptContentBlock(nil), content...)
-	for index, block := range out {
-		if block.Type != "text" || strings.TrimSpace(block.Text) == "" {
-			continue
-		}
-		out[index].Text = directive + "\n\nUser prompt:\n" + block.Text
-		return out, true, skills
-	}
-	return append([]PromptContentBlock{{Type: "text", Text: directive}}, out...), true, skills
-}
-
-func claudeCodeMentionRoutingDirective(text string) (string, []string) {
-	mentions := extractMentionURIs(text)
-	if len(mentions) == 0 {
-		return "", nil
-	}
-	lines := []string{
-		"Claude Code mention handoff routing for this user turn:",
-		"- Treat `mention://...` links as internal Tutti references. Do not infer the source platform from the display label, and do not answer from the label alone.",
+		return false, nil
 	}
 	var skills []string
 	seenSkills := map[string]struct{}{}
-	for _, mention := range mentions {
+	for _, mention := range extractMentionURIs(visibleText) {
 		skill := skillForMentionURI(mention)
 		if skill == "" {
 			continue
@@ -1063,18 +1039,8 @@ func claudeCodeMentionRoutingDirective(text string) (string, []string) {
 			skills = append(skills, skill)
 			seenSkills[skill] = struct{}{}
 		}
-		lines = append(lines, fmt.Sprintf(
-			"- The prompt contains `%s`. Before answering, your first tool call MUST be `Skill(skill=\"%s\", args=\"%s\")`.",
-			mention,
-			skill,
-			mention,
-		))
 	}
-	if len(lines) == 2 {
-		return "", nil
-	}
-	lines = append(lines, "- Do not say you cannot read the mention until that Skill call fails or no matching skill exists.")
-	return strings.Join(lines, "\n"), skills
+	return len(skills) > 0, skills
 }
 
 func skillForMentionURI(uri string) string {
@@ -3003,7 +2969,11 @@ func shouldIgnoreStandardACPTitle(config standardACPConfig, title string) bool {
 	if strings.TrimSpace(config.provider) != ProviderClaudeCode {
 		return false
 	}
-	return isClaudeACPInterruptMarker(title)
+	return isClaudeACPInterruptMarker(title) || isClaudeCodeMentionHandoffTitle(title)
+}
+
+func isClaudeCodeMentionHandoffTitle(title string) bool {
+	return strings.HasPrefix(strings.TrimSpace(title), "Claude Code mention handoff routing for this user turn:")
 }
 
 func isClaudeACPInterruptMarker(text string) bool {

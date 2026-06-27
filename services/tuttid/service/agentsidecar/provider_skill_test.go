@@ -15,16 +15,22 @@ func TestWorkspaceAppSkillUsesPreparedCLICommandForAgentLaunchers(t *testing.T) 
 		"tutti-dev app open --app-id <appId> --json",
 		"Built-in app ids include",
 		"tutti-onboarding",
-		"Do not call `app open` by default",
+		"Do not call `app open` or app-specific open commands",
 		"Do not ask for a missing model",
 		"If `appId` is `issue-manager` and the user asks issue/task work",
 		"`tutti-dev <scope> <command>`",
+		"render it inline with Markdown instead of opening the app",
+		"tutti-dev <scope> read --json",
+		"Prefer command scopes that match the mentioned app",
+		"Do not assume they are equal",
+		"App id: <appId>",
+		"read the materialized sibling `tutti-cli/SKILL.md`",
 	} {
 		if !strings.Contains(skill, want) {
 			t.Fatalf("workspace app skill missing %q: %q", want, skill)
 		}
 	}
-	if strings.Contains(skill, "{{CLI_COMMAND}}") || strings.Contains(skill, "tutti codex start") {
+	if strings.Contains(skill, "{{") || strings.Contains(skill, "tutti codex start") {
 		t.Fatalf("workspace app skill used unresolved or production CLI command: %q", skill)
 	}
 	if strings.Contains(skill, "ask for missing `model`") ||
@@ -47,13 +53,18 @@ func TestTuttiCLIPolicyUsesPreparedCLICommandForAgentLauncherFallback(t *testing
 		"tutti-dev app open --app-id <appId> --json",
 		"Built-in app ids include",
 		"tutti-onboarding",
-		"Do not use `app open` by default",
+		"Do not use `app open` or app-specific open commands",
 		"do not ask for a missing model",
 		"if it is `issue-manager` and the user asks issue/task work",
 		"The Claude Code `Monitor` tool is disabled in Tutti AgentGUI sessions",
 		"prefer one self-contained Bash command or script",
 		"checks the CLI first",
 		"polls with bounded sleeps",
+		"public web URL points directly to an image",
+		"returns an image URL on `127.0.0.1`, `localhost`, or another machine-local host",
+		"download it to a readable local image file first",
+		"app-specific open commands such as `tutti-dev <scope> open`",
+		"render it inline with Markdown instead of opening the app",
 	} {
 		if !strings.Contains(policy, want) {
 			t.Fatalf("tutti CLI policy missing %q: %q", want, policy)

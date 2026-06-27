@@ -188,6 +188,7 @@ function agentActivityDisplayStatusFromSession(
 ): AgentActivityDisplayStatus {
   return normalizeAgentActivityDisplayStatus(session.status, {
     currentPhase: session.currentPhase,
+    turnLifecycleOutcome: session.turnLifecycle?.outcome,
     turnLifecyclePhase: session.turnLifecycle?.phase
   });
 }

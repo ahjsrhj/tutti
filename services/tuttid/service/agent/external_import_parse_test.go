@@ -223,6 +223,32 @@ func TestParseClaudeCodeJSONLPrefersCustomTitle(t *testing.T) {
 	}
 }
 
+func TestParseClaudeCodeJSONLUsesPromptInsideMentionHandoffTitle(t *testing.T) {
+	cwd := t.TempDir()
+	prompt := "[@AI Canvas](mention://workspace-app/ai-media-canvas?workspaceId=ws-1) 帮我生成图片"
+	session, ok, err := parseClaudeCodeJSONL(
+		filepath.Join(cwd, "claude.jsonl"),
+		strings.NewReader(testAgentJSONL(t,
+			map[string]any{
+				"timestamp": "2026-06-18T00:00:00Z",
+				"sessionId": "claude-handoff",
+				"cwd":       cwd,
+				"uuid":      "claude-1",
+				"message": map[string]any{
+					"role":    "user",
+					"content": []any{map[string]any{"type": "text", "text": "Claude Code mention handoff routing for this user turn:\n- Treat `mention://...` links as internal Tutti references.\n\nUser prompt:\n" + prompt}},
+				},
+			},
+		)),
+	)
+	if err != nil || !ok {
+		t.Fatalf("parseClaudeCodeJSONL ok=%v err=%v", ok, err)
+	}
+	if session.Title != prompt {
+		t.Fatalf("title = %q, want user prompt title", session.Title)
+	}
+}
+
 func TestTruncateExternalTitleKeepsMultibyteRunesIntact(t *testing.T) {
 	// 120 CJK runes (360 bytes) — must truncate by rune, not byte, so the
 	// result stays valid UTF-8 instead of being cut mid-character.

@@ -53,9 +53,9 @@ describe("agentHostSnapshotFromAgentActivitySnapshot", () => {
     });
     expect(hostSnapshot.sessions[1]).toMatchObject({
       agentSessionId: "session-idle",
-      effectiveStatus: "ready",
-      lifecycleStatus: "active",
-      status: "ready",
+      effectiveStatus: "completed",
+      lifecycleStatus: "ended",
+      status: "completed",
       turnPhase: "idle"
     });
   });

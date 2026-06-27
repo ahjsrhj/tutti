@@ -99,6 +99,38 @@ test("session display status uses current phase when lifecycle status is active"
   assert.equal(statuses.get("session-failed"), "failed");
 });
 
+test("session display status treats settled turn lifecycle as terminal", () => {
+  const snapshot = snapshotWithSessionMessages(
+    [
+      session({
+        agentSessionId: "session-completed",
+        status: "working",
+        currentPhase: "working",
+        turnLifecycle: {
+          activeTurnId: null,
+          phase: "settled",
+          outcome: "completed"
+        }
+      }),
+      session({
+        agentSessionId: "session-failed",
+        status: "working",
+        currentPhase: "working",
+        turnLifecycle: {
+          activeTurnId: null,
+          phase: "settled",
+          outcome: "failed"
+        }
+      })
+    ],
+    {}
+  );
+  const statuses = selectSessionDisplayStatuses(snapshot);
+
+  assert.equal(statuses.get("session-completed"), "completed");
+  assert.equal(statuses.get("session-failed"), "failed");
+});
+
 test("agent activity display status normalizes raw status aliases", () => {
   assert.equal(normalizeAgentActivityDisplayStatus("running"), "working");
   assert.equal(

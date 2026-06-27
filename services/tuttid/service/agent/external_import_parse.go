@@ -253,7 +253,7 @@ func externalImportedMessageHasContent(message externalImportedMessage) bool {
 // priority: provider-supplied summary title -> first real user message (with
 // system preambles skipped) -> raw first message text.
 func resolveExternalSessionTitle(provider string, summaryTitle string, hint string, messages []externalImportedMessage) string {
-	if title := strings.TrimSpace(summaryTitle); title != "" {
+	if title, ok := externalImportTitleCandidate(provider, summaryTitle); ok {
 		return truncateExternalTitle(title)
 	}
 	if title, ok := externalImportTitleCandidate(provider, hint); ok {
@@ -273,8 +273,10 @@ func resolveExternalSessionTitle(provider string, summaryTitle string, hint stri
 // VS Code injects IDE context ahead of the real Codex prompt; the actual
 // request lives under the final "## My request for Codex:" heading.
 const (
-	codexIDEContextPrefix = "# Context from my IDE setup:"
-	codexRequestMarker    = "my request for codex"
+	codexIDEContextPrefix              = "# Context from my IDE setup:"
+	codexRequestMarker                 = "my request for codex"
+	claudeMentionHandoffPrefix         = "Claude Code mention handoff routing for this user turn:"
+	claudeMentionHandoffPromptBoundary = "\n\nUser prompt:\n"
 )
 
 // externalImportTitleCandidate cleans a user message for use as a session title,
@@ -288,6 +290,12 @@ func externalImportTitleCandidate(provider string, text string) (string, bool) {
 	}
 	switch provider {
 	case agentproviderbiz.ClaudeCode:
+		if title, ok := extractClaudeMentionHandoffUserPrompt(trimmed); ok {
+			return title, true
+		}
+		if strings.HasPrefix(trimmed, claudeMentionHandoffPrefix) {
+			return "", false
+		}
 		if strings.Contains(trimmed, "<local-command-caveat>") || strings.HasPrefix(trimmed, "<command-name>") {
 			return "", false
 		}
@@ -301,6 +309,15 @@ func externalImportTitleCandidate(provider string, text string) (string, bool) {
 		}
 		return trimmed, true
 	}
+}
+
+func extractClaudeMentionHandoffUserPrompt(text string) (string, bool) {
+	if !strings.HasPrefix(text, claudeMentionHandoffPrefix) {
+		return "", false
+	}
+	_, prompt, ok := strings.Cut(text, claudeMentionHandoffPromptBoundary)
+	prompt = strings.TrimSpace(prompt)
+	return prompt, ok && prompt != ""
 }
 
 func extractCodexPromptFromIDEContext(text string) (string, bool) {

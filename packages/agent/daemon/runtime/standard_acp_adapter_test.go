@@ -1397,6 +1397,7 @@ func TestClaudeCodeStandardACPUpdateDoesNotProjectSyntheticInterruptTitleAsSessi
 	for _, title := range []string{
 		"[Request interrupted by user]",
 		"[Request interrupted by user for tool use]",
+		"Claude Code mention handoff routing for this user turn: - Treat `mention://...` links as internal Tutti references.",
 	} {
 		events := standardACPUpdateEvents(standardACPClaudeCodeConfig(), session, "turn-1", json.RawMessage(`{
 			"update": {
@@ -2006,7 +2007,7 @@ func TestClaudeCodeAdapterStartAppendsSessionScopedSystemPrompt(t *testing.T) {
 	}
 }
 
-func TestClaudeCodeAdapterExecPrependsMentionRoutingDirective(t *testing.T) {
+func TestClaudeCodeAdapterExecKeepsMentionPromptUnmodified(t *testing.T) {
 	t.Parallel()
 
 	transport := newStandardACPTransport("Claude Agent", "claude-session-mention-routing")
@@ -2024,11 +2025,8 @@ func TestClaudeCodeAdapterExecPrependsMentionRoutingDirective(t *testing.T) {
 	}
 
 	text := firstPromptText(t, transport.conn.lastPromptParamsSnapshot)
-	if !strings.Contains(text, "Claude Code mention handoff routing for this user turn") ||
-		!strings.Contains(text, `Skill(skill="tutti-cli", args="mention://agent-session/session-1?workspaceId=workspace-1&provider=codex")`) ||
-		!strings.Contains(text, "Do not say you cannot read the mention") ||
-		!strings.Contains(text, "User prompt:\n"+prompt) {
-		t.Fatalf("prompt text = %q, want Claude mention routing directive and original prompt", text)
+	if text != prompt {
+		t.Fatalf("prompt text = %q, want unmodified prompt %q", text, prompt)
 	}
 	userContent := firstUserMessageContent(t, events)
 	if !strings.Contains(userContent, prompt) ||
@@ -2054,9 +2052,8 @@ func TestClaudeCodeAdapterExecRoutesWorkspaceReferenceMention(t *testing.T) {
 	}
 
 	text := firstPromptText(t, transport.conn.lastPromptParamsSnapshot)
-	if !strings.Contains(text, `Skill(skill="reference", args="mention://workspace-reference/app-1?source=app&workspaceId=workspace-1&groupId=group-1")`) ||
-		!strings.Contains(text, "User prompt:\n"+prompt) {
-		t.Fatalf("prompt text = %q, want workspace-reference routed to reference skill", text)
+	if text != prompt {
+		t.Fatalf("prompt text = %q, want unmodified prompt %q", text, prompt)
 	}
 }
 
