@@ -152,6 +152,7 @@ export interface AgentGUINodeProps {
   workspacePath: string;
   workspaceFileReferenceAdapter?: WorkspaceFileReferenceAdapter | null;
   onRequestGitBranches?: AgentComposerGitBranchLoader | null;
+  selectProjectDirectory?: () => Promise<{ path: string } | null>;
   referenceSourceAggregator?: ReferenceSourceAggregator | null;
   resolveMentionReferenceTarget?: AgentMentionReferenceTargetResolver | null;
   resolveWorkspaceReferenceInitialTarget?: AgentWorkspaceReferenceInitialTargetResolver | null;
@@ -455,6 +456,7 @@ function areAgentGUINodePropsEqual(
     previous.workspacePath === next.workspacePath &&
     previous.workspaceFileReferenceAdapter ===
       next.workspaceFileReferenceAdapter &&
+    previous.selectProjectDirectory === next.selectProjectDirectory &&
     previous.referenceSourceAggregator === next.referenceSourceAggregator &&
     previous.resolveMentionReferenceTarget ===
       next.resolveMentionReferenceTarget &&
@@ -512,6 +514,7 @@ export const AgentGUINode = memo(function AgentGUINode({
   workspacePath,
   workspaceFileReferenceAdapter = null,
   onRequestGitBranches = null,
+  selectProjectDirectory,
   referenceSourceAggregator = null,
   resolveMentionReferenceTarget = null,
   resolveWorkspaceReferenceInitialTarget = null,
@@ -1350,6 +1353,7 @@ export const AgentGUINode = memo(function AgentGUINode({
             workspaceFileReferenceAdapter={workspaceFileReferenceAdapter}
             onOpenConversationWindow={onOpenConversationWindow}
             onRequestGitBranches={onRequestGitBranches}
+            selectProjectDirectory={selectProjectDirectory}
             referenceSourceAggregator={referenceSourceAggregator}
             resolveMentionReferenceTarget={resolveMentionReferenceTarget}
             resolveWorkspaceReferenceInitialTarget={

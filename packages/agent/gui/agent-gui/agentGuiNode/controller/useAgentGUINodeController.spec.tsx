@@ -894,12 +894,17 @@ describe("useAgentGUINodeController", () => {
       sessionStatus: "working",
       status: "started"
     }));
+    const listUserProjects = vi.fn(async () => ({ projects: [] }));
     installAgentHostApi({
       list: vi.fn(async () => ({ presences: [], sessions: [] })),
       listSessionTimeline: vi.fn(async () => ({ timelineItems: [] })),
       subscribeEvents: vi.fn(() => vi.fn()),
       activate,
-      exec
+      exec,
+      userProjects: {
+        list: listUserProjects,
+        use: vi.fn()
+      }
     });
 
     const { result } = renderHook(() =>
@@ -913,8 +918,19 @@ describe("useAgentGUINodeController", () => {
       })
     );
 
+    await waitFor(() => {
+      expect(listUserProjects).toHaveBeenCalled();
+    });
+
     act(() => {
-      result.current.actions.updateSelectedProjectPath("/workspace/app");
+      result.current.actions.updateSelectedProjectPath("/workspace/app", {
+        action: "select_existing",
+        project: {
+          id: "app",
+          path: "/workspace/app",
+          label: "App"
+        }
+      });
       result.current.actions.createConversation();
       result.current.actions.submitPrompt(promptBlocks("start in app"));
     });
@@ -927,6 +943,13 @@ describe("useAgentGUINodeController", () => {
           mode: "new"
         })
       );
+    });
+    await waitFor(() => {
+      expect(result.current.viewModel.conversations[0]?.project).toEqual({
+        id: "app",
+        path: "/workspace/app",
+        label: "App"
+      });
     });
   });
 

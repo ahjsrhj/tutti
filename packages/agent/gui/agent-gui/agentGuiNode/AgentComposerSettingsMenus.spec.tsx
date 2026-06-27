@@ -35,6 +35,7 @@ const { mockAgentHostApi } = vi.hoisted(() => ({
           isNoProjectPath?: ReturnType<typeof vi.fn>;
           list: ReturnType<typeof vi.fn>;
           rememberDefaultSelection?: ReturnType<typeof vi.fn>;
+          selectDirectory?: ReturnType<typeof vi.fn>;
           service?: WorkspaceUserProjectService;
           subscribe?: ReturnType<typeof vi.fn>;
           use: ReturnType<typeof vi.fn>;
@@ -88,6 +89,42 @@ describe("AgentProjectDropdown", () => {
     expect(trigger.querySelector(".lucide-folder")).toBeNull();
   });
 
+  it("shows unlocked no-project workspace roots as No project", async () => {
+    const noProjectPath = "/workspace/workspace-1";
+    mockAgentHostApi.userProjects = {
+      list: vi.fn().mockResolvedValue({
+        projects: []
+      }),
+      isNoProjectPath: vi.fn(({ path }) => path === noProjectPath),
+      use: vi.fn()
+    };
+
+    render(
+      <AgentProjectDropdown
+        composerSettings={{
+          selectedProjectPath: noProjectPath,
+          projectLocked: false
+        }}
+        labels={projectLabels}
+        i18n={workspaceUserProjectI18n}
+        onProjectPathChange={vi.fn()}
+      />
+    );
+
+    await waitFor(() =>
+      expect(mockAgentHostApi.userProjects?.list).toHaveBeenCalled()
+    );
+
+    const trigger = screen.getByRole("combobox", { name: "Project" });
+    expect(trigger).toHaveTextContent("No project");
+    expect(trigger.querySelector(".lucide-folder")).toBeNull();
+    expect(mockAgentHostApi.userProjects.isNoProjectPath).toHaveBeenCalledWith(
+      {
+        path: noProjectPath
+      }
+    );
+  });
+
   it("opens the project folder menu through ui-system Select layering", async () => {
     mockAgentHostApi.userProjects = {
       list: vi.fn().mockResolvedValue({
@@ -104,6 +141,7 @@ describe("AgentProjectDropdown", () => {
         isDirectory: false,
         path: "/workspace/deleted"
       }),
+      create: vi.fn(),
       use: vi.fn()
     };
 
@@ -314,7 +352,14 @@ describe("AgentProjectDropdown", () => {
     expect(mockAgentHostApi.workspace.selectDirectory).not.toHaveBeenCalled();
     expect(onProjectPathChange).toHaveBeenCalledWith(
       "/Users/local/Documents/tutti/Tutti Demo",
-      { action: "create_new" }
+      {
+        action: "create_new",
+        project: {
+          id: "dir-1",
+          path: "/Users/local/Documents/tutti/Tutti Demo",
+          label: "Tutti Demo"
+        }
+      }
     );
 
     expect(mockAgentHostApi.userProjects?.use).not.toHaveBeenCalled();
@@ -486,7 +531,7 @@ describe("AgentProjectDropdown", () => {
 
   it("links an existing project directory through the dropdown choices", async () => {
     const onProjectPathChange = vi.fn();
-    mockAgentHostApi.workspace.selectDirectory.mockResolvedValue({
+    const selectProjectDirectory = vi.fn().mockResolvedValue({
       path: "/workspace/existing"
     });
     mockAgentHostApi.userProjects = {
@@ -506,6 +551,7 @@ describe("AgentProjectDropdown", () => {
         }}
         labels={projectLabels}
         i18n={workspaceUserProjectI18n}
+        selectProjectDirectory={selectProjectDirectory}
         onProjectPathChange={onProjectPathChange}
       />
     );
@@ -525,13 +571,103 @@ describe("AgentProjectDropdown", () => {
       await screen.findByRole("option", { name: "Use existing project" })
     );
 
+    expect(selectProjectDirectory).toHaveBeenCalledTimes(1);
+    expect(mockAgentHostApi.workspace.selectDirectory).not.toHaveBeenCalled();
     await waitFor(() =>
       expect(mockAgentHostApi.userProjects?.use).toHaveBeenCalledWith({
         path: "/workspace/existing"
       })
     );
     expect(onProjectPathChange).toHaveBeenCalledWith("/workspace/existing", {
-      action: "select_existing"
+      action: "select_existing",
+      project: {
+        id: "dir-2",
+        path: "/workspace/existing",
+        label: "existing"
+      }
+    });
+  });
+
+  it("prefers the injected project directory picker over the service picker", async () => {
+    const onProjectPathChange = vi.fn();
+    const selectProjectDirectory = vi.fn().mockResolvedValue({
+      path: "/workspace/injected"
+    });
+    const serviceSelectDirectory = vi.fn().mockResolvedValue({
+      path: "/Users/vector/Documents/tutti/service"
+    });
+    const store = proxy({
+      error: null,
+      initialized: true,
+      isLoading: false,
+      projects: [],
+      revision: 1
+    }) as unknown as WorkspaceUserProjectService["store"];
+    const service: WorkspaceUserProjectService = {
+      store,
+      async prepareSelection() {
+        return {
+          isSelectedPathMissing: false,
+          projects: [],
+          selection: { kind: "none" }
+        };
+      },
+      async refresh() {},
+      selectDirectory: serviceSelectDirectory
+    };
+    mockAgentHostApi.userProjects = {
+      list: vi.fn().mockResolvedValue({ projects: [] }),
+      service,
+      use: vi.fn().mockResolvedValue({
+        id: "dir-injected",
+        path: "/workspace/injected",
+        label: "injected"
+      })
+    };
+
+    render(
+      <AgentProjectDropdown
+        composerSettings={{
+          selectedProjectPath: null,
+          projectLocked: false
+        }}
+        labels={projectLabels}
+        i18n={workspaceUserProjectI18n}
+        selectProjectDirectory={selectProjectDirectory}
+        onProjectPathChange={onProjectPathChange}
+      />
+    );
+
+    await waitFor(() =>
+      expect(screen.getByRole("combobox", { name: "Project" })).toBeVisible()
+    );
+
+    ensurePointerCaptureApi();
+    fireEvent.pointerDown(screen.getByRole("combobox", { name: "Project" }), {
+      button: 0,
+      ctrlKey: false,
+      pointerId: 1,
+      pointerType: "mouse"
+    });
+    fireEvent.click(
+      await screen.findByRole("option", { name: "Use existing project" })
+    );
+
+    expect(selectProjectDirectory).toHaveBeenCalledTimes(1);
+    expect(serviceSelectDirectory).not.toHaveBeenCalled();
+    expect(mockAgentHostApi.workspace.selectDirectory).not.toHaveBeenCalled();
+    await waitFor(() =>
+      expect(mockAgentHostApi.userProjects?.use).toHaveBeenCalledWith({
+        path: "/workspace/injected"
+      })
+    );
+    expect(onProjectPathChange).toHaveBeenCalledWith("/workspace/injected", {
+      action: "select_existing",
+      project: {
+        id: "dir-injected",
+        path: "/workspace/injected",
+        label: "injected"
+      }
     });
   });
 
@@ -895,17 +1031,16 @@ describe("AgentProjectDropdown", () => {
       />
     );
 
+    const userProjects = mockAgentHostApi.userProjects!;
     await waitFor(() =>
-      expect(mockAgentHostApi.userProjects?.checkPath).toHaveBeenCalledWith({
+      expect(userProjects.isNoProjectPath).toHaveBeenCalledWith({
         path: noProjectPath
       })
     );
     expect(
       screen.getByRole("combobox", { name: "Project locked" })
     ).toHaveTextContent("No project");
-    expect(mockAgentHostApi.userProjects.isNoProjectPath).toHaveBeenCalledWith({
-      path: noProjectPath
-    });
+    expect(userProjects.checkPath).not.toHaveBeenCalled();
   });
 
   it("keeps No project as a session choice without updating recent projects", async () => {

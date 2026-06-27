@@ -14,6 +14,7 @@ import {
   type WorkspaceUserProjectSelectLabelOverrides
 } from "@tutti-os/workspace-user-project/ui";
 import { prepareWorkspaceUserProjectSelection } from "@tutti-os/workspace-user-project/core";
+import type { WorkspaceUserProject } from "@tutti-os/workspace-user-project/contracts";
 import type { WorkspaceUserProjectI18nRuntime } from "@tutti-os/workspace-user-project/i18n";
 import { useAgentHostApi } from "../../agentActivityHost";
 import {
@@ -63,6 +64,7 @@ export type AgentProjectDropdownLabels = Pick<
 
 export interface AgentProjectPathChangeMetadata {
   action: WorkspaceUserProjectSelectChangeAction;
+  project?: WorkspaceUserProject;
 }
 
 function basenameProjectPath(path: string): string {
@@ -75,6 +77,7 @@ export function AgentProjectDropdown({
   labels,
   i18n,
   previewMode = false,
+  selectProjectDirectory,
   onProjectMissingChange,
   onProjectPathChange
 }: {
@@ -85,6 +88,7 @@ export function AgentProjectDropdown({
   i18n: WorkspaceUserProjectI18nRuntime;
   labels: AgentProjectDropdownLabels;
   previewMode?: boolean;
+  selectProjectDirectory?: () => Promise<{ path: string } | null>;
   onProjectMissingChange?: (isMissing: boolean) => void;
   onProjectPathChange: (
     path: string | null,
@@ -102,13 +106,15 @@ export function AgentProjectDropdown({
       !previewMode && agentHostApi.userProjects
         ? {
             ...agentHostApi.userProjects,
-            selectDirectory: agentHostApi.workspace.selectDirectory
+            selectDirectory:
+              selectProjectDirectory ?? agentHostApi.workspace.selectDirectory
           }
         : null,
     [
       agentHostApi.userProjects,
       agentHostApi.workspace.selectDirectory,
-      previewMode
+      previewMode,
+      selectProjectDirectory
     ]
   );
 

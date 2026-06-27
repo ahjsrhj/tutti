@@ -360,6 +360,7 @@ export interface AgentComposerProps {
         entity?: AgentContextMentionItem | null
       ) => Promise<WorkspaceReferencePickResult>)
     | null;
+  selectProjectDirectory?: () => Promise<{ path: string } | null>;
   onRequestGitBranches?: AgentComposerGitBranchLoader | null;
   contextMentionProviders?: readonly AgentContextMentionProvider[];
 }
@@ -717,6 +718,7 @@ export function AgentComposer({
   onCapabilitySettingsRequest,
   onLinkAction,
   onRequestWorkspaceReferences = null,
+  selectProjectDirectory,
   onRequestGitBranches = null,
   contextMentionProviders = EMPTY_CONTEXT_MENTION_PROVIDERS
 }: AgentComposerProps): React.JSX.Element {
@@ -2884,6 +2886,7 @@ export function AgentComposer({
                   projectLocked: labels.projectLocked,
                   projectMissingDescription: labels.projectMissingDescription
                 }}
+                selectProjectDirectory={selectProjectDirectory}
                 onProjectMissingChange={setIsSelectedProjectMissing}
                 onProjectPathChange={onProjectPathChange}
               />

@@ -3775,9 +3775,28 @@ export function useAgentGUINodeController({
   const updateSelectedProjectPath = useCallback(
     (
       path: string | null,
-      metadata?: { action: "clear" | "create_new" | "select_existing" }
+      metadata?: {
+        action: "clear" | "create_new" | "select_existing";
+        project?: {
+          id: string;
+          path: string;
+          label: string;
+          createdAtUnixMs?: number;
+          updatedAtUnixMs?: number;
+          lastUsedAtUnixMs?: number | null;
+        };
+      }
     ) => {
       const normalizedPath = normalizeProjectDraftPath(path);
+      const project = metadata?.project;
+      if (project && normalizedPath && project.path === normalizedPath) {
+        const nextProjects = upsertAgentGUIUserProject(
+          userProjectsRef.current,
+          project
+        );
+        userProjectsRef.current = nextProjects;
+        setUserProjectsSnapshot(nextProjects);
+      }
       selectedProjectPathRef.current = normalizedPath;
       setSelectedProjectPath(normalizedPath);
       const agentSessionId = activeConversationIdRef.current;
@@ -9316,6 +9335,45 @@ function areAgentGUIUserProjectsEqual(
       );
     })
   );
+}
+
+function upsertAgentGUIUserProject(
+  projects: readonly AgentHostUserProject[],
+  project: {
+    id: string;
+    path: string;
+    label: string;
+    createdAtUnixMs?: number;
+    updatedAtUnixMs?: number;
+    lastUsedAtUnixMs?: number | null;
+  }
+): AgentHostUserProject[] {
+  const normalizedProject: AgentHostUserProject = {
+    ...(project.createdAtUnixMs === undefined
+      ? {}
+      : { createdAtUnixMs: project.createdAtUnixMs }),
+    id: project.id,
+    ...(project.lastUsedAtUnixMs === undefined ||
+    project.lastUsedAtUnixMs === null
+      ? {}
+      : { lastUsedAtUnixMs: project.lastUsedAtUnixMs }),
+    label: project.label,
+    path: project.path,
+    ...(project.updatedAtUnixMs === undefined
+      ? {}
+      : { updatedAtUnixMs: project.updatedAtUnixMs })
+  };
+  const index = projects.findIndex(
+    (candidate) =>
+      candidate.id === normalizedProject.id ||
+      candidate.path === normalizedProject.path
+  );
+  if (index === -1) {
+    return [...projects, normalizedProject];
+  }
+  const next = [...projects];
+  next[index] = normalizedProject;
+  return next;
 }
 
 function readAgentGUIUserProjectSnapshot(
