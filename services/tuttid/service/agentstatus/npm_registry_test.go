@@ -42,7 +42,7 @@ func TestRunExternalAgentRegistryNPMInstallerUsesOfficialWhenItSucceeds(t *testi
 		return InstallCommandResult{ExitCode: 0}, nil // official succeeds
 	}
 
-	if _, err := service.runExternalAgentRegistryNPMInstaller(context.Background(), npmInstallerSpec(t)); err != nil {
+	if _, err := service.runExternalAgentRegistryNPMInstaller(context.Background(), "claude-code", npmInstallerSpec(t)); err != nil {
 		t.Fatalf("runExternalAgentRegistryNPMInstaller() error = %v", err)
 	}
 	// Official succeeded → no mirror tax.
@@ -67,7 +67,7 @@ func TestRunExternalAgentRegistryNPMInstallerFallsBackToMirror(t *testing.T) {
 		return InstallCommandResult{ExitCode: 0}, nil // first mirror succeeds
 	}
 
-	if _, err := service.runExternalAgentRegistryNPMInstaller(context.Background(), npmInstallerSpec(t)); err != nil {
+	if _, err := service.runExternalAgentRegistryNPMInstaller(context.Background(), "claude-code", npmInstallerSpec(t)); err != nil {
 		t.Fatalf("runExternalAgentRegistryNPMInstaller() error = %v", err)
 	}
 	want := []string{"https://registry.npmjs.org", "https://registry.npmmirror.com"}
@@ -92,7 +92,7 @@ func TestRunExternalAgentRegistryNPMInstallerReplacesExistingRegistryEnv(t *test
 		return InstallCommandResult{ExitCode: 0}, nil
 	}
 
-	if _, err := service.runExternalAgentRegistryNPMInstaller(context.Background(), spec); err != nil {
+	if _, err := service.runExternalAgentRegistryNPMInstaller(context.Background(), "claude-code", spec); err != nil {
 		t.Fatalf("runExternalAgentRegistryNPMInstaller() error = %v", err)
 	}
 	if !slices.Equal(registriesTried, []string{"https://registry.npmjs.org"}) {

@@ -121,6 +121,63 @@ func (e AgentProviderActionRunStatus) Valid() bool {
 	}
 }
 
+// Defines values for AgentProviderActiveActionPhase.
+const (
+	AgentProviderActiveActionPhaseDetect  AgentProviderActiveActionPhase = "detect"
+	AgentProviderActiveActionPhaseDone    AgentProviderActiveActionPhase = "done"
+	AgentProviderActiveActionPhaseError   AgentProviderActiveActionPhase = "error"
+	AgentProviderActiveActionPhaseInstall AgentProviderActiveActionPhase = "install"
+	AgentProviderActiveActionPhaseRepair  AgentProviderActiveActionPhase = "repair"
+	AgentProviderActiveActionPhaseVerify  AgentProviderActiveActionPhase = "verify"
+)
+
+// Valid indicates whether the value is a known member of the AgentProviderActiveActionPhase enum.
+func (e AgentProviderActiveActionPhase) Valid() bool {
+	switch e {
+	case AgentProviderActiveActionPhaseDetect:
+		return true
+	case AgentProviderActiveActionPhaseDone:
+		return true
+	case AgentProviderActiveActionPhaseError:
+		return true
+	case AgentProviderActiveActionPhaseInstall:
+		return true
+	case AgentProviderActiveActionPhaseRepair:
+		return true
+	case AgentProviderActiveActionPhaseVerify:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for AgentProviderActiveActionStepStatus.
+const (
+	AgentProviderActiveActionStepStatusError   AgentProviderActiveActionStepStatus = "error"
+	AgentProviderActiveActionStepStatusOk      AgentProviderActiveActionStepStatus = "ok"
+	AgentProviderActiveActionStepStatusPending AgentProviderActiveActionStepStatus = "pending"
+	AgentProviderActiveActionStepStatusRunning AgentProviderActiveActionStepStatus = "running"
+	AgentProviderActiveActionStepStatusSkipped AgentProviderActiveActionStepStatus = "skipped"
+)
+
+// Valid indicates whether the value is a known member of the AgentProviderActiveActionStepStatus enum.
+func (e AgentProviderActiveActionStepStatus) Valid() bool {
+	switch e {
+	case AgentProviderActiveActionStepStatusError:
+		return true
+	case AgentProviderActiveActionStepStatusOk:
+		return true
+	case AgentProviderActiveActionStepStatusPending:
+		return true
+	case AgentProviderActiveActionStepStatusRunning:
+		return true
+	case AgentProviderActiveActionStepStatusSkipped:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for AgentProviderAuthStatus.
 const (
 	AgentProviderAuthStatusAuthenticated AgentProviderAuthStatus = "authenticated"
@@ -1537,6 +1594,35 @@ type AgentProviderActionRunResponse struct {
 // AgentProviderActionRunStatus defines model for AgentProviderActionRunStatus.
 type AgentProviderActionRunStatus string
 
+// AgentProviderActiveAction defines model for AgentProviderActiveAction.
+type AgentProviderActiveAction struct {
+	Error    *AgentProviderActiveActionError `json:"error"`
+	Log      []string                        `json:"log"`
+	Phase    AgentProviderActiveActionPhase  `json:"phase"`
+	Registry *string                         `json:"registry"`
+	Steps    []AgentProviderActiveActionStep `json:"steps"`
+}
+
+// AgentProviderActiveActionError defines model for AgentProviderActiveActionError.
+type AgentProviderActiveActionError struct {
+	Code    *string `json:"code"`
+	Message *string `json:"message"`
+}
+
+// AgentProviderActiveActionPhase defines model for AgentProviderActiveActionPhase.
+type AgentProviderActiveActionPhase string
+
+// AgentProviderActiveActionStep defines model for AgentProviderActiveActionStep.
+type AgentProviderActiveActionStep struct {
+	Detail *string                             `json:"detail"`
+	Id     string                              `json:"id"`
+	Label  *string                             `json:"label"`
+	Status AgentProviderActiveActionStepStatus `json:"status"`
+}
+
+// AgentProviderActiveActionStepStatus defines model for AgentProviderActiveActionStepStatus.
+type AgentProviderActiveActionStepStatus string
+
 // AgentProviderAdapterStatus defines model for AgentProviderAdapterStatus.
 type AgentProviderAdapterStatus struct {
 	BinaryPath *string  `json:"binaryPath,omitempty"`
@@ -1686,6 +1772,7 @@ type AgentProviderSkillOptionSourceKind string
 // AgentProviderStatus defines model for AgentProviderStatus.
 type AgentProviderStatus struct {
 	Actions      []AgentProviderAction       `json:"actions"`
+	ActiveAction *AgentProviderActiveAction  `json:"activeAction,omitempty"`
 	Adapter      AgentProviderAdapterStatus  `json:"adapter"`
 	Auth         AgentProviderAuthInfo       `json:"auth"`
 	Availability AgentProviderAvailability   `json:"availability"`

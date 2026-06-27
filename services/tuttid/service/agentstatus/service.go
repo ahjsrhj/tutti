@@ -264,6 +264,9 @@ func (s Service) List(ctx context.Context, input ListInput) (Snapshot, error) {
 			logNetworkProbe(statuses[i].Provider, registry, api, proxy)
 		}
 	}
+	for i := range statuses {
+		statuses[i].ActiveAction = activeActionForProvider(statuses[i].Provider)
+	}
 
 	return Snapshot{
 		CapturedAt: now,
@@ -382,9 +385,7 @@ func (s Service) runInstallAction(ctx context.Context, spec ProviderSpec, result
 	if result, ok := unsupportedProviderRunActionResult(spec, result); ok {
 		return result, nil
 	}
-	if spec.Provider == agentprovider.Codex {
-		defer clearActiveAction(spec.Provider)
-	}
+	defer clearActiveAction(spec.Provider)
 	runtimeResolution := s.resolveProviderRuntime(ctx, spec)
 	summary, updatedRuntime, err := s.installMissingProviderRuntime(baseContext(ctx), spec, runtimeResolution)
 	result.Command = strings.Join(summary.Commands, " && ")
@@ -534,11 +535,25 @@ func (s Service) statusForSpec(ctx context.Context, spec ProviderSpec, now time.
 		Auth:    auth,
 		Actions: actions,
 	}
+	status.ActiveAction = activeActionForProvider(spec.Provider)
+	if status.ActiveAction != nil {
+		bytes, lines := activeActionOutputStats(status.ActiveAction.Stdout)
+		slog.Info(
+			"agent provider status attached active action",
+			"event", "tutti.agent_provider.status.active_action_attached",
+			"provider", spec.Provider,
+			"availability", status.Availability.Status,
+			"reasonCode", status.Availability.ReasonCode,
+			"step", status.ActiveAction.Step,
+			"registryPresent", strings.TrimSpace(status.ActiveAction.Registry) != "",
+			"stdoutBytes", bytes,
+			"stdoutLines", lines,
+		)
+	}
 	if spec.Provider == agentprovider.Codex {
 		status.CLI.MinVersion = MinSupportedCodexVersion
 		status.Checks = codexProviderChecks(status, codexPlatformOK)
 		status.LastError = codexProviderLastError(status)
-		status.ActiveAction = activeActionForProvider(spec.Provider)
 		slog.Info(
 			"codex agent provider status checked",
 			"availability", status.Availability.Status,

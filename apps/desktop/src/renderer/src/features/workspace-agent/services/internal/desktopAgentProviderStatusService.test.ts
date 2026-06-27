@@ -516,6 +516,51 @@ test("runAction installs providers silently and refreshes the status", async () 
   assert.equal(pendingSnapshots.includes(true), true);
 });
 
+test("runAction short-polls install status while daemon action is pending", async () => {
+  const statusCalls: Array<readonly WorkspaceAgentProvider[] | undefined> = [];
+  const pollScheduler = createManualPollScheduler();
+  const installRun = createDeferred<AgentProviderActionRunResponse>();
+  const installingStatus = createProviderStatus({
+    actions: [{ id: "install", kind: "daemon_action" }],
+    availability: "not_installed",
+    provider: "claude-code"
+  });
+  const service = new DesktopAgentProviderStatusService({
+    loginStatusPollScheduler: pollScheduler.scheduler,
+    tuttidClient: {
+      async getAgentProviderStatuses(request) {
+        statusCalls.push(request?.providers);
+        return createStatusResponse([installingStatus]);
+      },
+      async runAgentProviderAction(provider, actionID) {
+        assert.equal(provider, "claude-code");
+        assert.equal(actionID, "install");
+        return installRun.promise;
+      }
+    } as Partial<TuttidClient> as TuttidClient,
+    terminalCommandRunner: {
+      async runTerminalCommand() {}
+    }
+  });
+
+  await service.refresh(["claude-code"]);
+  const runPromise = service.runAction("claude-code", "install");
+  await waitFor(() => pollScheduler.pendingTimerCount() === 1);
+
+  pollScheduler.runNext();
+  await waitFor(() => statusCalls.length >= 2);
+
+  assert.deepEqual(statusCalls, [["claude-code"], ["claude-code"]]);
+
+  installRun.resolve(
+    createActionRunResponse("claude-code", "install", "completed")
+  );
+  await runPromise;
+
+  assert.equal(pollScheduler.pendingTimerCount(), 0);
+  assert.equal(service.isActionPending("claude-code", "install"), false);
+});
+
 test("runAction reports daemon install action failures and skips refresh", async () => {
   const notifications = createNotificationRecorder();
   const statusCalls: Array<readonly WorkspaceAgentProvider[] | undefined> = [];

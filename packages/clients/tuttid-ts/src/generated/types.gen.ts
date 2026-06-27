@@ -896,6 +896,41 @@ export type AgentProviderProbeStatus = "ready" | "failed" | "skipped";
 
 export type AgentProviderActionRunStatus = "completed" | "failed";
 
+export type AgentProviderActiveActionPhase =
+  | "detect"
+  | "install"
+  | "repair"
+  | "verify"
+  | "done"
+  | "error";
+
+export type AgentProviderActiveActionStepStatus =
+  | "pending"
+  | "running"
+  | "ok"
+  | "error"
+  | "skipped";
+
+export type AgentProviderActiveActionStep = {
+  id: string;
+  label: string | null;
+  status: AgentProviderActiveActionStepStatus;
+  detail: string | null;
+};
+
+export type AgentProviderActiveActionError = {
+  code: string | null;
+  message: string | null;
+};
+
+export type AgentProviderActiveAction = {
+  phase: AgentProviderActiveActionPhase;
+  steps: Array<AgentProviderActiveActionStep>;
+  registry: string | null;
+  log: Array<string>;
+  error: AgentProviderActiveActionError | null;
+};
+
 export type AgentProviderProbeResponse = {
   provider: WorkspaceAgentProvider;
   status: AgentProviderProbeStatus;
@@ -974,6 +1009,7 @@ export type AgentProviderStatus = {
   auth: AgentProviderAuthInfo;
   actions: Array<AgentProviderAction>;
   network?: AgentProviderNetworkStatus | null;
+  activeAction?: AgentProviderActiveAction | null;
 };
 
 export type AgentProviderNetworkStatus = {

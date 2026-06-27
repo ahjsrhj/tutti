@@ -5259,6 +5259,82 @@ components:
       enum:
         - completed
         - failed
+    AgentProviderActiveActionPhase:
+      type: string
+      enum:
+        - detect
+        - install
+        - repair
+        - verify
+        - done
+        - error
+    AgentProviderActiveActionStepStatus:
+      type: string
+      enum:
+        - pending
+        - running
+        - ok
+        - error
+        - skipped
+    AgentProviderActiveActionStep:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - label
+        - status
+        - detail
+      properties:
+        id:
+          type: string
+        label:
+          type: string
+          nullable: true
+        status:
+          $ref: "#/components/schemas/AgentProviderActiveActionStepStatus"
+        detail:
+          type: string
+          nullable: true
+    AgentProviderActiveActionError:
+      type: object
+      additionalProperties: false
+      required:
+        - code
+        - message
+      properties:
+        code:
+          type: string
+          nullable: true
+        message:
+          type: string
+          nullable: true
+    AgentProviderActiveAction:
+      type: object
+      additionalProperties: false
+      required:
+        - phase
+        - steps
+        - registry
+        - log
+        - error
+      properties:
+        phase:
+          $ref: "#/components/schemas/AgentProviderActiveActionPhase"
+        steps:
+          type: array
+          items:
+            $ref: "#/components/schemas/AgentProviderActiveActionStep"
+        registry:
+          type: string
+          nullable: true
+        log:
+          type: array
+          items:
+            type: string
+        error:
+          allOf:
+            - $ref: "#/components/schemas/AgentProviderActiveActionError"
+          nullable: true
     AgentProviderProbeResponse:
       type: object
       additionalProperties: false
@@ -5459,6 +5535,10 @@ components:
         network:
           allOf:
             - $ref: "#/components/schemas/AgentProviderNetworkStatus"
+          nullable: true
+        activeAction:
+          allOf:
+            - $ref: "#/components/schemas/AgentProviderActiveAction"
           nullable: true
     AgentProviderNetworkStatus:
       type: object

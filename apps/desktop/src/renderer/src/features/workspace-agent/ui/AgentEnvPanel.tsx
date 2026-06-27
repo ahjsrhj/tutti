@@ -216,6 +216,16 @@ function StepStatusIcon({
   );
 }
 
+function latestLogLine(log: string[]): string | null {
+  for (let index = log.length - 1; index >= 0; index -= 1) {
+    const line = log[index]?.trim();
+    if (line) {
+      return line;
+    }
+  }
+  return null;
+}
+
 export function AgentEnvPanel({
   agentProviderStatusService,
   workspaceId,
@@ -764,6 +774,7 @@ function SetupTrack({
           const isActive = stage.status === "running";
           const dimmed = stage.status === "pending";
           const hasLog = isActive && log.length > 0;
+          const stageDetail = hasLog ? latestLogLine(log) : stage.detail;
           // Single-line rows center vertically; rows that stack content under
           // their label (the running log, the network sub-checks) top-align so
           // the icon lines up with the first line.
@@ -824,12 +835,13 @@ function SetupTrack({
                         ? doneStageLabel(stage.id, t)
                         : stage.label}
                   </span>
-                  {stage.detail ? (
+                  {stageDetail ? (
                     // Shown for a healthy step (version · path) AND for a version
                     // problem (current · requires ≥ floor) — a blocked CLI must
-                    // still reveal which version it has and what it needs.
+                    // still reveal which version it has and what it needs. While
+                    // running, this becomes the latest installer log line.
                     <span className="min-w-0 truncate text-[12px] text-[var(--text-secondary)]">
-                      {stage.detail}
+                      {stageDetail}
                     </span>
                   ) : null}
                 </span>
