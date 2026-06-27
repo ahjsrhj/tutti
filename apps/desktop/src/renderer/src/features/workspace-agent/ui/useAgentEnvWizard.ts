@@ -1,5 +1,4 @@
-import { useCallback, useEffect, useMemo } from "react";
-import { useSyncExternalStore } from "react";
+import { useCallback, useEffect, useMemo, useSyncExternalStore } from "react";
 import type { WorkspaceAgentProvider } from "@tutti-os/client-tuttid-ts";
 import {
   buildAgentEnvWizardViewModel,
@@ -181,6 +180,10 @@ export function useAgentEnvWizard(input: {
       setWizardCopied(false);
     }
   }, []);
+  const copyManualSync = useCallback(
+    (c: string) => void copyManual(c),
+    [copyManual]
+  );
   const toggleLog = useCallback(() => toggleWizardLog(), []);
 
   return {
@@ -195,7 +198,7 @@ export function useAgentEnvWizard(input: {
       runStageAction,
       confirmReport,
       dismissReport,
-      copyManual: (c) => void copyManual(c),
+      copyManual: copyManualSync,
       toggleLog
     }
   };
