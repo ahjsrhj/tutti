@@ -35,7 +35,9 @@ export function bindDesktopManagedAgentProviderVisibilityRefresh(
       return;
     }
     lastRefreshAt = now;
-    void service.refresh(providers).catch(() => {});
+    void service.refresh(providers).catch((err) => {
+      console.warn("[agent-status] visibility-triggered detect failed", err);
+    });
   };
 
   windowRef.addEventListener("focus", refreshStatuses);
