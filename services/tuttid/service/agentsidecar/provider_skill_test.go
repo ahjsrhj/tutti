@@ -28,6 +28,9 @@ func TestWorkspaceAppSkillUsesPreparedCLICommandForAgentLaunchers(t *testing.T) 
 		"call the exact visible skill name with no arguments",
 		"`tutti-cli:tutti-cli`",
 		"Do not derive filesystem paths from the plugin directory, plugin name, or skill slug",
+		"snapshot rendered for the current agent runtime or skill bundle",
+		"preserves `App id:` metadata",
+		"Do not use CLI help alone",
 	} {
 		if !strings.Contains(skill, want) {
 			t.Fatalf("workspace app skill missing %q: %q", want, skill)
@@ -170,6 +173,11 @@ func TestDefaultPreparerRenderSkillBundleUsesDynamicGuide(t *testing.T) {
 	}
 	for _, want := range []string{
 		"tutti-dev issue list --topic-id <topic-id>",
+		"## Dynamic Command Snapshot",
+		"not a stable inventory of every command",
+		"tutti-dev <scope> --help",
+		"preserves `App id:` metadata",
+		"older materialized command guide",
 		"The current AgentGUI session is `run-1`.",
 		"The current AgentGUI provider is `codex`.",
 	} {

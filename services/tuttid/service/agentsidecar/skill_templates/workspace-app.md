@@ -7,7 +7,9 @@ description: Use for `mention://workspace-app/<appId>?workspaceId=...` links to 
 
 Use this skill when the current user turn contains one or more `mention://workspace-app/<appId>?workspaceId=...` links.
 
-Before choosing an app command, use the injected `tutti-cli` command reference for CLI syntax and available commands. Prefer the `## Commands` section already present in the session policy or the loaded/visible `tutti-cli` skill. If you need to load `tutti-cli` through a provider-native Skill tool, call the exact visible skill name with no arguments, such as `tutti-cli:tutti-cli` when that namespaced name is visible. Do not derive filesystem paths from the plugin directory, plugin name, or skill slug; materialized skill paths must come from the provider/runtime skill listing.
+Before choosing an app command, use the injected `tutti-cli` command reference for CLI syntax and currently visible commands. Prefer the `## Commands` section already present in the session policy or the loaded/visible `tutti-cli` skill. If you need to load `tutti-cli` through a provider-native Skill tool, call the exact visible skill name with no arguments, such as `tutti-cli:tutti-cli` when that namespaced name is visible. Do not derive filesystem paths from the plugin directory, plugin name, or skill slug; materialized skill paths must come from the provider/runtime skill listing.
+
+The injected `tutti-cli` command guide is a snapshot rendered for the current agent runtime or skill bundle. Workspace app commands can appear or disappear after app install, reload, start, stop, daemon restart, or session refresh. If the mentioned app should be active but no matching command is listed, refresh the command guide or skill bundle capability reference that preserves `App id:` metadata before deciding the app has no usable CLI command. Do not use CLI help alone to map a workspace app id to a CLI scope; use help only after the scope is known.
 
 ## Mention Contract
 
@@ -30,12 +32,12 @@ After reading the mention query, recover the smallest useful app context through
 5. If `appId` is `issue-manager` and the user asks issue/task work, read and follow the injected `issue-manager` skill for issue/task context and workflows before using generic workspace app command matching.
 6. When `--cwd` is not specified, tuttid inherits the caller agent session working directory.
 7. For agent launcher mentions, ask for a missing task prompt before invoking. Do not ask for a missing model; when `--model` is omitted, tuttid uses the target provider's configured/default model. If the user provided a model and the command rejects it, use the error's available model list to ask for or select a valid value.
-8. For other app ids, use the injected `tutti-cli` command guide, find command entries whose metadata says `App id: <appId>` in its `## Commands` section, then use the listed command path and scope from those entries.
+8. For other app ids, use the injected `tutti-cli` command guide, find command entries whose metadata says `App id: <appId>` in its `## Commands` section, then use the listed command path and scope from those entries. If no entry is listed, refresh the command guide or skill bundle capability reference that preserves `App id:` metadata before deciding the app command is unavailable.
 9. If several apps have similar names, match by `appId` from the mention, not only by the visible label.
 10. Use the listed `{{CLI_COMMAND}} <scope> <command>` examples to inspect or invoke the app.
 11. Prefer `--json` when the command output is used as context for reasoning.
 
-If the mentioned app has no visible CLI commands in the injected `tutti-cli` command guide, explain that the app is not currently exposing usable CLI capabilities instead of guessing an app-specific command.
+If the mentioned app has no visible CLI commands after checking the injected `tutti-cli` command guide and any refreshed capability reference that preserves `App id:` metadata, explain that the app is not currently exposing usable CLI capabilities instead of guessing an app-specific command.
 
 ## Invocation Rules
 
