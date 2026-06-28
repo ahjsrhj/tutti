@@ -1,9 +1,21 @@
-import { render, screen } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { ConversationImageContextMenu } from "./ConversationImageContextMenu";
 
+const { copyImageToClipboardMock } = vi.hoisted(() => ({
+  copyImageToClipboardMock: vi.fn()
+}));
+
+vi.mock("../lib/copyImageToClipboard", () => ({
+  copyImageToClipboard: copyImageToClipboardMock
+}));
+
 describe("ConversationImageContextMenu", () => {
+  afterEach(() => {
+    copyImageToClipboardMock.mockReset();
+  });
+
   it("wraps children in a trigger element by default", () => {
     render(
       <ConversationImageContextMenu src="blob:preview">
@@ -34,5 +46,28 @@ describe("ConversationImageContextMenu", () => {
     expect(screen.getByTestId("image").getAttribute("data-slot")).toBe(
       "context-menu-trigger"
     );
+  });
+
+  it("copies and closes the menu on pointer down", async () => {
+    copyImageToClipboardMock.mockResolvedValue(true);
+
+    render(
+      <ConversationImageContextMenu src="blob:preview">
+        <img data-testid="image" alt="" />
+      </ConversationImageContextMenu>
+    );
+
+    fireEvent.contextMenu(screen.getByTestId("image"));
+
+    const copyItem = await screen.findByText("Copy image");
+    fireEvent.pointerDown(copyItem, { button: 0 });
+
+    expect(copyImageToClipboardMock).toHaveBeenCalledWith(
+      "blob:preview",
+      expect.anything()
+    );
+    await waitFor(() => {
+      expect(screen.queryByText("Copy image")).toBeNull();
+    });
   });
 });

@@ -742,6 +742,7 @@ function createDependenciesStub(): {
       selectAppIconImage: fail,
       selectDirectory: fail,
       selectUploadFiles: fail,
+      copyImageToClipboard: fail,
       copyFilesToClipboard: fail
     },
     tuttidClient: {

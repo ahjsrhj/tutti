@@ -1,5 +1,7 @@
 import {
   useCallback,
+  useRef,
+  useState,
   type CSSProperties,
   type JSX,
   type ReactNode
@@ -10,6 +12,7 @@ import {
   ContextMenuItem,
   ContextMenuTrigger
 } from "../../../app/renderer/components/ui/context-menu";
+import { useOptionalAgentHostApi } from "../../../agentActivityHost";
 import { copyImageToClipboard } from "../lib/copyImageToClipboard";
 import { translate } from "../../../i18n/index";
 
@@ -33,14 +36,34 @@ export function ConversationImageContextMenu({
    */
   contentStyle?: CSSProperties;
 }): JSX.Element {
-  const handleCopy = useCallback(() => {
-    void copyImageToClipboard(src);
-  }, [src]);
+  const agentHostApi = useOptionalAgentHostApi();
+  const copyStartedRef = useRef(false);
+  const [menuResetKey, setMenuResetKey] = useState(0);
+  const copyAndClose = useCallback(() => {
+    if (copyStartedRef.current) {
+      return;
+    }
+    copyStartedRef.current = true;
+    setMenuResetKey((key) => key + 1);
+    void copyImageToClipboard(src, agentHostApi?.clipboard).finally(() => {
+      copyStartedRef.current = false;
+    });
+  }, [agentHostApi?.clipboard, src]);
   return (
-    <ContextMenu>
+    <ContextMenu key={menuResetKey}>
       <ContextMenuTrigger asChild={asChild}>{children}</ContextMenuTrigger>
       <ContextMenuContent style={contentStyle}>
-        <ContextMenuItem onSelect={handleCopy}>
+        <ContextMenuItem
+          onClick={copyAndClose}
+          onPointerDown={(event) => {
+            if (event.button !== 0) {
+              return;
+            }
+            event.preventDefault();
+            copyAndClose();
+          }}
+          onSelect={copyAndClose}
+        >
           {translate("agentHost.agentGui.copyImage")}
         </ContextMenuItem>
       </ContextMenuContent>

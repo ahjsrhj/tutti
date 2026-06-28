@@ -471,6 +471,8 @@ describe("AgentComposer", () => {
     );
 
     const drafts = screen.getByTestId("agent-gui-composer-image-drafts");
+    expect(drafts).toHaveClass("w-full");
+    expect(drafts.className).not.toContain("max-w-[320px]");
     expect(
       drafts.querySelector('[data-slot="context-menu-trigger"]')
     ).not.toBeNull();
@@ -1893,6 +1895,7 @@ describe("AgentComposer", () => {
 
     const compactButton = screen.queryByTestId("agent-gui-compact-button");
     expect(compactButton).toBeInTheDocument();
+    expect(compactButton).toHaveClass("hover:bg-[var(--transparency-hover)]");
     fireEvent.click(compactButton!);
     expect(onSubmit).toHaveBeenCalledWith(textPromptContent("/compact"));
   });
@@ -3149,11 +3152,73 @@ describe("AgentComposer", () => {
     expect(screen.getByRole("img", { name: "screen.png" })).toHaveClass(
       "cursor-zoom-in",
       "size-full",
-      "object-cover"
+      "object-contain"
     );
     fireEvent.click(screen.getByRole("img", { name: "screen.png" }));
 
     expect(await screen.findByRole("dialog")).toBeInTheDocument();
+  });
+
+  it("sizes pasted image drafts from the loaded image aspect ratio", async () => {
+    let draftContent = createDraft("");
+    const onDraftContentChange = vi.fn((nextDraft: AgentComposerDraft) => {
+      draftContent = nextDraft;
+    });
+    const renderComposer = () => (
+      <AgentComposer
+        workspaceId="workspace-1"
+        currentUserId="user-1"
+        provider="codex"
+        draftContent={draftContent}
+        availableCommands={[] satisfies readonly AgentHostAgentSessionCommand[]}
+        disabled={false}
+        submitDisabled={false}
+        placeholder="placeholder"
+        composerSettings={createComposerSettings()}
+        queuedPrompts={[]}
+        drainingQueuedPromptId={null}
+        canQueueWhileBusy={false}
+        showStopButton={false}
+        activePrompt={null}
+        isInterrupting={false}
+        isSendingTurn={false}
+        isSubmittingPrompt={false}
+        labels={createLabels()}
+        workspaceUserProjectI18n={workspaceUserProjectI18n}
+        onDraftContentChange={onDraftContentChange}
+        onSettingsChange={vi.fn()}
+        onSubmit={vi.fn()}
+        onSendQueuedPromptNext={vi.fn()}
+        onRemoveQueuedPrompt={vi.fn()}
+        onEditQueuedPrompt={vi.fn()}
+        onInterruptCurrentTurn={vi.fn()}
+        onSubmitInteractivePrompt={vi.fn()}
+      />
+    );
+    const { rerender } = render(renderComposer());
+
+    fireEvent.click(screen.getByTestId("mock-paste-image"));
+    rerender(renderComposer());
+
+    const image = screen.getByRole("img", {
+      name: "screen.png"
+    }) as HTMLImageElement;
+    Object.defineProperty(image, "naturalWidth", {
+      configurable: true,
+      value: 320
+    });
+    Object.defineProperty(image, "naturalHeight", {
+      configurable: true,
+      value: 160
+    });
+    fireEvent.load(image);
+
+    await waitFor(() => {
+      expect(screen.getByTestId("agent-gui-composer-image-draft")).toHaveStyle({
+        aspectRatio: "2",
+        width: "144px"
+      });
+    });
   });
 
   it("removes pasted image drafts without opening the zoom preview", () => {

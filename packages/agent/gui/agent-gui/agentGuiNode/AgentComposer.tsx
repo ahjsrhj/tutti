@@ -617,7 +617,7 @@ function AgentUsageChip({
                 type="button"
                 data-testid="agent-gui-compact-button"
                 disabled={compactDisabled}
-                className="nodrag inline-flex items-center justify-center rounded-[6px] bg-[var(--transparency-block)] px-2 py-1 text-[12px] font-medium text-[var(--text-primary)] transition-colors hover:bg-background-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-45 disabled:hover:bg-[var(--transparency-block)] [-webkit-app-region:no-drag]"
+                className="nodrag inline-flex items-center justify-center rounded-[6px] bg-[var(--transparency-block)] px-2 py-1 text-[12px] font-medium text-[var(--text-primary)] transition-colors hover:bg-[var(--transparency-hover)] focus-visible:bg-[var(--transparency-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-45 disabled:hover:bg-[var(--transparency-block)] [-webkit-app-region:no-drag]"
                 onClick={onCompact}
               >
                 {labels.usageCompactAction}
@@ -645,6 +645,11 @@ const MENTION_PALETTE_MIN_HEIGHT_PX = 280;
 const MENTION_PALETTE_MAX_HEIGHT_PX = 320;
 const MENTION_PALETTE_GAP_PX = 8;
 const MENTION_PALETTE_VIEWPORT_PADDING_PX = 8;
+const DRAFT_IMAGE_PREVIEW_BASE_HEIGHT_PX = 72;
+const DRAFT_IMAGE_PREVIEW_MIN_WIDTH_PX = 56;
+const DRAFT_IMAGE_PREVIEW_MAX_WIDTH_PX = 180;
+const DRAFT_IMAGE_PREVIEW_MIN_RATIO = 0.5;
+const DRAFT_IMAGE_PREVIEW_MAX_RATIO = 3;
 const EMPTY_CONTEXT_MENTION_PROVIDERS: readonly AgentContextMentionProvider[] =
   [];
 const EMPTY_PROMPT_TIPS: readonly AgentComposerPromptTip[] = [];
@@ -2455,59 +2460,22 @@ export function AgentComposer({
             modal={false}
           >
             <PopoverAnchor asChild>
-              <div ref={promptInputAreaRef} className="min-w-0 self-start">
+              <div
+                ref={promptInputAreaRef}
+                className="w-full min-w-0 self-start"
+              >
                 {draftImages.length > 0 ? (
                   <div
-                    className="mb-2 grid max-w-[320px] grid-cols-[repeat(auto-fill,minmax(56px,1fr))] gap-2"
+                    className="mb-2 flex w-full max-w-full flex-wrap items-start gap-2"
                     data-testid="agent-gui-composer-image-drafts"
                   >
                     {draftImages.map((image) => (
-                      <div
+                      <AgentComposerDraftImagePreview
                         key={image.id}
-                        className={cn(
-                          "group relative aspect-square min-w-0 overflow-hidden rounded-[6px] border border-[var(--line-1)] bg-[var(--background-fronted)]",
-                          "[&>[data-rmiz]]:block [&>[data-rmiz]]:size-full",
-                          "[&>[data-rmiz]>[data-rmiz-content]]:block [&>[data-rmiz]>[data-rmiz-content]]:size-full",
-                          image.uploadError &&
-                            "border-[color:color-mix(in_srgb,var(--danger)_55%,var(--line-1))]"
-                        )}
-                        data-uploading={image.uploading ? "true" : undefined}
-                        data-upload-error={
-                          image.uploadError ? "true" : undefined
-                        }
-                      >
-                        <ConversationImageContextMenu src={image.previewUrl}>
-                          <ZoomableImage
-                            src={image.previewUrl}
-                            alt={image.name}
-                            className="size-full object-cover"
-                            draggable={false}
-                          />
-                        </ConversationImageContextMenu>
-                        {image.uploading ? (
-                          <div
-                            className="absolute inset-0 grid place-items-center bg-[color-mix(in_srgb,var(--background-fronted)_62%,transparent)]"
-                            data-testid="agent-gui-composer-image-uploading"
-                          >
-                            <Spinner
-                              className="text-[var(--text-primary)]"
-                              size={18}
-                              strokeWidth={2.4}
-                              trackColor="var(--transparency-hover)"
-                              testId="agent-gui-composer-image-upload-spinner"
-                            />
-                          </div>
-                        ) : null}
-                        <button
-                          type="button"
-                          className="absolute right-1 top-1 inline-flex size-5 items-center justify-center rounded-full border border-[color-mix(in_srgb,var(--text-primary)_16%,transparent)] bg-[color-mix(in_srgb,var(--background-fronted)_88%,transparent)] text-[var(--text-primary)] opacity-90 shadow-sm transition hover:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:color-mix(in_srgb,var(--text-primary)_34%,transparent)]"
-                          aria-label={labels.removeMention}
-                          title={labels.removeMention}
-                          onClick={() => removeDraftImage(image.id)}
-                        >
-                          <X size={12} strokeWidth={2.4} aria-hidden />
-                        </button>
-                      </div>
+                        image={image}
+                        removeLabel={labels.removeMention}
+                        onRemove={removeDraftImage}
+                      />
                     ))}
                   </div>
                 ) : null}
@@ -2966,6 +2934,92 @@ export function AgentComposer({
         ) : null}
       </div>
     </form>
+  );
+}
+
+function AgentComposerDraftImagePreview({
+  image,
+  removeLabel,
+  onRemove
+}: {
+  image: AgentComposerDraftImage;
+  removeLabel: string;
+  onRemove: (id: string) => void;
+}): React.JSX.Element {
+  const [aspectRatio, setAspectRatio] = useState(1);
+  const previewWidth = Math.round(
+    Math.min(
+      DRAFT_IMAGE_PREVIEW_MAX_WIDTH_PX,
+      Math.max(
+        DRAFT_IMAGE_PREVIEW_MIN_WIDTH_PX,
+        aspectRatio * DRAFT_IMAGE_PREVIEW_BASE_HEIGHT_PX
+      )
+    )
+  );
+  const previewStyle = {
+    aspectRatio: String(aspectRatio),
+    width: `${previewWidth}px`
+  } satisfies CSSProperties;
+
+  return (
+    <div
+      className={cn(
+        "group relative min-w-0 overflow-hidden rounded-[6px] border border-[var(--line-1)] bg-[var(--background-fronted)]",
+        "[&>[data-rmiz]]:block [&>[data-rmiz]]:size-full",
+        "[&>[data-rmiz]>[data-rmiz-content]]:block [&>[data-rmiz]>[data-rmiz-content]]:size-full",
+        image.uploadError &&
+          "border-[color:color-mix(in_srgb,var(--danger)_55%,var(--line-1))]"
+      )}
+      data-testid="agent-gui-composer-image-draft"
+      data-uploading={image.uploading ? "true" : undefined}
+      data-upload-error={image.uploadError ? "true" : undefined}
+      style={previewStyle}
+    >
+      <ConversationImageContextMenu src={image.previewUrl}>
+        <ZoomableImage
+          src={image.previewUrl}
+          alt={image.name}
+          className="size-full object-contain"
+          draggable={false}
+          onLoad={(event) => {
+            const element = event.currentTarget;
+            const width = element.naturalWidth;
+            const height = element.naturalHeight;
+            if (width <= 0 || height <= 0) {
+              return;
+            }
+            const nextRatio = Math.min(
+              DRAFT_IMAGE_PREVIEW_MAX_RATIO,
+              Math.max(DRAFT_IMAGE_PREVIEW_MIN_RATIO, width / height)
+            );
+            setAspectRatio(nextRatio);
+          }}
+        />
+      </ConversationImageContextMenu>
+      {image.uploading ? (
+        <div
+          className="absolute inset-0 grid place-items-center bg-[color-mix(in_srgb,var(--background-fronted)_62%,transparent)]"
+          data-testid="agent-gui-composer-image-uploading"
+        >
+          <Spinner
+            className="text-[var(--text-primary)]"
+            size={18}
+            strokeWidth={2.4}
+            trackColor="var(--transparency-hover)"
+            testId="agent-gui-composer-image-upload-spinner"
+          />
+        </div>
+      ) : null}
+      <button
+        type="button"
+        className="absolute right-1 top-1 inline-flex size-5 items-center justify-center rounded-full border border-[color-mix(in_srgb,var(--text-primary)_16%,transparent)] bg-[color-mix(in_srgb,var(--background-fronted)_88%,transparent)] text-[var(--text-primary)] opacity-90 shadow-sm transition hover:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:color-mix(in_srgb,var(--text-primary)_34%,transparent)]"
+        aria-label={removeLabel}
+        title={removeLabel}
+        onClick={() => onRemove(image.id)}
+      >
+        <X size={12} strokeWidth={2.4} aria-hidden />
+      </button>
+    </div>
   );
 }
 

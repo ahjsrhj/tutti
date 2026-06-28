@@ -13,6 +13,7 @@ export const zhCN = {
     confirm: "确认",
     copy: "复制",
     create: "创建",
+    cut: "剪切",
     delete: "删除",
     deleting: "删除中...",
     download: "下载",
@@ -39,6 +40,7 @@ export const zhCN = {
     followCliDefault: "跟随 CLI 默认值",
     unknownError: "未知错误",
     notAvailable: "无",
+    paste: "粘贴",
     percentUnit: "%",
     pixelUnit: "px",
     minuteUnit: "分钟"
@@ -493,6 +495,7 @@ export const zhCN = {
       planImplementationSend: "送出",
       planImplementationSkip: "留在计划模式",
       noRunningResponse: "当前没有正在运行的回复。",
+      composerTextMenu: "输入框文本操作",
       copyMessage: "复制消息",
       copyImage: "复制图片",
       messageCopied: "已复制",

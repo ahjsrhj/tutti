@@ -1036,6 +1036,7 @@ function createHostFilesApi(): DesktopHostFilesApi {
     async selectUploadFiles() {
       return [];
     },
+    async copyImageToClipboard() {},
     async copyFilesToClipboard() {},
     async listOpenWithApplications() {
       return [];

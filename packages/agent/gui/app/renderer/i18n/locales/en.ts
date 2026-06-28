@@ -11,6 +11,7 @@ export const en = {
     confirm: "Confirm",
     copy: "Copy",
     create: "Create",
+    cut: "Cut",
     delete: "Delete",
     deleting: "Deleting...",
     download: "Download",
@@ -37,6 +38,7 @@ export const en = {
     followCliDefault: "Follow CLI default",
     unknownError: "Unknown error",
     notAvailable: "N/A",
+    paste: "Paste",
     percentUnit: "%",
     pixelUnit: "px",
     minuteUnit: "min"
@@ -538,6 +540,7 @@ export const en = {
       planImplementationSend: "Send",
       planImplementationSkip: "Stay in Plan Mode",
       noRunningResponse: "No running response to stop.",
+      composerTextMenu: "Composer text actions",
       copyMessage: "Copy message",
       copyImage: "Copy image",
       messageCopied: "Copied",

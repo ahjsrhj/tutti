@@ -176,6 +176,7 @@ export const desktopIpcChannels = {
       selectAppIconImage: "host:files:selectAppIconImage",
       selectDirectory: "host:files:selectDirectory",
       selectUploadFiles: "host:files:selectUploadFiles",
+      copyImageToClipboard: "host:files:copyImageToClipboard",
       copyFilesToClipboard: "host:files:copyFilesToClipboard"
     },
     window: {
@@ -251,6 +252,11 @@ export interface DesktopWorkspaceFileEntryIconPayload extends DesktopWorkspaceFi
   entryKind: string;
   entryMtimeMs: number | null;
   entryName: string;
+}
+
+export interface DesktopClipboardImagePayload {
+  data: string;
+  mimeType: "image/png";
 }
 
 export interface DesktopTerminalLinkPathPayload {
@@ -766,6 +772,8 @@ export interface DesktopInvokePayloadByChannel {
   [desktopIpcChannels.host.files.selectUploadFiles]:
     | DesktopSelectUploadFilesInput
     | undefined;
+  [desktopIpcChannels.host.files
+    .copyImageToClipboard]: DesktopClipboardImagePayload;
   [desktopIpcChannels.host.files.copyFilesToClipboard]: string[];
   [desktopIpcChannels.host.window.approveClose]: undefined;
   [desktopIpcChannels.host.window
@@ -874,6 +882,7 @@ export interface DesktopInvokeResultByChannel {
   [desktopIpcChannels.host.files.selectAppIconImage]: string | null;
   [desktopIpcChannels.host.files.selectDirectory]: string | null;
   [desktopIpcChannels.host.files.selectUploadFiles]: string[];
+  [desktopIpcChannels.host.files.copyImageToClipboard]: void;
   [desktopIpcChannels.host.files.copyFilesToClipboard]: void;
   [desktopIpcChannels.host.window.approveClose]: void;
   [desktopIpcChannels.host.window.capturePreview]: string | null;
