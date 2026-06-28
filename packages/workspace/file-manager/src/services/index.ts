@@ -73,6 +73,7 @@ export {
   type WorkspaceFileRecentLocation,
   type WorkspaceFileManagerCapabilities,
   type WorkspaceFileManagerFileDefaultOpener,
+  type WorkspaceFileOpenWithApplication,
   type WorkspaceFileManagerPersistedState,
   type WorkspaceFilePreviewKind,
   type WorkspaceFilePreviewState,

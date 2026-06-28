@@ -40,6 +40,7 @@ import {
 } from "@tutti-os/ui-system";
 import { WorkspaceUserProjectSelect } from "@tutti-os/workspace-user-project/ui";
 import type { WorkspaceUserProjectI18nRuntime } from "@tutti-os/workspace-user-project/i18n";
+import type { WorkspaceFileManagerI18nRuntime } from "@tutti-os/workspace-file-manager";
 import { BareIconButton, ScrollArea } from "@tutti-os/ui-system/components";
 import { Button } from "../../app/renderer/components/ui/button";
 import {
@@ -467,6 +468,7 @@ interface AgentGUINodeViewProps {
   onConversationRailWidthChanged: (widthPx: number) => void;
   labels: AgentGUIViewLabels;
   workspaceUserProjectI18n: WorkspaceUserProjectI18nRuntime;
+  workspaceFileManagerCopy?: WorkspaceFileManagerI18nRuntime | null;
   workspaceFileReferenceAdapter?: WorkspaceFileReferenceAdapter | null;
   onOpenConversationWindow?: (agentSessionId: string) => void;
   selectProjectDirectory?: () => Promise<{ path: string } | null>;
@@ -800,6 +802,7 @@ export function AgentGUINodeView({
   onConversationRailWidthChanged,
   labels,
   workspaceUserProjectI18n,
+  workspaceFileManagerCopy = null,
   workspaceFileReferenceAdapter = null,
   onOpenConversationWindow,
   selectProjectDirectory,
@@ -1360,6 +1363,7 @@ export function AgentGUINodeView({
           }
           initialTarget={workspaceReferencePickerTarget}
           isNodeSelectable={isWorkspaceReferencePickerNodeSelectable}
+          fileManagerCopy={workspaceFileManagerCopy ?? undefined}
           open={workspaceReferencePickerOpen}
           workspaceId={viewModel.workspaceId}
           onClose={closeWorkspaceReferencePicker}
@@ -2027,8 +2031,9 @@ const AgentGUIDetailPane = memo(function AgentGUIDetailPane({
   const stableRequestWorkspaceReferences = useOptionalStableEventCallback(
     onRequestWorkspaceReferences
   );
-  const stableSelectProjectDirectory =
-    useOptionalStableEventCallback(selectProjectDirectory);
+  const stableSelectProjectDirectory = useOptionalStableEventCallback(
+    selectProjectDirectory
+  );
   const stableRequestGitBranches =
     useOptionalStableEventCallback(onRequestGitBranches);
   const authLogin = useOptionalStableEventCallback(onAgentProviderLogin);

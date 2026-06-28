@@ -558,6 +558,21 @@ export function useReferenceSourcePickerView({
 
   // app/issue 源的文件夹引用需异步递归枚举展开,故 confirm 异步;期间置 isConfirming 防重复提交。
   const [isConfirming, setIsConfirming] = useState(false);
+  const [isOpeningReference, setIsOpeningReference] = useState(false);
+  const runReferenceAction = useCallback(
+    async (action: () => Promise<void>): Promise<void> => {
+      if (isOpeningReference) {
+        return;
+      }
+      setIsOpeningReference(true);
+      try {
+        await action();
+      } finally {
+        setIsOpeningReference(false);
+      }
+    },
+    [isOpeningReference]
+  );
   const confirm = useCallback(async () => {
     if (isConfirming) {
       return;
@@ -822,6 +837,28 @@ export function useReferenceSourcePickerView({
       isQuery ? controller.loadMoreSearch() : controller.loadMore(currentNode),
     isSelectable,
     isSelected,
+    isOpeningReference,
+    listOpenWithApplications: (node: ReferenceNode) =>
+      aggregator.listOpenWithApplications(scope, node),
+    openNode: (node: ReferenceNode) =>
+      runReferenceAction(() => aggregator.open(scope, node)),
+    openWithApplication: (node: ReferenceNode, applicationPath: string) =>
+      runReferenceAction(() =>
+        aggregator.openWithApplication(scope, node, applicationPath)
+      ),
+    openWithOtherApplication: (
+      node: ReferenceNode,
+      applicationPickerPrompt?: string
+    ) =>
+      runReferenceAction(() =>
+        aggregator.openWithOtherApplication(
+          scope,
+          node,
+          applicationPickerPrompt
+        )
+      ),
+    revealNode: (node: ReferenceNode) =>
+      runReferenceAction(() => aggregator.reveal(scope, node)),
     confirm,
     isConfirming
   };

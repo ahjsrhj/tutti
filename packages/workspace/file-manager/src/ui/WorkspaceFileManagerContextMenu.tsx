@@ -35,6 +35,53 @@ import type {
   WorkspaceFileOpenWithApplication
 } from "../services/workspaceFileManagerTypes.ts";
 
+export interface WorkspaceFileManagerContextMenuProps {
+  busy: boolean;
+  copy: WorkspaceFileManagerI18nRuntime;
+  contextMenu: {
+    entry: WorkspaceFileEntry | null;
+    x: number;
+    y: number;
+  } | null;
+  contextMenuRef: RefObject<HTMLDivElement | null>;
+  openInAppBrowserIcon?: ReactElement;
+  resolveOpenWithApplicationIcon?: (
+    application: WorkspaceFileOpenWithApplication
+  ) => ReactElement | null;
+  showCopyAction: boolean;
+  showCopyPathAction: boolean;
+  showCreateAction: boolean;
+  showDeleteAction: boolean;
+  showImportAction: boolean;
+  showExportAction: boolean;
+  showOpenInAppBrowserAction: boolean;
+  showOpenInDefaultBrowserAction: boolean;
+  showOpenInFileViewerAction: boolean;
+  showOpenWithAction: boolean;
+  showOpenWithOtherAction: boolean;
+  showRevealInFolderAction: boolean;
+  showRenameAction: boolean;
+  revealInFolderLabel: string;
+  openWithApplications: readonly WorkspaceFileOpenWithApplication[];
+  openWithLoading: boolean;
+  onClose: () => void;
+  onCreateDirectory: () => void;
+  onCreateFile: () => void;
+  onCopy: () => Promise<void>;
+  onCopyPath: () => Promise<void>;
+  onDelete: () => void;
+  onExport: () => Promise<void>;
+  onOpen: () => Promise<void>;
+  onOpenInAppBrowser: () => Promise<void>;
+  onOpenInDefaultBrowser: () => Promise<void>;
+  onOpenInFileViewer: () => Promise<void>;
+  onOpenWithApplication: (applicationPath: string) => Promise<void>;
+  onOpenWithOtherApplication: () => Promise<void>;
+  onImport: () => Promise<void>;
+  onRevealInFolder: () => Promise<void>;
+  onRename: () => void;
+}
+
 export function WorkspaceFileManagerContextMenu({
   busy,
   copy,
@@ -42,6 +89,7 @@ export function WorkspaceFileManagerContextMenu({
   contextMenuRef,
   openInAppBrowserIcon,
   showCopyAction,
+  showCopyPathAction,
   showCreateAction,
   showDeleteAction,
   showImportAction,
@@ -73,51 +121,7 @@ export function WorkspaceFileManagerContextMenu({
   onImport,
   onRevealInFolder,
   onRename
-}: {
-  busy: boolean;
-  copy: WorkspaceFileManagerI18nRuntime;
-  contextMenu: {
-    entry: WorkspaceFileEntry | null;
-    x: number;
-    y: number;
-  } | null;
-  contextMenuRef: RefObject<HTMLDivElement | null>;
-  openInAppBrowserIcon?: ReactElement;
-  resolveOpenWithApplicationIcon?: (
-    application: WorkspaceFileOpenWithApplication
-  ) => ReactElement | null;
-  showCopyAction: boolean;
-  showCreateAction: boolean;
-  showDeleteAction: boolean;
-  showImportAction: boolean;
-  showExportAction: boolean;
-  showOpenInAppBrowserAction: boolean;
-  showOpenInDefaultBrowserAction: boolean;
-  showOpenInFileViewerAction: boolean;
-  showOpenWithAction: boolean;
-  showOpenWithOtherAction: boolean;
-  showRevealInFolderAction: boolean;
-  showRenameAction: boolean;
-  revealInFolderLabel: string;
-  openWithApplications: readonly WorkspaceFileOpenWithApplication[];
-  openWithLoading: boolean;
-  onClose: () => void;
-  onCreateDirectory: () => void;
-  onCreateFile: () => void;
-  onCopy: () => Promise<void>;
-  onCopyPath: () => Promise<void>;
-  onDelete: () => void;
-  onExport: () => Promise<void>;
-  onOpen: () => Promise<void>;
-  onOpenInAppBrowser: () => Promise<void>;
-  onOpenInDefaultBrowser: () => Promise<void>;
-  onOpenInFileViewer: () => Promise<void>;
-  onOpenWithApplication: (applicationPath: string) => Promise<void>;
-  onOpenWithOtherApplication: () => Promise<void>;
-  onImport: () => Promise<void>;
-  onRevealInFolder: () => Promise<void>;
-  onRename: () => void;
-}): ReactElement | null {
+}: WorkspaceFileManagerContextMenuProps): ReactElement | null {
   const [position, setPosition] = useState({
     x: contextMenu?.x ?? 0,
     y: contextMenu?.y ?? 0
@@ -137,7 +141,9 @@ export function WorkspaceFileManagerContextMenu({
     }
 
     const menu = contextMenuRef.current;
-    const boundary = menu?.closest("[data-workspace-file-manager]");
+    const boundary = menu?.closest(
+      "[data-workspace-file-menu-boundary], [data-workspace-file-manager]"
+    );
     if (!menu || !boundary) {
       return;
     }
@@ -160,6 +166,7 @@ export function WorkspaceFileManagerContextMenu({
     openWithApplications.length,
     openWithLoading,
     showCopyAction,
+    showCopyPathAction,
     showExportAction,
     showImportAction,
     showOpenInAppBrowserAction,
@@ -201,13 +208,15 @@ export function WorkspaceFileManagerContextMenu({
         label: copy.t("copyLabel")
       });
     }
-    editItems.push({
-      action: onCopyPath,
-      disabled: busy,
-      icon: <CopyIcon className="size-4" />,
-      key: "copy-path",
-      label: copy.t("copyPathLabel")
-    });
+    if (showCopyPathAction) {
+      editItems.push({
+        action: onCopyPath,
+        disabled: busy,
+        icon: <CopyIcon className="size-4" />,
+        key: "copy-path",
+        label: copy.t("copyPathLabel")
+      });
+    }
     if (showRevealInFolderAction) {
       editItems.push({
         action: onRevealInFolder,

@@ -142,3 +142,8 @@ test("focused middle tree row scrolls into view after initial target reveal", ()
   );
   assert.match(source, /ref=\{focused \? focusedRowRef : undefined\}/);
 });
+
+test("reference picker context menu uses the same viewport boundary as file manager submenus", () => {
+  assert.match(source, /data-slot="viewport-menu-boundary"/);
+  assert.match(source, /data-workspace-file-menu-boundary=""/);
+});
