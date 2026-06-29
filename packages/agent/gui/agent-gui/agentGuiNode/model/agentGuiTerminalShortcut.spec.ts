@@ -15,6 +15,15 @@ describe("agent GUI terminal shortcut", () => {
     );
   });
 
+  it("accepts Ctrl+J without extra modifiers", () => {
+    expect(isAgentGUIOpenTerminalShortcut({ ctrlKey: true, key: "j" })).toBe(
+      true
+    );
+    expect(isAgentGUIOpenTerminalShortcut({ ctrlKey: true, key: "J" })).toBe(
+      true
+    );
+  });
+
   it("rejects handled or modified shortcut events", () => {
     expect(
       isAgentGUIOpenTerminalShortcut({
@@ -28,6 +37,13 @@ describe("agent GUI terminal shortcut", () => {
         key: "j",
         metaKey: true,
         shiftKey: true
+      })
+    ).toBe(false);
+    expect(
+      isAgentGUIOpenTerminalShortcut({
+        ctrlKey: true,
+        key: "j",
+        metaKey: true
       })
     ).toBe(false);
     expect(isAgentGUIOpenTerminalShortcut({ key: "j" })).toBe(false);

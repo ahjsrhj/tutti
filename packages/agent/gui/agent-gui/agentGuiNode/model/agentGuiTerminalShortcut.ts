@@ -15,8 +15,8 @@ export function isAgentGUIOpenTerminalShortcut(
   return (
     event.defaultPrevented !== true &&
     event.key.toLowerCase() === "j" &&
-    event.metaKey === true &&
-    event.ctrlKey !== true &&
+    ((event.metaKey === true && event.ctrlKey !== true) ||
+      (event.ctrlKey === true && event.metaKey !== true)) &&
     event.altKey !== true &&
     event.shiftKey !== true
   );

@@ -628,6 +628,10 @@ function ReadyWorkspaceWorkbench({
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent): void => {
+      if (!runtime.shortcutsEnabled) {
+        return;
+      }
+
       if (isWorkspaceSettingsShortcut(event)) {
         event.preventDefault();
         workspaceSettingsService.openPanel({ id: state.workspace.id });
@@ -662,7 +666,12 @@ function ReadyWorkspaceWorkbench({
     return () => {
       window.removeEventListener("keydown", handleKeyDown, true);
     };
-  }, [state.workspace.id, workbenchHost, workspaceSettingsService]);
+  }, [
+    runtime.shortcutsEnabled,
+    state.workspace.id,
+    workbenchHost,
+    workspaceSettingsService
+  ]);
 
   return (
     <main
@@ -1124,7 +1133,7 @@ function selectFocusedVisibleNode(host: WorkbenchHostHandle) {
     }
   }
 
-  return snapshot.nodes.find((node) => !node.isMinimized) ?? null;
+  return null;
 }
 
 function WorkspaceCloseGuardDialog({
