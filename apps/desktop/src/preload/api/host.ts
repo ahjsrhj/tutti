@@ -207,6 +207,18 @@ export function createHostDesktopApi(): DesktopHostApi {
           );
         };
       },
+      onMenuCommand(listener): () => void {
+        const handler = (_event: IpcRendererEvent, payload: unknown) => {
+          listener(payload as Parameters<typeof listener>[0]);
+        };
+        ipcRenderer.on(desktopIpcChannels.host.window.menuCommand, handler);
+        return () => {
+          ipcRenderer.removeListener(
+            desktopIpcChannels.host.window.menuCommand,
+            handler
+          );
+        };
+      },
       onQuitShortcutToast(listener): () => void {
         const handler = () => {
           listener();

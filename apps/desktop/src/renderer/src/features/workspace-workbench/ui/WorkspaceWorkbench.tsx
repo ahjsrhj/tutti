@@ -19,8 +19,10 @@ import {
 } from "@tutti-os/workbench-surface";
 import {
   AGENT_GUI_WORKBENCH_NEW_CONVERSATION_EVENT,
+  AGENT_GUI_WORKBENCH_OPEN_TERMINAL_EVENT,
   agentGuiWorkbenchTypeId,
-  type AgentGuiWorkbenchNewConversationDetail
+  type AgentGuiWorkbenchNewConversationDetail,
+  type AgentGuiWorkbenchOpenTerminalDetail
 } from "@tutti-os/agent-gui/workbench";
 import {
   Button,
@@ -106,7 +108,10 @@ import { useWorkspaceWorkbenchShellRuntime } from "./useWorkspaceWorkbenchShellR
 import { useWorkspaceOnboardingAutoOpen } from "./useWorkspaceOnboardingAutoOpen.ts";
 import { useWorkspaceSettingsService } from "./useWorkspaceSettingsService";
 import { resolveWorkspaceWorkbenchLayoutConstraints } from "./workspaceWorkbenchLayoutConstraints.ts";
-import type { DesktopWorkspaceAppExternalHostApi } from "@preload/types";
+import type {
+  DesktopHostWindowApi,
+  DesktopWorkspaceAppExternalHostApi
+} from "@preload/types";
 import type { DesktopWorkspaceAppExternalRendererEvent } from "@shared/contracts/ipc";
 import type {
   TuttiExternalFileOpenInput,
@@ -119,6 +124,7 @@ const temporaryWorkspaceAppDockRetentionActionPrefix =
 interface WorkspaceWorkbenchProps {
   enableWindowCloseGuard: boolean;
   headerSlot?: React.ReactNode;
+  hostWindowApi?: Pick<DesktopHostWindowApi, "onMenuCommand">;
   routeView: string;
   workspaceAppExternalApi?: DesktopWorkspaceAppExternalHostApi;
   workspaceID: string | null;
@@ -126,6 +132,7 @@ interface WorkspaceWorkbenchProps {
 export function WorkspaceWorkbench({
   enableWindowCloseGuard,
   headerSlot,
+  hostWindowApi,
   routeView,
   workspaceAppExternalApi,
   workspaceID
@@ -161,6 +168,7 @@ export function WorkspaceWorkbench({
     <ReadyWorkspaceWorkbench
       enableWindowCloseGuard={enableWindowCloseGuard}
       headerSlot={headerSlot}
+      hostWindowApi={hostWindowApi}
       state={{
         platform: state.platform,
         workspace: state.workspace
@@ -173,11 +181,13 @@ export function WorkspaceWorkbench({
 function ReadyWorkspaceWorkbench({
   enableWindowCloseGuard,
   headerSlot,
+  hostWindowApi,
   state,
   workspaceAppExternalApi
 }: {
   enableWindowCloseGuard: boolean;
   headerSlot?: React.ReactNode;
+  hostWindowApi?: Pick<DesktopHostWindowApi, "onMenuCommand">;
   state: {
     platform: NodeJS.Platform;
     workspace: WorkspaceSummary;
@@ -627,29 +637,27 @@ function ReadyWorkspaceWorkbench({
   }, [runtime.missionControl, runtime.shortcutsEnabled]);
 
   useEffect(() => {
-    const handleKeyDown = (event: KeyboardEvent): void => {
+    const openSettingsFromShortcut = (): boolean => {
       if (!runtime.shortcutsEnabled) {
-        return;
+        return false;
       }
 
-      if (isWorkspaceSettingsShortcut(event)) {
-        event.preventDefault();
-        workspaceSettingsService.openPanel({ id: state.workspace.id });
-        return;
-      }
+      workspaceSettingsService.openPanel({ id: state.workspace.id });
+      return true;
+    };
 
-      if (!isWorkspaceAgentNewConversationShortcut(event)) {
-        return;
+    const openNewAgentConversationFromShortcut = (): boolean => {
+      if (!runtime.shortcutsEnabled) {
+        return false;
       }
 
       const focusedNode = workbenchHost
         ? selectFocusedVisibleNode(workbenchHost)
         : null;
       if (focusedNode?.data.typeId !== agentGuiWorkbenchTypeId) {
-        return;
+        return false;
       }
 
-      event.preventDefault();
       window.dispatchEvent(
         new CustomEvent<AgentGuiWorkbenchNewConversationDetail>(
           AGENT_GUI_WORKBENCH_NEW_CONVERSATION_EVENT,
@@ -660,13 +668,74 @@ function ReadyWorkspaceWorkbench({
           }
         )
       );
+      return true;
     };
+
+    const openAgentTerminalFromShortcut = (): boolean => {
+      if (!runtime.shortcutsEnabled) {
+        return false;
+      }
+
+      const focusedNode = workbenchHost
+        ? selectFocusedVisibleNode(workbenchHost)
+        : null;
+      if (focusedNode?.data.typeId !== agentGuiWorkbenchTypeId) {
+        return false;
+      }
+
+      window.dispatchEvent(
+        new CustomEvent<AgentGuiWorkbenchOpenTerminalDetail>(
+          AGENT_GUI_WORKBENCH_OPEN_TERMINAL_EVENT,
+          {
+            detail: {
+              instanceId: focusedNode.data.instanceId
+            }
+          }
+        )
+      );
+      return true;
+    };
+
+    const handleKeyDown = (event: KeyboardEvent): void => {
+      if (isWorkspaceSettingsShortcut(event)) {
+        if (openSettingsFromShortcut()) {
+          event.preventDefault();
+        }
+        return;
+      }
+
+      if (!isWorkspaceAgentNewConversationShortcut(event)) {
+        return;
+      }
+
+      if (openNewAgentConversationFromShortcut()) {
+        event.preventDefault();
+      }
+    };
+
+    const disposeMenuCommand = hostWindowApi?.onMenuCommand((payload) => {
+      if (payload.command === "open-settings") {
+        openSettingsFromShortcut();
+        return;
+      }
+
+      if (payload.command === "new-chat") {
+        openNewAgentConversationFromShortcut();
+        return;
+      }
+
+      if (payload.command === "toggle-terminal") {
+        openAgentTerminalFromShortcut();
+      }
+    });
 
     window.addEventListener("keydown", handleKeyDown, true);
     return () => {
+      disposeMenuCommand?.();
       window.removeEventListener("keydown", handleKeyDown, true);
     };
   }, [
+    hostWindowApi,
     runtime.shortcutsEnabled,
     state.workspace.id,
     workbenchHost,

@@ -45,6 +45,7 @@ export function WorkspaceWindow() {
       <WorkspaceWorkbench
         enableWindowCloseGuard={environmentMode === "desktop"}
         headerSlot={<AppUpdateStatus />}
+        hostWindowApi={hostWindowApi}
         routeView={routeView}
         workspaceAppExternalApi={workspaceAppExternalApi}
         workspaceID={workspaceID}

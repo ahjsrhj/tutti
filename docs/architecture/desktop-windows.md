@@ -99,6 +99,13 @@ the workspace window shell in main. They are enabled only for development
 renderer sessions and are intercepted without entering the close-guard flow.
 Packaged builds intercept those shortcuts without reloading the product window.
 
+Native application menu accelerators that mirror workspace actions should stay
+main-owned for discoverability, then forward a typed preload event to the
+focused workspace window. Renderer handlers should still enforce workspace
+guards such as shortcut-disabled state, Mission Control state, and focused-node
+requirements instead of treating the menu accelerator as unconditional command
+authority.
+
 ## Relationship To Layering
 
 This window model follows the desktop layering rules:

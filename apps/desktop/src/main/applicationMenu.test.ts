@@ -212,6 +212,88 @@ test("application menu routes Command-W through the shortcut close handler", () 
   assert.equal(receivedOwnerWindow, ownerWindow);
 });
 
+test("application menu exposes workspace settings in the mac app menu", () => {
+  const ownerWindow = {};
+  const commands: Array<{ command: string; ownerWindow: unknown }> = [];
+  const menu = createApplicationMenuTemplate({
+    menuCommandFromShortcut(command, nextOwnerWindow) {
+      commands.push({ command, ownerWindow: nextOwnerWindow });
+    },
+    platform: "darwin"
+  });
+
+  const appMenu = menu.find((item) => item.label === "Tutti");
+  assert.ok(appMenu);
+  assert.ok(Array.isArray(appMenu.submenu));
+  const settingsItem = appMenu.submenu[1];
+  assert.equal(settingsItem?.label, "Settings");
+  assert.equal(settingsItem.accelerator, "Command+,");
+
+  settingsItem.click?.(
+    {} as Parameters<NonNullable<typeof settingsItem.click>>[0],
+    ownerWindow as Parameters<NonNullable<typeof settingsItem.click>>[1],
+    undefined as unknown as Parameters<
+      NonNullable<typeof settingsItem.click>
+    >[2]
+  );
+
+  assert.deepEqual(commands, [{ command: "open-settings", ownerWindow }]);
+});
+
+test("application menu exposes new chat at the top of the mac File menu", () => {
+  const ownerWindow = {};
+  const commands: Array<{ command: string; ownerWindow: unknown }> = [];
+  const menu = createApplicationMenuTemplate({
+    menuCommandFromShortcut(command, nextOwnerWindow) {
+      commands.push({ command, ownerWindow: nextOwnerWindow });
+    },
+    platform: "darwin"
+  });
+
+  const fileMenu = menu.find((item) => item.label === "File");
+  assert.ok(fileMenu);
+  assert.ok(Array.isArray(fileMenu.submenu));
+  const newChatItem = fileMenu.submenu[0];
+  assert.equal(newChatItem?.label, "New Chat");
+  assert.equal(newChatItem.accelerator, "Command+N");
+
+  newChatItem.click?.(
+    {} as Parameters<NonNullable<typeof newChatItem.click>>[0],
+    ownerWindow as Parameters<NonNullable<typeof newChatItem.click>>[1],
+    undefined as unknown as Parameters<NonNullable<typeof newChatItem.click>>[2]
+  );
+
+  assert.deepEqual(commands, [{ command: "new-chat", ownerWindow }]);
+});
+
+test("application menu exposes toggle terminal at the top of the View menu", () => {
+  const ownerWindow = {};
+  const commands: Array<{ command: string; ownerWindow: unknown }> = [];
+  const menu = createApplicationMenuTemplate({
+    menuCommandFromShortcut(command, nextOwnerWindow) {
+      commands.push({ command, ownerWindow: nextOwnerWindow });
+    },
+    platform: "darwin"
+  });
+
+  const viewMenu = menu.find((item) => item.label === "View");
+  assert.ok(viewMenu);
+  assert.ok(Array.isArray(viewMenu.submenu));
+  const toggleTerminalItem = viewMenu.submenu[0];
+  assert.equal(toggleTerminalItem?.label, "Toggle Terminal");
+  assert.equal(toggleTerminalItem.accelerator, "Command+J");
+
+  toggleTerminalItem.click?.(
+    {} as Parameters<NonNullable<typeof toggleTerminalItem.click>>[0],
+    ownerWindow as Parameters<NonNullable<typeof toggleTerminalItem.click>>[1],
+    undefined as unknown as Parameters<
+      NonNullable<typeof toggleTerminalItem.click>
+    >[2]
+  );
+
+  assert.deepEqual(commands, [{ command: "toggle-terminal", ownerWindow }]);
+});
+
 test("application menu exposes Perf Monitor DevTools when configured", () => {
   const ownerWindow = {};
   let receivedOwnerWindow: unknown;

@@ -185,6 +185,7 @@ export const desktopIpcChannels = {
       closeRequest: "host:window:closeRequest",
       closeRequestResolved: "host:window:closeRequestResolved",
       layout: "host:window:layout",
+      menuCommand: "host:window:menuCommand",
       minimizeState: "host:window:minimizeState",
       quitShortcutToast: "host:window:quitShortcutToast"
     },
@@ -205,6 +206,15 @@ export interface DesktopHostWindowLayoutPayload {
 
 export interface DesktopHostWindowMinimizeStatePayload {
   minimized: boolean;
+}
+
+export type DesktopHostWindowMenuCommand =
+  | "new-chat"
+  | "open-settings"
+  | "toggle-terminal";
+
+export interface DesktopHostWindowMenuCommandPayload {
+  command: DesktopHostWindowMenuCommand;
 }
 
 export interface DesktopHostWindowCapturePreviewInput {

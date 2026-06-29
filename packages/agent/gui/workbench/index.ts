@@ -1,6 +1,7 @@
 export {
   AGENT_GUI_WORKBENCH_NEW_CONVERSATION_EVENT,
   AGENT_GUI_WORKBENCH_CONVERSATION_RAIL_TOGGLE_EVENT,
+  AGENT_GUI_WORKBENCH_OPEN_TERMINAL_EVENT,
   agentGuiWorkbenchDefaultCopy,
   agentGuiWorkbenchDefaultNodeFrame,
   createAgentGuiWorkbenchContribution,
@@ -11,6 +12,7 @@ export type {
   AgentGuiWorkbenchContributionCopyOverrides,
   AgentGuiWorkbenchConversationRailToggleDetail,
   AgentGuiWorkbenchNewConversationDetail,
+  AgentGuiWorkbenchOpenTerminalDetail,
   AgentGuiWorkbenchRenderBodyHelpers,
   CreateAgentGuiWorkbenchContributionInput
 } from "./contribution.ts";

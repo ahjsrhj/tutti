@@ -55,12 +55,19 @@ export const AGENT_GUI_WORKBENCH_CONVERSATION_RAIL_TOGGLE_EVENT =
 export const AGENT_GUI_WORKBENCH_NEW_CONVERSATION_EVENT =
   "tutti:agent-gui-workbench-new-conversation";
 
+export const AGENT_GUI_WORKBENCH_OPEN_TERMINAL_EVENT =
+  "tutti:agent-gui-workbench-open-terminal";
+
 export interface AgentGuiWorkbenchConversationRailToggleDetail {
   conversationRailCollapsed: boolean;
   instanceId: string;
 }
 
 export interface AgentGuiWorkbenchNewConversationDetail {
+  instanceId: string;
+}
+
+export interface AgentGuiWorkbenchOpenTerminalDetail {
   instanceId: string;
 }
 

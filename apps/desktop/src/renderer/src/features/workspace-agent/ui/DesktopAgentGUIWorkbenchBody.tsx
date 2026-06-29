@@ -18,8 +18,10 @@ import type {
 import {
   AGENT_GUI_WORKBENCH_CONVERSATION_RAIL_TOGGLE_EVENT,
   AGENT_GUI_WORKBENCH_NEW_CONVERSATION_EVENT,
+  AGENT_GUI_WORKBENCH_OPEN_TERMINAL_EVENT,
   type AgentGuiWorkbenchConversationRailToggleDetail,
-  type AgentGuiWorkbenchNewConversationDetail
+  type AgentGuiWorkbenchNewConversationDetail,
+  type AgentGuiWorkbenchOpenTerminalDetail
 } from "@tutti-os/agent-gui/workbench/contribution";
 import type { IWorkspaceAppCenterService } from "@renderer/features/workspace-app-center";
 import type { WorkspaceLinkAction } from "@contexts/workspace/presentation/renderer/actions/workspaceLinkActions";
@@ -482,6 +484,8 @@ function DesktopAgentGUIWorkbenchBodyImpl({
     useState<DesktopAgentGUIPrefillPromptRequest | null>(null);
   const [newConversationRequestSequence, setNewConversationRequestSequence] =
     useState(0);
+  const [openTerminalRequestSequence, setOpenTerminalRequestSequence] =
+    useState<number | null>(null);
   const handledOpenSessionActivationSequenceRef = useRef<number | null>(null);
   const handledPrefillPromptActivationSequenceRef = useRef<number | null>(null);
   const pendingComposerDefaultsWriteRef =
@@ -780,6 +784,36 @@ function DesktopAgentGUIWorkbenchBodyImpl({
     };
   }, [context.instanceId, previewMode]);
 
+  useEffect(() => {
+    if (previewMode) {
+      return;
+    }
+    const handleOpenTerminalRequest = (event: Event) => {
+      const detail = (event as CustomEvent<unknown>).detail;
+      if (!detail || typeof detail !== "object" || !("instanceId" in detail)) {
+        return;
+      }
+
+      const request = detail as AgentGuiWorkbenchOpenTerminalDetail;
+      if (request.instanceId !== context.instanceId) {
+        return;
+      }
+
+      setOpenTerminalRequestSequence((current) => (current ?? 0) + 1);
+    };
+
+    window.addEventListener(
+      AGENT_GUI_WORKBENCH_OPEN_TERMINAL_EVENT,
+      handleOpenTerminalRequest
+    );
+    return () => {
+      window.removeEventListener(
+        AGENT_GUI_WORKBENCH_OPEN_TERMINAL_EVENT,
+        handleOpenTerminalRequest
+      );
+    };
+  }, [context.instanceId, previewMode]);
+
   const openConversationWindowRef = useRef({
     onOpenAgentConversationWindow,
     previewMode,
@@ -956,6 +990,7 @@ function DesktopAgentGUIWorkbenchBodyImpl({
         isActive={context.isFocused}
         composerFocusRequestSequence={composerFocusRequestSequence}
         newConversationRequestSequence={newConversationRequestSequence}
+        openTerminalRequestSequence={openTerminalRequestSequence}
         openSessionRequest={openSessionRequest}
         prefillPromptRequest={prefillPromptRequest}
         managedAgentsState={managedAgentsState}

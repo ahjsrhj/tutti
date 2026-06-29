@@ -22,6 +22,10 @@ export interface ApplicationMenuOptions {
   exportDeveloperLogs?: () => unknown;
   getLocale?: () => DesktopLocale;
   logger?: DesktopLogger;
+  menuCommandFromShortcut?: (
+    command: "new-chat" | "open-settings" | "toggle-terminal",
+    ownerWindow?: BaseWindow | null
+  ) => void;
   openPerfMonitorDevTools?: (ownerWindow?: BaseWindow | null) => unknown;
   platform?: NodeJS.Platform;
   quitFromCommandShortcut?: () => void;
@@ -154,6 +158,7 @@ export function createApplicationMenuTemplate({
   exportDeveloperLogs,
   getLocale = () => "en",
   logger,
+  menuCommandFromShortcut,
   openPerfMonitorDevTools,
   platform = process.platform,
   quitFromCommandShortcut,
@@ -168,6 +173,12 @@ export function createApplicationMenuTemplate({
       label: "Tutti",
       submenu: [
         { role: "about" },
+        {
+          accelerator: "Command+,",
+          label: translator.t("desktop.menu.settings"),
+          click: (_menuItem, browserWindow) =>
+            menuCommandFromShortcut?.("open-settings", browserWindow)
+        },
         {
           label: translator.t("desktop.menu.checkForUpdates"),
           click: () => {
@@ -204,6 +215,13 @@ export function createApplicationMenuTemplate({
       label: translator.t("desktop.menu.file"),
       submenu: isMac
         ? [
+            {
+              accelerator: "Command+N",
+              label: translator.t("desktop.menu.newChat"),
+              click: (_menuItem, browserWindow) =>
+                menuCommandFromShortcut?.("new-chat", browserWindow)
+            },
+            { type: "separator" },
             closeFromCommandShortcut
               ? {
                   accelerator: "Command+W",
@@ -232,6 +250,17 @@ export function createApplicationMenuTemplate({
     {
       label: translator.t("desktop.menu.view"),
       submenu: [
+        ...(isMac
+          ? ([
+              {
+                accelerator: "Command+J",
+                label: translator.t("desktop.menu.toggleTerminal"),
+                click: (_menuItem, browserWindow) =>
+                  menuCommandFromShortcut?.("toggle-terminal", browserWindow)
+              },
+              { type: "separator" }
+            ] satisfies MenuItemConstructorOptions[])
+          : []),
         { role: "reload" },
         { role: "forceReload" },
         ...(allowDeveloperTools
@@ -354,6 +383,17 @@ export async function configureApplicationMenu(
               ({ requestWorkspaceWindowCloseFromCommandShortcut }) => {
                 requestWorkspaceWindowCloseFromCommandShortcut(ownerWindow);
               }
+            );
+          }
+        },
+        menuCommandFromShortcut: (command, ownerWindow) => {
+          if (
+            ownerWindow instanceof BrowserWindow &&
+            !ownerWindow.webContents.isDestroyed()
+          ) {
+            ownerWindow.webContents.send(
+              desktopIpcChannels.host.window.menuCommand,
+              { command }
             );
           }
         },

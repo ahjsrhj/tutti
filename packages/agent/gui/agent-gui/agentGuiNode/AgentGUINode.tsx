@@ -200,6 +200,7 @@ export interface AgentGUINodeProps {
   prefillPromptRequest?: AgentGUIPrefillPromptRequest | null;
   isMuted?: boolean;
   newConversationRequestSequence?: number | null;
+  openTerminalRequestSequence?: number | null;
   onMinimize?: () => void;
   onToggleMaximize?: () => void;
   onShowMessage?: (
@@ -518,6 +519,7 @@ function areAgentGUINodePropsEqual(
       next.composerFocusRequestSequence &&
     previous.newConversationRequestSequence ===
       next.newConversationRequestSequence &&
+    previous.openTerminalRequestSequence === next.openTerminalRequestSequence &&
     previous.openSessionRequest === next.openSessionRequest &&
     previous.prefillPromptRequest === next.prefillPromptRequest
   );
@@ -556,6 +558,7 @@ export const AgentGUINode = memo(function AgentGUINode({
   isActive,
   composerFocusRequestSequence = null,
   newConversationRequestSequence = null,
+  openTerminalRequestSequence = null,
   openSessionRequest = null,
   prefillPromptRequest = null,
   isMuted = false,
@@ -718,6 +721,40 @@ export const AgentGUINode = memo(function AgentGUINode({
     onShowMessage
   });
 
+  const openTerminalFromShortcut = useCallback((): void => {
+    if (
+      previewMode ||
+      !isActive ||
+      !onOpenTerminalAtCwd ||
+      !supportsAgentGUIOpenTerminalShortcut(state.provider)
+    ) {
+      return;
+    }
+
+    void Promise.resolve(
+      onOpenTerminalAtCwd({
+        agentSessionId: viewModel.activeConversationId,
+        cwd: resolveAgentGUITerminalShortcutCwd({
+          activeConversationCwd: viewModel.activeConversation?.cwd,
+          selectedProjectPath: viewModel.composerSettings.selectedProjectPath,
+          fallbackCwd: terminalFallbackCwd
+        }),
+        provider: state.provider,
+        workspaceId
+      })
+    ).catch(() => {});
+  }, [
+    isActive,
+    onOpenTerminalAtCwd,
+    previewMode,
+    state.provider,
+    terminalFallbackCwd,
+    viewModel.activeConversation?.cwd,
+    viewModel.activeConversationId,
+    viewModel.composerSettings.selectedProjectPath,
+    workspaceId
+  ]);
+
   useEffect(() => {
     if (
       previewMode ||
@@ -734,18 +771,7 @@ export const AgentGUINode = memo(function AgentGUINode({
       }
       event.preventDefault();
       event.stopPropagation();
-      void Promise.resolve(
-        onOpenTerminalAtCwd({
-          agentSessionId: viewModel.activeConversationId,
-          cwd: resolveAgentGUITerminalShortcutCwd({
-            activeConversationCwd: viewModel.activeConversation?.cwd,
-            selectedProjectPath: viewModel.composerSettings.selectedProjectPath,
-            fallbackCwd: terminalFallbackCwd
-          }),
-          provider: state.provider,
-          workspaceId
-        })
-      ).catch(() => {});
+      openTerminalFromShortcut();
     };
 
     window.addEventListener("keydown", handleKeyDown, true);
@@ -755,14 +781,19 @@ export const AgentGUINode = memo(function AgentGUINode({
   }, [
     isActive,
     onOpenTerminalAtCwd,
+    openTerminalFromShortcut,
     previewMode,
     state.provider,
-    terminalFallbackCwd,
-    viewModel.activeConversation?.cwd,
-    viewModel.activeConversationId,
-    viewModel.composerSettings.selectedProjectPath,
-    workspaceId
+    terminalFallbackCwd
   ]);
+
+  useEffect(() => {
+    if (openTerminalRequestSequence === null) {
+      return;
+    }
+
+    openTerminalFromShortcut();
+  }, [openTerminalFromShortcut, openTerminalRequestSequence]);
 
   const fallbackAgentTitle = t("sidebar.fallbackAgentLabel");
   const activeProvider =

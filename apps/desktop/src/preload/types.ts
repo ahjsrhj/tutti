@@ -28,6 +28,7 @@ import type {
   DesktopHostWindowCapturePreviewInput,
   DesktopHostWindowCloseRequestPayload,
   DesktopHostWindowCloseRequestResolutionPayload,
+  DesktopHostWindowMenuCommandPayload,
   DesktopRendererDiagnosticPayload,
   DesktopTerminalDiagnosticPayload,
   DesktopTerminalStreamUrlRequest,
@@ -102,6 +103,9 @@ export interface DesktopHostWindowApi {
   ): Promise<string | null>;
   onCloseRequest(
     listener: (payload: DesktopHostWindowCloseRequestPayload) => void
+  ): () => void;
+  onMenuCommand(
+    listener: (payload: DesktopHostWindowMenuCommandPayload) => void
   ): () => void;
   onQuitShortcutToast(listener: () => void): () => void;
   resolveCloseRequest(
